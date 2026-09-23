@@ -12,6 +12,7 @@ public class Managers : MonoBehaviour
     public static Managers Instance => _instance;
 
     [Header("Manager References")]
+    [SerializeField] private EventManager _eventManager;
     [SerializeField] private InputManager _inputManager;
     [SerializeField] private PlayerManager _playerManager;
     [SerializeField] private EnemyManager _enemyManager;
@@ -35,6 +36,7 @@ public class Managers : MonoBehaviour
         _instance = this;
         DontDestroyOnLoad(gameObject);
 
+        RegisterManager(_eventManager);
         RegisterManager(_inputManager);
         RegisterManager(_playerManager);
         RegisterManager(_enemyManager);
@@ -124,10 +126,15 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 입력, 플레이어, 난이도, 적 순서로 초기화한다.
+    /// 이벤트, 입력, 플레이어, 적 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
+        if (TryGetManager<EventManager>(out var eventManager))
+        {
+            await eventManager.InitializeAsync();
+        }
+
         if (TryGetManager<InputManager>(out var inputManager))
         {
             await inputManager.InitializeAsync();
