@@ -11,11 +11,12 @@ public class Managers : MonoBehaviour
 
     public static Managers Instance => _instance;
 
-    [Header("Manager References")]
+    [Header("매니저 참조")]
     [SerializeField] private EventManager _eventManager;
     [SerializeField] private InputManager _inputManager;
     [SerializeField] private PlayerManager _playerManager;
     [SerializeField] private EnemyManager _enemyManager;
+    [SerializeField] private SceneLoadManager _sceneLoadManager;
 
     private readonly Dictionary<System.Type, BaseManager> _managers = new Dictionary<System.Type, BaseManager>();
 
@@ -40,10 +41,16 @@ public class Managers : MonoBehaviour
         RegisterManager(_inputManager);
         RegisterManager(_playerManager);
         RegisterManager(_enemyManager);
+        RegisterManager(_sceneLoadManager);
     }
 
     private void Start()
     {
+        if (_instance != this)
+        {
+            return;
+        }
+
         InitializeManagersAsync().Forget();
     }
 
@@ -126,7 +133,7 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 이벤트, 입력, 플레이어, 적 순서로 초기화한다.
+    /// 이벤트, 입력, 플레이어, 적, 씬 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
@@ -149,5 +156,12 @@ public class Managers : MonoBehaviour
         {
             await enemyManager.InitializeAsync();
         }
+
+        if (TryGetManager<SceneLoadManager>(out var sceneLoadManager))
+        {
+            await sceneLoadManager.InitializeAsync();
+        }
+
+        ChangeState(GameState.Menu);
     }
 }
