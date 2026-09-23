@@ -18,6 +18,7 @@ public class AudioManager : BaseManager
     private readonly List<AudioSource> _soundPool = new List<AudioSource>();
     private readonly List<PlayingSound> _playingSounds = new List<PlayingSound>();
 
+    private AudioListener _audioListener;
     private AudioSource _musicSource;
     private float _musicBaseVolume;
     private float _soundVolume = DEFAULT_VOLUME;
@@ -42,6 +43,15 @@ public class AudioManager : BaseManager
             _musicVolume = Mathf.Clamp01(value);
             ApplyMusicVolume();
             SaveVolume(MUSIC_VOLUME_KEY, _musicVolume);
+        }
+    }
+
+    private void Awake()
+    {
+        _audioListener = GetComponent<AudioListener>();
+        if (_audioListener == null)
+        {
+            _audioListener = gameObject.AddComponent<AudioListener>();
         }
     }
 
