@@ -13,6 +13,7 @@ public class Managers : MonoBehaviour
 
     [Header("매니저 참조")]
     [SerializeField] private EventManager _eventManager;
+    [SerializeField] private AudioManager _audioManager;
     [SerializeField] private InputManager _inputManager;
     [SerializeField] private PlayerManager _playerManager;
     [SerializeField] private EnemyManager _enemyManager;
@@ -38,6 +39,7 @@ public class Managers : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         RegisterManager(_eventManager);
+        RegisterManager(_audioManager);
         RegisterManager(_inputManager);
         RegisterManager(_playerManager);
         RegisterManager(_enemyManager);
@@ -133,13 +135,18 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 이벤트, 입력, 플레이어, 적, 씬 순서로 초기화한다.
+    /// 이벤트, 오디오, 입력, 플레이어, 적, 씬 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
         if (TryGetManager<EventManager>(out var eventManager))
         {
             await eventManager.InitializeAsync();
+        }
+
+        if (TryGetManager<AudioManager>(out var audioManager))
+        {
+            await audioManager.InitializeAsync();
         }
 
         if (TryGetManager<InputManager>(out var inputManager))
