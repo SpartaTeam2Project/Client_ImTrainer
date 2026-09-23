@@ -10,6 +10,30 @@ public class GameController : MonoBehaviour
     /// </summary>
     public float ElapsedSeconds { get; private set; }
 
+    /// <summary>
+    /// 지금 게임 씬에 올라와 있는 스테이지. 없으면 null.
+    /// </summary>
+    public StageController ActiveStage { get; private set; }
+
+    /// <summary>
+    /// 게임 씬의 스테이지가 자신을 알린다.
+    /// </summary>
+    public void RegisterStage(StageController stage)
+    {
+        ActiveStage = stage;
+    }
+
+    /// <summary>
+    /// 같은 스테이지가 빠질 때만 참조를 지운다.
+    /// </summary>
+    public void UnregisterStage(StageController stage)
+    {
+        if (ActiveStage == stage)
+        {
+            ActiveStage = null;
+        }
+    }
+
     private void Start()
     {
         if (Managers.Instance == null)
@@ -49,6 +73,11 @@ public class GameController : MonoBehaviour
         if (previousState == GameState.Loading && newState == GameState.Playing)
         {
             ElapsedSeconds = 0f;
+        }
+
+        if (newState == GameState.Loading || newState == GameState.Menu)
+        {
+            Time.timeScale = 1f;
         }
 
         PlayMusicForState(newState);
