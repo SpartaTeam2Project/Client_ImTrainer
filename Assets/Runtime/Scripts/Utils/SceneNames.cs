@@ -3,9 +3,9 @@
 /// </summary>
 public static class SceneNames
 {
-    public const string MAIN_MENU = "MainMenu";
+    public const string TITLE_SCENE = "TitleScene";
 
-    public const string LOADING_SCREEN = "LoadingScreen";
+    public const string LOADING_SCENE = "LoadingScene";
 
-    public const string GAME = "Game";
+    public const string GAME_SCENE = "GameScene";
 }

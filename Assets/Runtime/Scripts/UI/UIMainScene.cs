@@ -2,9 +2,9 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 메인 메뉴에서 게임 시작을 요청한다.
+/// 타이틀 씬에서 게임 시작을 요청한다.
 /// </summary>
-public class UIMainMenu : MonoBehaviour
+public class UIMainScene : MonoBehaviour
 {
     /// <summary>
     /// 게임 씬으로 전환한다.

@@ -17,6 +17,6 @@ public class UIGameExit : MonoBehaviour
             return;
         }
 
-        sceneLoadManager.LoadMainMenuAsync().Forget();
+        sceneLoadManager.LoadTitleSceneAsync().Forget();
     }
 }
