@@ -9,8 +9,14 @@ public class PlayerManager : BaseManager
 {
     private const int LOCAL_PLAYER_ID_VALUE = 1;
     private const float ACTOR_SIZE = 0.9f;
+    private const int ACTOR_SORTING_ORDER = 10;
+    private const float MOVE_SQR_EPSILON = 0.0001f;
+
+    [Header("Player Settings")]
+    [SerializeField] private PlayerActor _playerPrefab;
 
     private PlayerActor _actor;
+    private PlayerView _view;
     private StageField _stageField;
     private float _speed;
     private Vector2 _lookDirection = Vector2.right;
@@ -31,6 +37,8 @@ public class PlayerManager : BaseManager
 
     public event Action<int> OnPlayerDied;
 
+    #region Unity Methods
+
     /// <summary>
     /// 플레이어 매니저 초기화
     /// </summary>
@@ -38,6 +46,25 @@ public class PlayerManager : BaseManager
     {
         return base.InitializeAsync();
     }
+
+    private void Update()
+    {
+        if (!IsAlive || _actor == null || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
+        {
+            return;
+        }
+
+        if (!Managers.Instance.TryGetManager<InputManager>(out var inputManager))
+        {
+            return;
+        }
+
+        Move(inputManager.MovementValue);
+    }
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// 필드가 비활성화되면 같은 참조만 지운다.
@@ -73,15 +100,14 @@ public class PlayerManager : BaseManager
         _lookDirection = Vector2.right;
         IsAlive = true;
 
-        var actorObject = new GameObject("Player");
-        _actor = actorObject.AddComponent<PlayerActor>();
+        _actor = CreateActor();
         _actor.Bind(this);
+        _view = _actor.GetComponent<PlayerView>();
+        if (_view != null)
+        {
+            _view.SetVisual(false, _lookDirection);
+        }
 
-        var renderer = actorObject.AddComponent<SpriteRenderer>();
-        renderer.sprite = PrototypeSprite.WhiteSquare;
-        renderer.color = new Color(0.95f, 0.85f, 0.2f, 1f);
-        renderer.sortingOrder = 10;
-        actorObject.transform.localScale = new Vector3(ACTOR_SIZE, ACTOR_SIZE, 1f);
         return LocalPlayerId;
     }
 
@@ -102,6 +128,11 @@ public class PlayerManager : BaseManager
         }
 
         IsAlive = false;
+        if (_view != null)
+        {
+            _view.SetVisual(false, _lookDirection);
+        }
+
         OnPlayerDied?.Invoke(playerId);
     }
 
@@ -116,27 +147,18 @@ public class PlayerManager : BaseManager
         }
 
         _actor = null;
+        _view = null;
         IsAlive = false;
     }
 
-    private void Update()
-    {
-        if (!IsAlive || _actor == null || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
-        {
-            return;
-        }
+    #endregion
 
-        if (!Managers.Instance.TryGetManager<InputManager>(out var inputManager))
-        {
-            return;
-        }
-
-        Move(inputManager.MovementValue);
-    }
+    #region Private Methods
 
     private void Move(Vector2 movement)
     {
-        if (movement.sqrMagnitude > 0.0001f)
+        var isMoving = movement.sqrMagnitude > MOVE_SQR_EPSILON;
+        if (isMoving)
         {
             _lookDirection = movement.normalized;
         }
@@ -149,9 +171,31 @@ public class PlayerManager : BaseManager
         }
 
         _actor.transform.position = next;
-        var scale = _actor.transform.localScale;
-        var facing = _lookDirection.x < 0f ? -ACTOR_SIZE : ACTOR_SIZE;
-        _actor.transform.localScale = new Vector3(facing, Mathf.Abs(scale.y), scale.z);
+        if (_view != null)
+        {
+            _view.SetVisual(isMoving, _lookDirection);
+        }
+    }
+
+    private PlayerActor CreateActor()
+    {
+        if (_playerPrefab != null)
+        {
+            var actor = Instantiate(_playerPrefab);
+            actor.gameObject.name = "Player";
+            return actor;
+        }
+
+        Debug.LogWarning("Player 프리팹이 없어 자리표시 액터를 만듭니다.");
+        var actorObject = new GameObject("Player");
+        actorObject.transform.localScale = new Vector3(ACTOR_SIZE, ACTOR_SIZE, 1f);
+
+        var renderer = actorObject.AddComponent<SpriteRenderer>();
+        renderer.sortingOrder = ACTOR_SORTING_ORDER;
+
+        var actorFallback = actorObject.AddComponent<PlayerActor>();
+        actorObject.AddComponent<PlayerView>();
+        return actorFallback;
     }
 
     private void Despawn()
@@ -163,34 +207,13 @@ public class PlayerManager : BaseManager
 
         var actor = _actor;
         _actor = null;
+        _view = null;
         IsAlive = false;
         if (actor != null)
         {
             Destroy(actor.gameObject);
         }
     }
-}
 
-/// <summary>
-/// 플레이어 오브젝트가 파괴될 때 매니저 참조를 끊는다.
-/// </summary>
-public class PlayerActor : MonoBehaviour
-{
-    private PlayerManager _owner;
-
-    public void Bind(PlayerManager owner)
-    {
-        _owner = owner;
-    }
-
-    private void OnDestroy()
-    {
-        if (_owner == null)
-        {
-            return;
-        }
-
-        _owner.NotifyActorDestroyed(this);
-        _owner = null;
-    }
+    #endregion
 }
