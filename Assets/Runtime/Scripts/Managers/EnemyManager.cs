@@ -10,7 +10,6 @@ public class EnemyManager : BaseManager
     private const float SPAWN_RADIUS = 8f;
     private const float CONTACT_RADIUS = 0.75f;
     private const float CONTACT_INTERVAL = 0.6f;
-    private const float OVERLAP_DAMAGE_TO_ENEMY = 6f;
     private const int MAX_ALIVE = 40;
     private const float ACTOR_SIZE = 0.7f;
 
@@ -188,6 +187,11 @@ public class EnemyManager : BaseManager
             }
 
             actor.MoveToward(playerPosition, Time.deltaTime);
+            if (!actor.IsAlive)
+            {
+                continue;
+            }
+
             if (Vector2.Distance(actor.transform.position, playerPosition) > CONTACT_RADIUS)
             {
                 continue;
@@ -199,19 +203,6 @@ public class EnemyManager : BaseManager
             }
 
             playerManager.TakeDamage(playerId, actor.ContactDamage);
-            // 자리표시. 플레이어 공격이 붙으면 겹침으로 적 체력을 깎지 않는다.
-            actor.ApplyDamage(OVERLAP_DAMAGE_TO_ENEMY);
-            if (actor.IsAlive)
-            {
-                if (playerManager.CurrentHealth <= 0f)
-                {
-                    return;
-                }
-
-                continue;
-            }
-
-            KillAt(i, actor);
             if (playerManager.CurrentHealth <= 0f)
             {
                 return;
