@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 메인 메뉴, 로딩, 게임 씬 전환을 담당한다.
+/// 타이틀, 로딩, 게임 씬 전환을 담당한다.
 /// </summary>
 public class SceneLoadManager : BaseManager
 {
@@ -28,9 +28,9 @@ public class SceneLoadManager : BaseManager
         try
         {
             Managers.Instance.ChangeState(GameState.Loading);
-            await LoadSceneAsync(SceneNames.LOADING_SCREEN, LoadSceneMode.Additive, cancellationToken);
-            await UnloadSceneAsync(SceneNames.MAIN_MENU, cancellationToken);
-            await LoadSceneAsync(SceneNames.GAME, LoadSceneMode.Single, cancellationToken);
+            await LoadSceneAsync(SceneNames.LOADING_SCENE, LoadSceneMode.Additive, cancellationToken);
+            await UnloadSceneAsync(SceneNames.TITLE_SCENE, cancellationToken);
+            await LoadSceneAsync(SceneNames.GAME_SCENE, LoadSceneMode.Single, cancellationToken);
 
             if (Managers.Instance != null)
             {
@@ -44,9 +44,9 @@ public class SceneLoadManager : BaseManager
     }
 
     /// <summary>
-    /// 로딩 씬을 거친 뒤 메인 메뉴로 돌아간다.
+    /// 로딩 씬을 거친 뒤 타이틀 씬으로 돌아간다.
     /// </summary>
-    public async UniTask LoadMainMenuAsync()
+    public async UniTask LoadTitleSceneAsync()
     {
         if (_isLoading)
         {
@@ -59,9 +59,9 @@ public class SceneLoadManager : BaseManager
         try
         {
             Managers.Instance.ChangeState(GameState.Loading);
-            await LoadSceneAsync(SceneNames.LOADING_SCREEN, LoadSceneMode.Additive, cancellationToken);
-            await UnloadSceneAsync(SceneNames.GAME, cancellationToken);
-            await LoadSceneAsync(SceneNames.MAIN_MENU, LoadSceneMode.Single, cancellationToken);
+            await LoadSceneAsync(SceneNames.LOADING_SCENE, LoadSceneMode.Additive, cancellationToken);
+            await UnloadSceneAsync(SceneNames.GAME_SCENE, cancellationToken);
+            await LoadSceneAsync(SceneNames.TITLE_SCENE, LoadSceneMode.Single, cancellationToken);
 
             if (Managers.Instance != null)
             {

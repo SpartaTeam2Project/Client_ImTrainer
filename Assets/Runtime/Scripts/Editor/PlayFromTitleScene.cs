@@ -4,19 +4,19 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /// <summary>
-/// 플레이 모드 시작 씬을 메인 메뉴로 고정한다.
+/// 플레이 모드 시작 씬을 타이틀 씬으로 고정한다.
 /// </summary>
 [InitializeOnLoad]
-public static class PlayFromMainMenu
+public static class PlayFromTitleScene
 {
-    static PlayFromMainMenu()
+    static PlayFromTitleScene()
     {
         EditorApplication.delayCall += ApplyStartScene;
     }
 
     private static void ApplyStartScene()
     {
-        var sceneAsset = FindMainMenuScene();
+        var sceneAsset = FindTitleScene();
         if (sceneAsset == null)
         {
             return;
@@ -25,13 +25,13 @@ public static class PlayFromMainMenu
         EditorSceneManager.playModeStartScene = sceneAsset;
     }
 
-    private static SceneAsset FindMainMenuScene()
+    private static SceneAsset FindTitleScene()
     {
-        var guids = AssetDatabase.FindAssets($"t:Scene {SceneNames.MAIN_MENU}");
+        var guids = AssetDatabase.FindAssets($"t:Scene {SceneNames.TITLE_SCENE}");
         foreach (var guid in guids)
         {
             var path = AssetDatabase.GUIDToAssetPath(guid);
-            if (Path.GetFileNameWithoutExtension(path) != SceneNames.MAIN_MENU)
+            if (Path.GetFileNameWithoutExtension(path) != SceneNames.TITLE_SCENE)
             {
                 continue;
             }
