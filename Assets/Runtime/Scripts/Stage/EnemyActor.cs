@@ -1,10 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// 자리표시 적. 추적과 접촉 판정에 필요한 수치만 가진다.
+/// 적 추적과 접촉 판정에 필요한 수치를 가진다.
 /// </summary>
 public class EnemyActor : MonoBehaviour
 {
+    private const float MOVE_SQR_EPSILON = 0.0001f;
+
+    private EnemyView _view;
     private float _health;
     private float _contactDamage;
     private float _moveSpeed;
@@ -19,6 +22,17 @@ public class EnemyActor : MonoBehaviour
 
     public bool IsAlive => _health > 0f;
 
+    #region Unity Methods
+
+    private void Awake()
+    {
+        _view = GetComponent<EnemyView>();
+    }
+
+    #endregion
+
+    #region Public Methods
+
     /// <summary>
     /// 스폰 직후 체력, 접촉 피해, 이동 속도를 넣는다.
     /// </summary>
@@ -29,6 +43,16 @@ public class EnemyActor : MonoBehaviour
         _contactDamage = contactDamage;
         _moveSpeed = moveSpeed;
         _nextContactTime = 0f;
+
+        if (_view == null)
+        {
+            _view = GetComponent<EnemyView>();
+        }
+
+        if (_view != null)
+        {
+            _view.SetVisual(false, Vector2.down);
+        }
     }
 
     /// <summary>
@@ -36,8 +60,15 @@ public class EnemyActor : MonoBehaviour
     /// </summary>
     public void MoveToward(Vector2 target, float deltaTime)
     {
-        var next = Vector2.MoveTowards(transform.position, target, _moveSpeed * deltaTime);
+        var current = (Vector2)transform.position;
+        var next = Vector2.MoveTowards(current, target, _moveSpeed * deltaTime);
         transform.position = next;
+
+        var movement = next - current;
+        if (_view != null)
+        {
+            _view.SetVisual(movement.sqrMagnitude > MOVE_SQR_EPSILON, movement);
+        }
     }
 
     /// <summary>
@@ -61,4 +92,6 @@ public class EnemyActor : MonoBehaviour
     {
         _health -= amount;
     }
+
+    #endregion
 }

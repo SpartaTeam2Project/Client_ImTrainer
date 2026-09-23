@@ -12,6 +12,10 @@ public class EnemyManager : BaseManager
     private const float CONTACT_INTERVAL = 0.6f;
     private const int MAX_ALIVE = 40;
     private const float ACTOR_SIZE = 0.7f;
+    private const int ACTOR_SORTING_ORDER = 5;
+
+    [Header("Enemy Settings")]
+    [SerializeField] private EnemyActor _enemyPrefab;
 
     private readonly List<EnemyActor> _alive = new List<EnemyActor>();
     private readonly List<WaveRuntime> _waves = new List<WaveRuntime>();
@@ -158,21 +162,34 @@ public class EnemyManager : BaseManager
     private void CreateEnemy(WaveRuntime runtime, Vector2 position)
     {
         var wave = runtime.Spawn;
-        var actorObject = new GameObject("Enemy");
-        actorObject.transform.position = position;
-        actorObject.transform.localScale = new Vector3(ACTOR_SIZE, ACTOR_SIZE, 1f);
-
-        var renderer = actorObject.AddComponent<SpriteRenderer>();
-        renderer.sprite = PrototypeSprite.WhiteSquare;
-        renderer.color = new Color(0.85f, 0.2f, 0.25f, 1f);
-        renderer.sortingOrder = 5;
-
-        var actor = actorObject.AddComponent<EnemyActor>();
+        var actor = CreateActor(position);
         var maxHealth = Mathf.Max(1f, wave.MaxHealth * _hpMultiplier);
         var contactDamage = wave.ContactDamage * _damageMultiplier;
         actor.Initialize(runtime.WaveIndex, maxHealth, contactDamage, wave.MoveSpeed);
         runtime.AliveCount++;
         _alive.Add(actor);
+    }
+
+    private EnemyActor CreateActor(Vector2 position)
+    {
+        if (_enemyPrefab != null)
+        {
+            var actor = Instantiate(_enemyPrefab, position, Quaternion.identity);
+            actor.gameObject.name = "Enemy";
+            return actor;
+        }
+
+        Debug.LogWarning("Enemy 프리팹이 없어 자리표시 액터를 만듭니다.");
+        var actorObject = new GameObject("Enemy");
+        actorObject.transform.position = position;
+        actorObject.transform.localScale = new Vector3(ACTOR_SIZE, ACTOR_SIZE, 1f);
+
+        var renderer = actorObject.AddComponent<SpriteRenderer>();
+        renderer.sortingOrder = ACTOR_SORTING_ORDER;
+
+        var actorFallback = actorObject.AddComponent<EnemyActor>();
+        actorObject.AddComponent<EnemyView>();
+        return actorFallback;
     }
 
     private void UpdateActors(Vector2 playerPosition, PlayerManager playerManager, int playerId)
