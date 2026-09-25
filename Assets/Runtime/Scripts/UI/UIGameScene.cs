@@ -7,8 +7,6 @@ using UnityEngine.UI;
 /// </summary>
 public class UIGameScene : MonoBehaviour
 {
-
-    [SerializeField] private GameObject _menuButton;
     [SerializeField] private Button _pauseButton;
     [SerializeField] private TextMeshProUGUI _healthText;
     [SerializeField] private TextMeshProUGUI _killText;
@@ -25,9 +23,6 @@ public class UIGameScene : MonoBehaviour
         {
             return;
         }
-
-        Managers.Instance.OnGameStateChanged += HandleGameStateChanged;
-        ApplyState(Managers.Instance.CurrentState);
     }
 
     private void OnDisable()
@@ -36,8 +31,6 @@ public class UIGameScene : MonoBehaviour
         {
             return;
         }
-
-        Managers.Instance.OnGameStateChanged -= HandleGameStateChanged;
     }
 
     private void Update()
@@ -60,19 +53,6 @@ public class UIGameScene : MonoBehaviour
         //_pauseWindow.SetActive(true);
     }
 
-    private void HandleGameStateChanged(GameState previousState, GameState newState)
-    {
-        ApplyState(newState);
-    }
-
-    private void ApplyState(GameState state)
-    {
-        var showResult = state == GameState.Victory || state == GameState.Defeat;
-        if (_menuButton != null)
-        {
-            _menuButton.SetActive(showResult);
-        }
-    }
 
     private void RefreshCombat()
     {
