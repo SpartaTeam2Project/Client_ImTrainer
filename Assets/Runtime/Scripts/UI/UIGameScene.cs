@@ -9,6 +9,7 @@ public class UIGameScene : MonoBehaviour
 {
     [SerializeField] private Button _pauseButton;
     [SerializeField] private GameObject _pauseWindow;
+    [SerializeField] private BackgroundTintUI _backgroundTint;
     [SerializeField] private TextMeshProUGUI _killText;
     [SerializeField] private TextMeshProUGUI _timerText;
 
@@ -23,7 +24,8 @@ public class UIGameScene : MonoBehaviour
     {
         CacheGameController();
         Managers.Instance.GetManager<EventManager>().Subscribe<GameStateChanged>(HandleGameStateChanged);
-        ApplyPauseWindow(Managers.Instance.CurrentState);
+        var state = Managers.Instance.CurrentState;
+        ApplyPauseWindow(state, state != GameState.Paused);
     }
 
     private void Start()
@@ -71,17 +73,29 @@ public class UIGameScene : MonoBehaviour
 
     private void HandleGameStateChanged(GameStateChanged changed)
     {
-        ApplyPauseWindow(changed.Next);
+        ApplyPauseWindow(changed.Next, changed.Previous != GameState.Paused);
     }
 
-    private void ApplyPauseWindow(GameState state)
+    private void ApplyPauseWindow(GameState state, bool hideInstantly)
     {
-        if (_pauseWindow == null)
+        var paused = state == GameState.Paused;
+        if (_pauseWindow != null)
+        {
+            _pauseWindow.SetActive(paused);
+        }
+
+        if (_backgroundTint == null)
         {
             return;
         }
 
-        _pauseWindow.SetActive(state == GameState.Paused);
+        if (paused)
+        {
+            _backgroundTint.Show();
+            return;
+        }
+
+        _backgroundTint.Hide(hideInstantly);
     }
 
 
