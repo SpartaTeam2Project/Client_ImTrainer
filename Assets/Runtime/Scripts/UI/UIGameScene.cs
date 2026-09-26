@@ -8,6 +8,8 @@ using UnityEngine.UI;
 public class UIGameScene : MonoBehaviour
 {
     [SerializeField] private Button _pauseButton;
+    [SerializeField] private GameObject _pauseWindow;
+    [SerializeField] private BackgroundTintUI _backgroundTint;
     [SerializeField] private TextMeshProUGUI _killText;
     [SerializeField] private TextMeshProUGUI _timerText;
 
@@ -21,6 +23,9 @@ public class UIGameScene : MonoBehaviour
     private void OnEnable()
     {
         CacheGameController();
+        Managers.Instance.GetManager<EventManager>().Subscribe<GameStateChanged>(HandleGameStateChanged);
+        var state = Managers.Instance.CurrentState;
+        ApplyPauseWindow(state, state != GameState.Paused);
     }
 
     private void Start()
@@ -30,6 +35,11 @@ public class UIGameScene : MonoBehaviour
 
     private void OnDisable()
     {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Unsubscribe<GameStateChanged>(HandleGameStateChanged);
+        }
+
         _gameController = null;
     }
 
@@ -48,9 +58,48 @@ public class UIGameScene : MonoBehaviour
 
         RefreshCombat();
     }
+
     private void OnPauseButtonClicked()
     {
-        //_pauseWindow.SetActive(true);
+        if (Managers.Instance == null || Managers.Instance.CurrentState != GameState.Playing)
+        {
+            return;
+        }
+
+        CacheGameController();
+        if (_gameController == null || _gameController.ActiveStage == null)
+        {
+            return;
+        }
+
+        _gameController.ActiveStage.Pause();
+    }
+
+    private void HandleGameStateChanged(GameStateChanged changed)
+    {
+        ApplyPauseWindow(changed.Next, changed.Previous != GameState.Paused);
+    }
+
+    private void ApplyPauseWindow(GameState state, bool hideInstantly)
+    {
+        var paused = state == GameState.Paused;
+        if (_pauseWindow != null)
+        {
+            _pauseWindow.SetActive(paused);
+        }
+
+        if (_backgroundTint == null)
+        {
+            return;
+        }
+
+        if (paused)
+        {
+            _backgroundTint.Show();
+            return;
+        }
+
+        _backgroundTint.Hide(hideInstantly);
     }
 
 

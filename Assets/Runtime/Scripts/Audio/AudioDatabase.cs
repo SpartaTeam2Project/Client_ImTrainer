@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// 재생 시 최소값과 최대값 사이에서 하나를 고르는 범위다.
@@ -28,14 +29,21 @@ public struct AudioFloatRange
 }
 
 /// <summary>
-/// 이름별 효과음·음악 클립과 재생 파라미터를 보관한다.
+/// BGM과 효과음을 이름별로 나눠 보관한다.
 /// </summary>
 [CreateAssetMenu(fileName = "AudioDatabase", menuName = "Audio/Audio Database")]
 public class AudioDatabase : ScriptableObject
 {
-    [SerializeField] private List<AudioEntry> _entries = new List<AudioEntry>();
+    [Header("BGM")]
+    [FormerlySerializedAs("_entries")]
+    [SerializeField] private List<AudioEntry> _music = new List<AudioEntry>();
 
-    public IReadOnlyList<AudioEntry> Entries => _entries;
+    [Header("효과음")]
+    [SerializeField] private List<AudioEntry> _sounds = new List<AudioEntry>();
+
+    public IReadOnlyList<AudioEntry> Music => _music;
+
+    public IReadOnlyList<AudioEntry> Sounds => _sounds;
 }
 
 /// <summary>

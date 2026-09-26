@@ -3,12 +3,14 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 이동과 일시정지 입력을 한곳으로 모은다.
+/// 이동, 일시정지, 메뉴 선택 입력을 한곳으로 모은다.
 /// </summary>
 public class InputManager : BaseManager
 {
     private Vector2 _movementValue;
     private bool _pausePressed;
+    private Vector2Int _menuMove;
+    private bool _menuSubmit;
 
     public Vector2 MovementValue => _movementValue;
 
@@ -40,11 +42,37 @@ public class InputManager : BaseManager
     }
 
     /// <summary>
+    /// 이번 프레임의 메뉴 방향키를 반환하고 소비한다. x는 좌우, y는 상하다.
+    /// </summary>
+    public Vector2Int ConsumeMenuMove()
+    {
+        var move = _menuMove;
+        _menuMove = Vector2Int.zero;
+        return move;
+    }
+
+    /// <summary>
+    /// 이번 프레임에 메뉴 확인이 눌렸으면 true를 반환하고 소비한다.
+    /// </summary>
+    public bool ConsumeMenuSubmit()
+    {
+        if (!_menuSubmit)
+        {
+            return false;
+        }
+
+        _menuSubmit = false;
+        return true;
+    }
+
+    /// <summary>
     /// 자리표시. 입력 담당이 장치 바인딩으로 이 읽기만 교체한다.
     /// </summary>
     private void ReadKeyboardPlaceholder()
     {
         _pausePressed = false;
+        _menuMove = Vector2Int.zero;
+        _menuSubmit = false;
         var keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -78,6 +106,47 @@ public class InputManager : BaseManager
         if (keyboard.escapeKey.wasPressedThisFrame)
         {
             _pausePressed = true;
+        }
+
+        ReadMenuKeys(keyboard);
+    }
+
+    /// <summary>
+    /// 메뉴 이동은 화살표 한 번 눌림만 본다. 대각선이면 좌우를 우선한다.
+    /// </summary>
+    private void ReadMenuKeys(Keyboard keyboard)
+    {
+        var moveX = 0;
+        var moveY = 0;
+        if (keyboard.leftArrowKey.wasPressedThisFrame)
+        {
+            moveX -= 1;
+        }
+
+        if (keyboard.rightArrowKey.wasPressedThisFrame)
+        {
+            moveX += 1;
+        }
+
+        if (keyboard.downArrowKey.wasPressedThisFrame)
+        {
+            moveY -= 1;
+        }
+
+        if (keyboard.upArrowKey.wasPressedThisFrame)
+        {
+            moveY += 1;
+        }
+
+        if (moveX != 0)
+        {
+            moveY = 0;
+        }
+
+        _menuMove = new Vector2Int(moveX, moveY);
+        if (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame)
+        {
+            _menuSubmit = true;
         }
     }
 }

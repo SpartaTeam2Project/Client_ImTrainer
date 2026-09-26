@@ -12,3 +12,19 @@ public enum GameState
     Victory,
     Defeat
 }
+
+/// <summary>
+/// 진행 상태가 바뀌었을 때의 이전 값과 다음 값.
+/// </summary>
+[System.Serializable]
+public struct GameStateChanged
+{
+    public GameState Previous;
+    public GameState Next;
+
+    public GameStateChanged(GameState previous, GameState next)
+    {
+        Previous = previous;
+        Next = next;
+    }
+}

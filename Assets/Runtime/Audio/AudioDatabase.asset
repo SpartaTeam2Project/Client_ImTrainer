@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c4e1a7b2d8f4e6a91b0c3d5e7f81234, type: 3}
   m_Name: AudioDatabase
   m_EditorClassIdentifier: 
-  _entries:
+  _music:
   - _name: TitleScene
     _clip: {fileID: 8300000, guid: c5d04e56ded82e94d979d72d449d3791, type: 3}
     _volume:
@@ -27,6 +27,61 @@ MonoBehaviour:
     _volume:
       _min: 0.2
       _max: 0.2
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  _sounds:
+  - _name: cursor
+    _clip: {fileID: 8300000, guid: 64b63911462723b48850fd5ba211aaed, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: select
+    _clip: {fileID: 8300000, guid: 95c306ae251a241479e3143076d538fb, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: cancle
+    _clip: {fileID: 8300000, guid: 3060e9b41f0ffd642839ab647a083ad1, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: warning
+    _clip: {fileID: 8300000, guid: 31b3b8d5fe7dc1d42b764cf9ceb2b8f5, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: error
+    _clip: {fileID: 8300000, guid: 59cbd8f00847c3343bcf5e3a88cc524f, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: open
+    _clip: {fileID: 8300000, guid: 51790c9ba4837ec46889ff7a2b6f8e19, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
     _pitch:
       _min: 1
       _max: 1

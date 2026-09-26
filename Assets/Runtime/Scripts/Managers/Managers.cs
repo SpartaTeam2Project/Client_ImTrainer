@@ -89,6 +89,10 @@ public class Managers : MonoBehaviour
         var previousState = CurrentState;
         CurrentState = newState;
         OnGameStateChanged?.Invoke(previousState, newState);
+        if (TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(new GameStateChanged(previousState, newState));
+        }
     }
 
     /// <summary>
