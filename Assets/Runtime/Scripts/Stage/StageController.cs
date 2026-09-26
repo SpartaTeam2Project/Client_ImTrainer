@@ -148,23 +148,44 @@ public class StageController : MonoBehaviour
             return;
         }
 
-        if (!_stageActive)
-        {
-            return;
-        }
-
         if (state == GameState.Playing)
         {
-            Time.timeScale = 0f;
-            Managers.Instance.ChangeState(GameState.Paused);
+            Pause();
             return;
         }
 
         if (state == GameState.Paused)
         {
-            Time.timeScale = 1f;
-            Managers.Instance.ChangeState(GameState.Playing);
+            Resume();
         }
+    }
+
+    /// <summary>
+    /// 진행 중인 판을 멈추고 일시정지 상태로 바꾼다.
+    /// </summary>
+    public void Pause()
+    {
+        if (!_stageActive || Managers.Instance == null || Managers.Instance.CurrentState != GameState.Playing)
+        {
+            return;
+        }
+
+        Time.timeScale = 0f;
+        Managers.Instance.ChangeState(GameState.Paused);
+    }
+
+    /// <summary>
+    /// 일시정지를 풀고 전투를 다시 진행한다.
+    /// </summary>
+    public void Resume()
+    {
+        if (!_stageActive || Managers.Instance == null || Managers.Instance.CurrentState != GameState.Paused)
+        {
+            return;
+        }
+
+        Time.timeScale = 1f;
+        Managers.Instance.ChangeState(GameState.Playing);
     }
 
     private void HandlePlayerDied(int playerId)

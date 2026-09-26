@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class UIGameScene : MonoBehaviour
 {
     [SerializeField] private Button _pauseButton;
+    [SerializeField] private GameObject _pauseWindow;
     [SerializeField] private TextMeshProUGUI _killText;
     [SerializeField] private TextMeshProUGUI _timerText;
 
@@ -21,6 +22,8 @@ public class UIGameScene : MonoBehaviour
     private void OnEnable()
     {
         CacheGameController();
+        Managers.Instance.GetManager<EventManager>().Subscribe<GameStateChanged>(HandleGameStateChanged);
+        ApplyPauseWindow(Managers.Instance.CurrentState);
     }
 
     private void Start()
@@ -30,6 +33,7 @@ public class UIGameScene : MonoBehaviour
 
     private void OnDisable()
     {
+        Managers.Instance.GetManager<EventManager>().Unsubscribe<GameStateChanged>(HandleGameStateChanged);
         _gameController = null;
     }
 
@@ -48,9 +52,36 @@ public class UIGameScene : MonoBehaviour
 
         RefreshCombat();
     }
+
     private void OnPauseButtonClicked()
     {
-        //_pauseWindow.SetActive(true);
+        if (Managers.Instance == null || Managers.Instance.CurrentState != GameState.Playing)
+        {
+            return;
+        }
+
+        CacheGameController();
+        if (_gameController == null || _gameController.ActiveStage == null)
+        {
+            return;
+        }
+
+        _gameController.ActiveStage.Pause();
+    }
+
+    private void HandleGameStateChanged(GameStateChanged changed)
+    {
+        ApplyPauseWindow(changed.Next);
+    }
+
+    private void ApplyPauseWindow(GameState state)
+    {
+        if (_pauseWindow == null)
+        {
+            return;
+        }
+
+        _pauseWindow.SetActive(state == GameState.Paused);
     }
 
 
