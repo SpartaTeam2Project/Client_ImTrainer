@@ -3,36 +3,32 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 로컬 플레이어의 식별자, 트랜스폼, 체력을 소유한다.
+/// 로컬 플레이어의 식별자와 스폰된 플레이어 참조를 소유한다.
 /// </summary>
 public class PlayerManager : BaseManager
 {
     private const int LOCAL_PLAYER_ID_VALUE = 1;
     private const float ACTOR_SIZE = 0.9f;
     private const int ACTOR_SORTING_ORDER = 10;
-    private const float MOVE_SQR_EPSILON = 0.0001f;
 
     [Header("Player Settings")]
-    [SerializeField] private PlayerActor _playerPrefab;
+    [SerializeField] private Player _playerPrefab;
 
-    private PlayerActor _actor;
-    private PlayerView _view;
-    private float _speed;
-    private Vector2 _lookDirection = Vector2.right;
+    private Player _player;
 
     public int LocalPlayerId => LOCAL_PLAYER_ID_VALUE;
 
-    public Transform PlayerTransform => _actor == null ? null : _actor.transform;
+    public Transform PlayerTransform => _player == null ? null : _player.transform;
 
-    public Vector2 LookDirection => _lookDirection;
+    public Vector2 LookDirection => _player == null ? Vector2.right : _player.LookDirection;
 
-    public float Speed => _speed;
+    public float Speed => _player == null ? 0f : _player.Speed;
 
-    public float CurrentHealth { get; private set; }
+    public float CurrentHealth => _player == null ? 0f : _player.CurrentHealth;
 
-    public float MaxHealth { get; private set; }
+    public float MaxHealth => _player == null ? 0f : _player.MaxHealth;
 
-    public bool IsAlive { get; private set; }
+    public bool IsAlive => _player != null && _player.IsAlive;
 
     public event Action<int> OnPlayerDied;
 
@@ -48,7 +44,7 @@ public class PlayerManager : BaseManager
 
     private void Update()
     {
-        if (!IsAlive || _actor == null || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
+        if (!IsAlive || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
         {
             return;
         }
@@ -58,7 +54,7 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        Move(inputManager.MovementValue);
+        _player.Move(inputManager.MovementValue);
     }
 
     #endregion
@@ -72,98 +68,62 @@ public class PlayerManager : BaseManager
     {
         Despawn();
 
-        var maxHealth = stats != null ? stats.MaxHealth : 1f;
-        var speed = stats != null ? stats.MoveSpeed : 0f;
-        MaxHealth = Mathf.Max(1f, maxHealth);
-        CurrentHealth = MaxHealth;
-        _speed = Mathf.Max(0f, speed);
-        _lookDirection = Vector2.right;
-        IsAlive = true;
-
-        _actor = CreateActor();
-        _actor.Bind(this);
-        _view = _actor.GetComponent<PlayerView>();
-        if (_view != null)
-        {
-            _view.SetVisual(false, _lookDirection);
-        }
-
+        _player = CreatePlayer();
+        _player.Bind(this);
+        _player.Initialize(stats);
         return LocalPlayerId;
     }
 
     /// <summary>
-    /// 플레이어 식별자에 피해를 준다. 체력이 0이면 사망을 알린다.
+    /// 플레이어 식별자에 피해를 준다.
     /// </summary>
     public void TakeDamage(int playerId, float amount)
     {
-        if (playerId != LocalPlayerId || !IsAlive || amount <= 0f)
+        if (playerId != LocalPlayerId || _player == null)
         {
             return;
         }
 
-        CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
-        if (CurrentHealth > 0f)
-        {
-            return;
-        }
-
-        IsAlive = false;
-        if (_view != null)
-        {
-            _view.SetVisual(false, _lookDirection);
-        }
-
-        OnPlayerDied?.Invoke(playerId);
+        _player.TakeDamage(amount);
     }
 
     /// <summary>
-    /// 스폰된 액터가 씬과 함께 사라지면 참조를 비운다.
+    /// 플레이어 체력이 0이 되면 사망을 알린다.
     /// </summary>
-    public void NotifyActorDestroyed(PlayerActor actor)
+    public void NotifyDied(Player player)
     {
-        if (_actor != actor)
+        if (_player != player)
         {
             return;
         }
 
-        _actor = null;
-        _view = null;
-        IsAlive = false;
+        OnPlayerDied?.Invoke(LocalPlayerId);
+    }
+
+    /// <summary>
+    /// 스폰된 플레이어가 씬과 함께 사라지면 참조를 비운다.
+    /// </summary>
+    public void NotifyActorDestroyed(Player player)
+    {
+        if (_player != player)
+        {
+            return;
+        }
+
+        _player = null;
     }
 
     #endregion
 
     #region Private Methods
 
-    private void Move(Vector2 movement)
-    {
-        var isMoving = movement.sqrMagnitude > MOVE_SQR_EPSILON;
-        if (isMoving)
-        {
-            _lookDirection = movement.normalized;
-        }
-
-        var delta = movement * _speed * Time.deltaTime;
-        var next = (Vector2)_actor.transform.position + delta;
-        if (Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
-        {
-            next = fieldManager.ValidatePosition(next);
-        }
-
-        _actor.transform.position = next;
-        if (_view != null)
-        {
-            _view.SetVisual(isMoving, _lookDirection);
-        }
-    }
-
-    private PlayerActor CreateActor()
+    private Player CreatePlayer()
     {
         if (_playerPrefab != null)
         {
-            var actor = Instantiate(_playerPrefab);
-            actor.gameObject.name = "Player";
-            return actor;
+            var player = Instantiate(_playerPrefab);
+            player.gameObject.name = "Player";
+            return player;
         }
 
         Debug.LogWarning("Player 프리팹이 없어 자리표시 액터를 만듭니다.");
@@ -173,25 +133,23 @@ public class PlayerManager : BaseManager
         var renderer = actorObject.AddComponent<SpriteRenderer>();
         renderer.sortingOrder = ACTOR_SORTING_ORDER;
 
-        var actorFallback = actorObject.AddComponent<PlayerActor>();
+        var playerFallback = actorObject.AddComponent<Player>();
         actorObject.AddComponent<PlayerView>();
-        return actorFallback;
+        return playerFallback;
     }
 
     private void Despawn()
     {
-        if (_actor == null)
+        if (_player == null)
         {
             return;
         }
 
-        var actor = _actor;
-        _actor = null;
-        _view = null;
-        IsAlive = false;
-        if (actor != null)
+        var player = _player;
+        _player = null;
+        if (player != null)
         {
-            Destroy(actor.gameObject);
+            Destroy(player.gameObject);
         }
     }
 
