@@ -6,6 +6,9 @@ using UnityEngine.UI;
 /// </summary>
 public class UILobbyWindow : MonoBehaviour
 {
+    private const string MENU_MOVE_SOUND = "cursor";
+    private const string BUTTON_CLICK_SOUND = "select";
+
     private enum LobbyButton
     {
         None,
@@ -31,7 +34,13 @@ public class UILobbyWindow : MonoBehaviour
             Debug.LogError("로비 버튼 선택에 필요한 참조가 없습니다.");
         }
 
+        SubscribeButtonClicks();
         ApplySelection();
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeButtonClicks();
     }
 
     private void Update()
@@ -55,6 +64,7 @@ public class UILobbyWindow : MonoBehaviour
 
     private void MoveSelection(Vector2Int move)
     {
+        var previous = _selectedButton;
         if (move.x > 0)
         {
             MoveRight();
@@ -73,6 +83,10 @@ public class UILobbyWindow : MonoBehaviour
         }
 
         ApplySelection();
+        if (_selectedButton != previous && Managers.Instance != null && Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            audioManager.PlaySound(MENU_MOVE_SOUND);
+        }
     }
 
     private void MoveRight()
@@ -165,6 +179,52 @@ public class UILobbyWindow : MonoBehaviour
         }
 
         button.onClick.Invoke();
+    }
+
+    private void SubscribeButtonClicks()
+    {
+        if (_loginButton != null)
+        {
+            _loginButton.onClick.AddListener(PlayButtonClick);
+        }
+
+        if (_registerButton != null)
+        {
+            _registerButton.onClick.AddListener(PlayButtonClick);
+        }
+
+        if (_settingsButton != null)
+        {
+            _settingsButton.onClick.AddListener(PlayButtonClick);
+        }
+    }
+
+    private void UnsubscribeButtonClicks()
+    {
+        if (_loginButton != null)
+        {
+            _loginButton.onClick.RemoveListener(PlayButtonClick);
+        }
+
+        if (_registerButton != null)
+        {
+            _registerButton.onClick.RemoveListener(PlayButtonClick);
+        }
+
+        if (_settingsButton != null)
+        {
+            _settingsButton.onClick.RemoveListener(PlayButtonClick);
+        }
+    }
+
+    private void PlayButtonClick()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(BUTTON_CLICK_SOUND);
     }
 
     private Button GetSelectedButton()
