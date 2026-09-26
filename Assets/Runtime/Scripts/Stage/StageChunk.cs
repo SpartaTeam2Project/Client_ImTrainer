@@ -109,7 +109,7 @@ public class StageChunk : MonoBehaviour
     }
 
     /// <summary>
-    /// 펜스 안 장식을 끈다.
+    /// 펜스 안 장식을 녹여서 없앤다. 재생이 끝난 장식은 스스로 꺼진다.
     /// </summary>
     public void RemovePropsInside(IStageFence fence)
     {
@@ -126,7 +126,7 @@ public class StageChunk : MonoBehaviour
                 continue;
             }
 
-            prop.gameObject.SetActive(false);
+            prop.Dissolve();
             _props.RemoveAt(i);
         }
     }
