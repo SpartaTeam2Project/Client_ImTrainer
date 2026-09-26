@@ -3,21 +3,19 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 시간 기준 스폰, 추적, 접촉 피해, 킬 수를 담당한다.
+/// 시간 기준 스폰과 킬 수를 담당한다.
 /// </summary>
 public class EnemyManager : BaseManager
 {
     private const float SPAWN_RADIUS = 8f;
-    private const float CONTACT_RADIUS = 0.75f;
-    private const float CONTACT_INTERVAL = 0.6f;
     private const int MAX_ALIVE = 40;
     private const float ACTOR_SIZE = 0.7f;
     private const int ACTOR_SORTING_ORDER = 5;
 
     [Header("Enemy Settings")]
-    [SerializeField] private EnemyActor _enemyPrefab;
+    [SerializeField] private Enemy _enemyPrefab;
 
-    private readonly List<EnemyActor> _alive = new List<EnemyActor>();
+    private readonly List<Enemy> _alive = new List<Enemy>();
     private readonly List<WaveRuntime> _waves = new List<WaveRuntime>();
 
     private int _playerId;
@@ -27,6 +25,8 @@ public class EnemyManager : BaseManager
 
     public int KillCount { get; private set; }
 
+    #region Unity Methods
+
     /// <summary>
     /// 적 매니저 초기화
     /// </summary>
@@ -34,6 +34,10 @@ public class EnemyManager : BaseManager
     {
         return base.InitializeAsync();
     }
+
+    #endregion
+
+    #region Public Methods
 
     /// <summary>
     /// 판을 열고 웨이브 시계를 맞춘다.
@@ -67,7 +71,7 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
-    /// Playing 동안 스폰과 추적, 접촉 피해를 진행한다.
+    /// Playing 동안 스폰을 진행하고 살아 있는 적에게 플레이어 위치를 넘긴다.
     /// </summary>
     public void Tick(int playerId, float elapsedSeconds)
     {
@@ -76,14 +80,47 @@ public class EnemyManager : BaseManager
             return;
         }
 
-        if (!TryGetPlayerPosition(out var playerPosition, out var playerManager))
+        if (!TryGetPlayerPosition(out var playerPosition))
         {
             return;
         }
 
         SpawnWaves(elapsedSeconds, playerPosition);
-        UpdateActors(playerPosition, playerManager, playerId);
+        UpdateEnemies(playerPosition);
     }
+
+    /// <summary>
+    /// 적 체력이 0이 되면 목록에서 빼고 처치 수를 올린다.
+    /// </summary>
+    public void NotifyDied(Enemy enemy)
+    {
+        var index = _alive.IndexOf(enemy);
+        if (index < 0)
+        {
+            return;
+        }
+
+        KillAt(index, enemy);
+    }
+
+    /// <summary>
+    /// 스폰된 적이 씬과 함께 사라지면 목록에서 뺀다.
+    /// </summary>
+    public void NotifyActorDestroyed(Enemy enemy)
+    {
+        var index = _alive.IndexOf(enemy);
+        if (index < 0)
+        {
+            return;
+        }
+
+        ReleaseWaveCount(enemy.WaveIndex);
+        _alive.RemoveAt(index);
+    }
+
+    #endregion
+
+    #region Private Methods
 
     private void SpawnWaves(float elapsedSeconds, Vector2 playerPosition)
     {
@@ -162,21 +199,22 @@ public class EnemyManager : BaseManager
     private void CreateEnemy(WaveRuntime runtime, Vector2 position)
     {
         var wave = runtime.Spawn;
-        var actor = CreateActor(position);
+        var enemy = CreateActor(position);
         var maxHealth = Mathf.Max(1f, wave.MaxHealth * _hpMultiplier);
         var contactDamage = wave.ContactDamage * _damageMultiplier;
-        actor.Initialize(runtime.WaveIndex, maxHealth, contactDamage, wave.MoveSpeed);
+        enemy.Bind(this);
+        enemy.Initialize(_playerId, runtime.WaveIndex, maxHealth, contactDamage, wave.MoveSpeed);
         runtime.AliveCount++;
-        _alive.Add(actor);
+        _alive.Add(enemy);
     }
 
-    private EnemyActor CreateActor(Vector2 position)
+    private Enemy CreateActor(Vector2 position)
     {
         if (_enemyPrefab != null)
         {
-            var actor = Instantiate(_enemyPrefab, position, Quaternion.identity);
-            actor.gameObject.name = "Enemy";
-            return actor;
+            var enemy = Instantiate(_enemyPrefab, position, Quaternion.identity);
+            enemy.gameObject.name = "Enemy";
+            return enemy;
         }
 
         Debug.LogWarning("Enemy 프리팹이 없어 자리표시 액터를 만듭니다.");
@@ -187,52 +225,38 @@ public class EnemyManager : BaseManager
         var renderer = actorObject.AddComponent<SpriteRenderer>();
         renderer.sortingOrder = ACTOR_SORTING_ORDER;
 
-        var actorFallback = actorObject.AddComponent<EnemyActor>();
+        var enemyFallback = actorObject.AddComponent<Enemy>();
         actorObject.AddComponent<EnemyView>();
-        return actorFallback;
+        return enemyFallback;
     }
 
-    private void UpdateActors(Vector2 playerPosition, PlayerManager playerManager, int playerId)
+    private void UpdateEnemies(Vector2 playerPosition)
     {
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
-            var actor = _alive[i];
-            if (actor == null)
+            var enemy = _alive[i];
+            if (enemy == null)
             {
                 _alive.RemoveAt(i);
                 continue;
             }
 
-            actor.MoveToward(playerPosition, Time.deltaTime);
-            if (!actor.IsAlive)
-            {
-                continue;
-            }
-
-            if (Vector2.Distance(actor.transform.position, playerPosition) > CONTACT_RADIUS)
-            {
-                continue;
-            }
-
-            if (!actor.TryStampContact(Time.time, CONTACT_INTERVAL))
-            {
-                continue;
-            }
-
-            playerManager.TakeDamage(playerId, actor.ContactDamage);
-            if (playerManager.CurrentHealth <= 0f)
+            if (!enemy.Tick(playerPosition))
             {
                 return;
             }
         }
     }
 
-    private void KillAt(int index, EnemyActor actor)
+    private void KillAt(int index, Enemy enemy)
     {
         KillCount++;
-        ReleaseWaveCount(actor.WaveIndex);
+        ReleaseWaveCount(enemy.WaveIndex);
         _alive.RemoveAt(index);
-        Destroy(actor.gameObject);
+        if (enemy != null)
+        {
+            Destroy(enemy.gameObject);
+        }
     }
 
     private void ReleaseWaveCount(int waveIndex)
@@ -249,11 +273,10 @@ public class EnemyManager : BaseManager
         }
     }
 
-    private bool TryGetPlayerPosition(out Vector2 playerPosition, out PlayerManager playerManager)
+    private bool TryGetPlayerPosition(out Vector2 playerPosition)
     {
         playerPosition = Vector2.zero;
-        playerManager = null;
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out playerManager))
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             return false;
         }
@@ -272,16 +295,18 @@ public class EnemyManager : BaseManager
     {
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
-            var actor = _alive[i];
-            if (actor != null)
+            var enemy = _alive[i];
+            _alive.RemoveAt(i);
+            if (enemy != null)
             {
-                Destroy(actor.gameObject);
+                Destroy(enemy.gameObject);
             }
         }
 
-        _alive.Clear();
         _stageActive = false;
     }
+
+    #endregion
 
     private sealed class WaveRuntime
     {
