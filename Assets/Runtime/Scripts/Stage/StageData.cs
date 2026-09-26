@@ -2,6 +2,17 @@ using System;
 using UnityEngine;
 
 /// <summary>
+/// 배경을 이어 붙이는 방식.
+/// </summary>
+public enum StageType
+{
+    Endless = 0,
+    VerticalEndless = 1,
+    HorizontalEndless = 2,
+    Rect = 3
+}
+
+/// <summary>
 /// 시간 구간에 적을 내는 방식. 몬스터 담당이 구간 데이터로 고른다.
 /// </summary>
 public enum WaveKind
@@ -53,6 +64,9 @@ public class StageData : ScriptableObject
     [SerializeField] private float _clearTimeSeconds = 45f;
     [SerializeField] private float _enemyHpMultiplier = 1f;
     [SerializeField] private float _enemyDamageMultiplier = 1f;
+    [SerializeField] private StageType _stageType = StageType.Endless;
+    [SerializeField] private StageFieldData _fieldData;
+    [SerializeField] private bool _spawnProp;
     [SerializeField] private WaveSpawn[] _waves = Array.Empty<WaveSpawn>();
 
     public bool EndsOnTime => _endsOnTime;
@@ -62,6 +76,12 @@ public class StageData : ScriptableObject
     public float EnemyHpMultiplier => _enemyHpMultiplier;
 
     public float EnemyDamageMultiplier => _enemyDamageMultiplier;
+
+    public StageType StageType => _stageType;
+
+    public StageFieldData FieldData => _fieldData;
+
+    public bool SpawnProp => _spawnProp;
 
     public WaveSpawn[] Waves => _waves;
 }

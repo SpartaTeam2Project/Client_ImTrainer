@@ -1,25 +1,52 @@
 using UnityEngine;
 
 /// <summary>
-/// 스테이지에서 PlayerManager가 가진 플레이어 트랜스폼을 따라간다.
+/// 게임 씬 카메라를 CameraManager에 등록한다.
 /// </summary>
 public class StageCamera : MonoBehaviour
 {
-    private void LateUpdate()
+    private Camera _camera;
+
+    #region Unity Methods
+
+    private void Awake()
     {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
-        {
-            return;
-        }
-
-        var target = playerManager.PlayerTransform;
-        if (target == null)
-        {
-            return;
-        }
-
-        var position = transform.position;
-        var targetPosition = target.position;
-        transform.position = new Vector3(targetPosition.x, targetPosition.y, position.z);
+        _camera = GetComponent<Camera>();
     }
+
+    private void OnEnable()
+    {
+        Register();
+    }
+
+    private void Start()
+    {
+        Register();
+    }
+
+    private void OnDisable()
+    {
+        if (_camera == null || Managers.Instance == null || !Managers.Instance.TryGetManager<CameraManager>(out var cameraManager))
+        {
+            return;
+        }
+
+        cameraManager.ClearCamera(_camera);
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private void Register()
+    {
+        if (_camera == null || Managers.Instance == null || !Managers.Instance.TryGetManager<CameraManager>(out var cameraManager))
+        {
+            return;
+        }
+
+        cameraManager.SetCamera(_camera);
+    }
+
+    #endregion
 }

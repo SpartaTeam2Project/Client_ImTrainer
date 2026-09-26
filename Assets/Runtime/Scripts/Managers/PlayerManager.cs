@@ -17,7 +17,6 @@ public class PlayerManager : BaseManager
 
     private PlayerActor _actor;
     private PlayerView _view;
-    private StageField _stageField;
     private float _speed;
     private Vector2 _lookDirection = Vector2.right;
 
@@ -65,25 +64,6 @@ public class PlayerManager : BaseManager
     #endregion
 
     #region Public Methods
-
-    /// <summary>
-    /// 필드가 비활성화되면 같은 참조만 지운다.
-    /// </summary>
-    public void ClearStageField(StageField stageField)
-    {
-        if (_stageField == stageField)
-        {
-            _stageField = null;
-        }
-    }
-
-    /// <summary>
-    /// 이동 한계를 등록한다. 씬 검색 대신 필드가 자신을 알린다.
-    /// </summary>
-    public void SetStageField(StageField stageField)
-    {
-        _stageField = stageField;
-    }
 
     /// <summary>
     /// 로컬 플레이어를 만들고 식별자를 돌려준다.
@@ -165,9 +145,9 @@ public class PlayerManager : BaseManager
 
         var delta = movement * _speed * Time.deltaTime;
         var next = (Vector2)_actor.transform.position + delta;
-        if (_stageField != null)
+        if (Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
-            next = _stageField.ValidatePosition(next);
+            next = fieldManager.ValidatePosition(next);
         }
 
         _actor.transform.position = next;

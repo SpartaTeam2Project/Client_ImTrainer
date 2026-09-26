@@ -8,9 +8,10 @@ using UnityEngine.UI;
 public class UIGameScene : MonoBehaviour
 {
     [SerializeField] private Button _pauseButton;
-    [SerializeField] private TextMeshProUGUI _healthText;
     [SerializeField] private TextMeshProUGUI _killText;
     [SerializeField] private TextMeshProUGUI _timerText;
+
+    private GameController _gameController;
 
     private void Awake()
     {
@@ -19,18 +20,17 @@ public class UIGameScene : MonoBehaviour
 
     private void OnEnable()
     {
-        if (Managers.Instance == null)
-        {
-            return;
-        }
+        CacheGameController();
+    }
+
+    private void Start()
+    {
+        CacheGameController();
     }
 
     private void OnDisable()
     {
-        if (Managers.Instance == null)
-        {
-            return;
-        }
+        _gameController = null;
     }
 
     private void Update()
@@ -56,11 +56,8 @@ public class UIGameScene : MonoBehaviour
 
     private void RefreshCombat()
     {
-        var elapsed = 0f;
-        if (TryGetGameController(out var gameController))
-        {
-            elapsed = gameController.ElapsedSeconds;
-        }
+        CacheGameController();
+        var elapsed = _gameController != null ? _gameController.ElapsedSeconds : 0f;
 
         var kills = 0;
         if (Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
@@ -86,24 +83,18 @@ public class UIGameScene : MonoBehaviour
             _killText.text = $"처치 {kills}";
         }
 
-        if (_healthText != null)
-        {
-            _healthText.text = $"체력 {Mathf.CeilToInt(current)}/{Mathf.CeilToInt(max)}";
-        }
     }
 
 
 
-    private static bool TryGetGameController(out GameController gameController)
+    private void CacheGameController()
     {
-        gameController = null;
-        if (Managers.Instance == null)
+        if (_gameController != null || Managers.Instance == null)
         {
-            return false;
+            return;
         }
 
-        gameController = Managers.Instance.GetComponent<GameController>();
-        return gameController != null;
+        _gameController = Managers.Instance.GetComponent<GameController>();
     }
 
     private static string FormatTime(float elapsedSeconds)

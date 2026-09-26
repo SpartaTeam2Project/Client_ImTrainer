@@ -957,8 +957,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7c9e1f364758091a2b3c4d5e6f70819, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIGameScreen
-  _menuButton: {fileID: 0}
-  _fontAsset: {fileID: 0}
+  _pauseButton: {fileID: 793549879674816795}
+  _healthText: {fileID: 0}
+  _killText: {fileID: 7697157090308523848}
+  _timerText: {fileID: 2802967395106140020}
 --- !u!1 &3799326898784730959
 GameObject:
   m_ObjectHideFlags: 0
@@ -1548,11 +1550,11 @@ RectTransform:
   - {fileID: 8313139526710128371}
   m_Father: {fileID: 5963112004131019691}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 10, y: -115}
+  m_AnchorMin: {x: 1, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -165, y: -115}
   m_SizeDelta: {x: 40, y: 100}
-  m_Pivot: {x: 0, y: 1}
+  m_Pivot: {x: 1, y: 1}
 --- !u!1 &6414295614779650119
 GameObject:
   m_ObjectHideFlags: 0
@@ -1695,7 +1697,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -48, y: -145}
+  m_AnchoredPosition: {x: -50, y: -312}
   m_SizeDelta: {x: 64, y: 64}
   m_Pivot: {x: 1, y: 1}
 --- !u!222 &688632920588276416
@@ -1949,9 +1951,9 @@ RectTransform:
   - {fileID: 4208184692833090312}
   m_Father: {fileID: 5963112004131019691}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -190}
+  m_AnchorMin: {x: 1, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -165, y: -192}
   m_SizeDelta: {x: 40, y: 100}
   m_Pivot: {x: 1, y: 1}
 --- !u!1 &8202910995726309138

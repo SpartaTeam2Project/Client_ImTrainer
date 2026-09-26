@@ -29,6 +29,12 @@ public class StageController : MonoBehaviour
         }
 
         Managers.Instance.OnGameStateChanged += HandleGameStateChanged;
+        RegisterFieldRoot();
+    }
+
+    private void Start()
+    {
+        RegisterFieldRoot();
     }
 
     private void OnDisable()
@@ -46,6 +52,7 @@ public class StageController : MonoBehaviour
         Time.timeScale = 1f;
         _stageActive = false;
         UnsubscribeDeath();
+        ClearFieldRoot();
     }
 
     private void Update()
@@ -98,6 +105,11 @@ public class StageController : MonoBehaviour
 
         Time.timeScale = 1f;
         LastResult = null;
+        if (Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            fieldManager.Begin(_stageData);
+        }
+
         var playerId = playerManager.SpawnLocal(_characterStats);
         enemyManager.BeginStage(playerId, _stageData);
         if (!_deathSubscribed)
@@ -201,6 +213,10 @@ public class StageController : MonoBehaviour
         Time.timeScale = 1f;
         _stageActive = false;
         UnsubscribeDeath();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            fieldManager.Clear();
+        }
     }
 
     private void UnsubscribeDeath()
@@ -213,5 +229,25 @@ public class StageController : MonoBehaviour
 
         playerManager.OnPlayerDied -= HandlePlayerDied;
         _deathSubscribed = false;
+    }
+
+    private void RegisterFieldRoot()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            return;
+        }
+
+        fieldManager.SetRoot(transform);
+    }
+
+    private void ClearFieldRoot()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            return;
+        }
+
+        fieldManager.ClearRoot(transform);
     }
 }
