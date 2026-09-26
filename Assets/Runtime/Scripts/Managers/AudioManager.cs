@@ -14,7 +14,8 @@ public class AudioManager : BaseManager
 
     [SerializeField] private AudioDatabase _database;
 
-    private readonly Dictionary<string, AudioEntry> _entries = new Dictionary<string, AudioEntry>();
+    private readonly Dictionary<string, AudioEntry> _musicEntries = new Dictionary<string, AudioEntry>();
+    private readonly Dictionary<string, AudioEntry> _soundEntries = new Dictionary<string, AudioEntry>();
     private readonly List<AudioSource> _soundPool = new List<AudioSource>();
     private readonly List<PlayingSound> _playingSounds = new List<PlayingSound>();
 
@@ -86,7 +87,8 @@ public class AudioManager : BaseManager
 
         _playingSounds.Clear();
         _soundPool.Clear();
-        _entries.Clear();
+        _musicEntries.Clear();
+        _soundEntries.Clear();
         base.Cleanup();
     }
 
@@ -95,7 +97,7 @@ public class AudioManager : BaseManager
     /// </summary>
     public AudioSource PlaySound(string name)
     {
-        if (!TryGetEntry(name, out var entry))
+        if (!TryGetSound(name, out var entry))
         {
             return null;
         }
@@ -141,7 +143,7 @@ public class AudioManager : BaseManager
     /// </summary>
     public AudioSource PlayMusic(string name)
     {
-        if (!TryGetEntry(name, out var entry))
+        if (!TryGetMusic(name, out var entry))
         {
             return null;
         }
@@ -217,7 +219,8 @@ public class AudioManager : BaseManager
 
     private void BuildLookup()
     {
-        _entries.Clear();
+        _musicEntries.Clear();
+        _soundEntries.Clear();
 
         if (_database == null)
         {
@@ -225,23 +228,28 @@ public class AudioManager : BaseManager
             return;
         }
 
-        var entries = _database.Entries;
-        for (var i = 0; i < entries.Count; i++)
+        AddEntries(_database.Music, _musicEntries, "BGM");
+        AddEntries(_database.Sounds, _soundEntries, "효과음");
+    }
+
+    private static void AddEntries(IReadOnlyList<AudioEntry> source, Dictionary<string, AudioEntry> target, string category)
+    {
+        for (var i = 0; i < source.Count; i++)
         {
-            var entry = entries[i];
+            var entry = source[i];
             if (entry == null || string.IsNullOrEmpty(entry.Name))
             {
                 continue;
             }
 
-            if (_entries.ContainsKey(entry.Name))
+            if (target.ContainsKey(entry.Name))
             {
-                Debug.LogError($"같은 이름의 오디오가 이미 있습니다: {entry.Name}");
+                Debug.LogError($"같은 이름의 {category}이 이미 있습니다: {entry.Name}");
                 continue;
             }
 
             entry.ResetCooldown();
-            _entries.Add(entry.Name, entry);
+            target.Add(entry.Name, entry);
         }
     }
 
@@ -339,11 +347,23 @@ public class AudioManager : BaseManager
         _musicSource.volume = _musicBaseVolume * _musicVolume;
     }
 
-    private bool TryGetEntry(string name, out AudioEntry entry)
+    private bool TryGetMusic(string name, out AudioEntry entry)
     {
-        if (string.IsNullOrEmpty(name) || !_entries.TryGetValue(name, out entry))
+        if (string.IsNullOrEmpty(name) || !_musicEntries.TryGetValue(name, out entry))
         {
-            Debug.LogWarning($"오디오를 찾을 수 없습니다: {name}");
+            Debug.LogWarning($"음악을 찾을 수 없습니다: {name}");
+            entry = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryGetSound(string name, out AudioEntry entry)
+    {
+        if (string.IsNullOrEmpty(name) || !_soundEntries.TryGetValue(name, out entry))
+        {
+            Debug.LogWarning($"효과음을 찾을 수 없습니다: {name}");
             entry = null;
             return false;
         }
