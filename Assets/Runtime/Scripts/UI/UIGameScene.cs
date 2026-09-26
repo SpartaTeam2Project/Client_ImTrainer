@@ -35,7 +35,11 @@ public class UIGameScene : MonoBehaviour
 
     private void OnDisable()
     {
-        Managers.Instance.GetManager<EventManager>().Unsubscribe<GameStateChanged>(HandleGameStateChanged);
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Unsubscribe<GameStateChanged>(HandleGameStateChanged);
+        }
+
         _gameController = null;
     }
 
