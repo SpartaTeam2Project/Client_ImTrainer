@@ -167,6 +167,32 @@ public class AudioManager : BaseManager
     }
 
     /// <summary>
+    /// 재생 위치를 유지한 채 음악을 멈춘다.
+    /// </summary>
+    public void PauseMusic()
+    {
+        if (_musicSource == null)
+        {
+            return;
+        }
+
+        _musicSource.Pause();
+    }
+
+    /// <summary>
+    /// 멈춰 둔 음악을 같은 위치에서 다시 튼다.
+    /// </summary>
+    public void ResumeMusic()
+    {
+        if (_musicSource == null)
+        {
+            return;
+        }
+
+        _musicSource.UnPause();
+    }
+
+    /// <summary>
     /// 재생 중인 음악을 멈춘다.
     /// </summary>
     public void StopMusic()

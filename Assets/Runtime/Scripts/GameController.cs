@@ -42,7 +42,7 @@ public class GameController : MonoBehaviour
         }
 
         Managers.Instance.OnGameStateChanged += HandleGameStateChanged;
-        PlayMusicForState(Managers.Instance.CurrentState);
+        PlayMusicForState(GameState.Boot, Managers.Instance.CurrentState);
     }
 
     private void OnDestroy()
@@ -80,13 +80,25 @@ public class GameController : MonoBehaviour
             Time.timeScale = 1f;
         }
 
-        PlayMusicForState(newState);
+        PlayMusicForState(previousState, newState);
     }
 
-    private void PlayMusicForState(GameState state)
+    private void PlayMusicForState(GameState previousState, GameState state)
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
         {
+            return;
+        }
+
+        if (state == GameState.Paused)
+        {
+            audioManager.PauseMusic();
+            return;
+        }
+
+        if (previousState == GameState.Paused && state == GameState.Playing)
+        {
+            audioManager.ResumeMusic();
             return;
         }
 
