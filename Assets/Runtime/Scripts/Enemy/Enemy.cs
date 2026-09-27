@@ -140,11 +140,16 @@ public class Enemy : MonoBehaviour
         var next = Vector2.MoveTowards(current, target, _moveSpeed * deltaTime);
         transform.position = next;
 
-        var movement = next - current;
-        if (_view != null)
+        if (_view == null)
         {
-            _view.SetVisual(movement.sqrMagnitude > MOVE_SQR_EPSILON, movement);
+            return;
         }
+
+        // 프레임 이동량은 고주사율에서 너무 작아져 걷기 재생이 멈춘다. 추적 방향으로 판정한다.
+        var toTarget = target - current;
+        var isChasing = toTarget.sqrMagnitude > MOVE_SQR_EPSILON;
+        var lookDirection = isChasing ? toTarget : next - current;
+        _view.SetVisual(isChasing, lookDirection);
     }
 
     #endregion

@@ -12,11 +12,42 @@ public class StraightWeapon : Weapon
     private const float PLACEHOLDER_SIZE = 0.65f;
     private const int SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
+    private const float SECTOR_DEGREES = 45f;
+    private const float SECTOR_HALF_DEGREES = 22.5f;
     private static readonly Color PLACEHOLDER_COLOR = new Color(0.35f, 0.75f, 0.95f, 1f);
 
+    private enum FacingMode
+    {
+        FlipHorizontal = 0,
+        EightDirection = 1
+    }
+
+    private enum EightWay
+    {
+        Right = 0,
+        UpRight = 1,
+        Up = 2,
+        UpLeft = 3,
+        Left = 4,
+        DownLeft = 5,
+        Down = 6,
+        DownRight = 7
+    }
+
     [Header("Idle")]
+    [SerializeField] private FacingMode _facingMode = FacingMode.FlipHorizontal;
     [SerializeField] private Sprite[] _idleFrames;
     [SerializeField] private float _framesPerSecond = DEFAULT_FRAMES_PER_SECOND;
+
+    [Header("Idle Eight Direction")]
+    [SerializeField] private Sprite[] _idleRight;
+    [SerializeField] private Sprite[] _idleUpRight;
+    [SerializeField] private Sprite[] _idleUp;
+    [SerializeField] private Sprite[] _idleUpLeft;
+    [SerializeField] private Sprite[] _idleLeft;
+    [SerializeField] private Sprite[] _idleDownLeft;
+    [SerializeField] private Sprite[] _idleDown;
+    [SerializeField] private Sprite[] _idleDownRight;
 
     [Header("Projectile")]
     [SerializeField] private WeaponProjectile _projectilePrefab;
@@ -33,6 +64,7 @@ public class StraightWeapon : Weapon
     private int _playerId;
     private float _cooldownTimer;
     private bool _facingRight;
+    private EightWay _eightWay = EightWay.Right;
     private int _frameIndex;
     private float _frameTimer;
 
@@ -47,7 +79,7 @@ public class StraightWeapon : Weapon
             _renderer.sortingOrder = SORTING_ORDER;
         }
 
-        if (HasIdleFrames())
+        if (HasFrames(CurrentFrames()))
         {
             ShowIdleFrame();
             return;
@@ -94,9 +126,10 @@ public class StraightWeapon : Weapon
         _offset = WeaponSlots.GetDirection(slot) * _stats.FollowDistance;
         _cooldownTimer = 0f;
         _facingRight = false;
+        _eightWay = EightWay.Right;
         _frameIndex = 0;
         _frameTimer = 0f;
-        if (HasIdleFrames())
+        if (HasFrames(CurrentFrames()))
         {
             ShowIdleFrame();
         }
@@ -146,9 +179,61 @@ public class StraightWeapon : Weapon
         return true;
     }
 
+    /// <summary>
+    /// 좌우 모드는 그림을 뒤집고, 8방향 모드는 이동 방향에 맞는 그림을 고른다.
+    /// </summary>
+    private void ApplyFacing(Vector2 lookDirection)
+    {
+        if (_facingMode == FacingMode.EightDirection)
+        {
+            ApplyEightDirection(lookDirection);
+            return;
+        }
+
+        if (lookDirection.x > LOOK_AXIS_EPSILON)
+        {
+            _facingRight = true;
+        }
+        else if (lookDirection.x < -LOOK_AXIS_EPSILON)
+        {
+            _facingRight = false;
+        }
+
+        if (_renderer != null)
+        {
+            _renderer.flipX = _facingRight;
+        }
+    }
+
+    private void ApplyEightDirection(Vector2 lookDirection)
+    {
+        _facingRight = false;
+        if (_renderer != null)
+        {
+            _renderer.flipX = false;
+        }
+
+        if (lookDirection.sqrMagnitude <= LOOK_AXIS_EPSILON)
+        {
+            return;
+        }
+
+        var next = ResolveEightWay(lookDirection);
+        if (next == _eightWay)
+        {
+            return;
+        }
+
+        _eightWay = next;
+        _frameIndex = 0;
+        _frameTimer = 0f;
+        ShowIdleFrame();
+    }
+
     private void AdvanceIdle(float deltaTime)
     {
-        if (!HasIdleFrames() || _idleFrames.Length <= 1 || _framesPerSecond <= 0f)
+        var frames = CurrentFrames();
+        if (!HasFrames(frames) || frames.Length <= 1 || _framesPerSecond <= 0f)
         {
             return;
         }
@@ -159,7 +244,7 @@ public class StraightWeapon : Weapon
         while (_frameTimer >= frameDuration)
         {
             _frameTimer -= frameDuration;
-            _frameIndex = (_frameIndex + 1) % _idleFrames.Length;
+            _frameIndex = (_frameIndex + 1) % frames.Length;
             changed = true;
         }
 
@@ -171,17 +256,18 @@ public class StraightWeapon : Weapon
 
     private void ShowIdleFrame()
     {
-        if (_renderer == null || !HasIdleFrames())
+        var frames = CurrentFrames();
+        if (_renderer == null || !HasFrames(frames))
         {
             return;
         }
 
-        if (_frameIndex < 0 || _frameIndex >= _idleFrames.Length)
+        if (_frameIndex < 0 || _frameIndex >= frames.Length)
         {
             _frameIndex = 0;
         }
 
-        var sprite = _idleFrames[_frameIndex];
+        var sprite = frames[_frameIndex];
         if (sprite == null)
         {
             return;
@@ -189,19 +275,74 @@ public class StraightWeapon : Weapon
 
         _renderer.sprite = sprite;
         _renderer.color = Color.white;
-        _renderer.flipX = _facingRight;
+        _renderer.flipX = _facingMode == FacingMode.FlipHorizontal && _facingRight;
     }
 
-    private bool HasIdleFrames()
+    private Sprite[] CurrentFrames()
     {
-        if (_idleFrames == null || _idleFrames.Length == 0)
+        if (_facingMode == FacingMode.EightDirection)
+        {
+            return GetEightWayFrames(_eightWay);
+        }
+
+        return _idleFrames;
+    }
+
+    private Sprite[] GetEightWayFrames(EightWay way)
+    {
+        switch (way)
+        {
+            case EightWay.UpRight:
+                return FirstFrames(_idleUpRight, _idleRight);
+            case EightWay.Up:
+                return FirstFrames(_idleUp, _idleRight);
+            case EightWay.UpLeft:
+                return FirstFrames(_idleUpLeft, _idleRight);
+            case EightWay.Left:
+                return FirstFrames(_idleLeft, _idleRight);
+            case EightWay.DownLeft:
+                return FirstFrames(_idleDownLeft, _idleRight);
+            case EightWay.Down:
+                return FirstFrames(_idleDown, _idleRight);
+            case EightWay.DownRight:
+                return FirstFrames(_idleDownRight, _idleRight);
+            default:
+                return _idleRight;
+        }
+    }
+
+    private static Sprite[] FirstFrames(Sprite[] primary, Sprite[] fallback)
+    {
+        if (HasFrames(primary))
+        {
+            return primary;
+        }
+
+        return fallback;
+    }
+
+    private static EightWay ResolveEightWay(Vector2 lookDirection)
+    {
+        var angle = Mathf.Atan2(lookDirection.y, lookDirection.x) * Mathf.Rad2Deg;
+        if (angle < 0f)
+        {
+            angle += 360f;
+        }
+
+        var index = Mathf.FloorToInt((angle + SECTOR_HALF_DEGREES) / SECTOR_DEGREES) % 8;
+        return (EightWay)index;
+    }
+
+    private static bool HasFrames(Sprite[] frames)
+    {
+        if (frames == null || frames.Length == 0)
         {
             return false;
         }
 
-        for (var i = 0; i < _idleFrames.Length; i++)
+        for (var i = 0; i < frames.Length; i++)
         {
-            if (_idleFrames[i] != null)
+            if (frames[i] != null)
             {
                 return true;
             }
@@ -220,26 +361,6 @@ public class StraightWeapon : Weapon
         _renderer.sprite = PrototypeSprite.WhiteSquare;
         _renderer.color = PLACEHOLDER_COLOR;
         transform.localScale = new Vector3(PLACEHOLDER_SIZE, PLACEHOLDER_SIZE, 1f);
-    }
-
-    /// <summary>
-    /// 기본 그림이 왼쪽을 보므로, 오른쪽을 볼 때만 뒤집는다.
-    /// </summary>
-    private void ApplyFacing(Vector2 lookDirection)
-    {
-        if (lookDirection.x > LOOK_AXIS_EPSILON)
-        {
-            _facingRight = true;
-        }
-        else if (lookDirection.x < -LOOK_AXIS_EPSILON)
-        {
-            _facingRight = false;
-        }
-
-        if (_renderer != null)
-        {
-            _renderer.flipX = _facingRight;
-        }
     }
 
     private void TryAttack(float deltaTime)
