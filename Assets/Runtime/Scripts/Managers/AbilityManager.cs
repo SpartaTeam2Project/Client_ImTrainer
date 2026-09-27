@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -13,7 +14,13 @@ public class AbilityManager : BaseManager
     [Header("Weapon")]
     [SerializeField] private Weapon _startingWeaponPrefab;
 
+    private readonly Queue<int> _levelUpQueue = new Queue<int>();
+
     private Weapon _weapon;
+    private int _playerId;
+    private bool _waitingForChoice;
+
+    public int PendingLevelUpLevel { get; private set; }
 
     #region Unity Methods
 
@@ -37,6 +44,7 @@ public class AbilityManager : BaseManager
 
     public override void Cleanup()
     {
+        ClearLevelUpQueue();
         ClearWeapon();
         base.Cleanup();
     }
@@ -50,6 +58,8 @@ public class AbilityManager : BaseManager
     /// </summary>
     public void BeginStage(int playerId)
     {
+        _playerId = playerId;
+        ClearLevelUpQueue();
         ClearWeapon();
         var playerManager = GetManager<PlayerManager>();
         if (playerManager == null)
@@ -74,7 +84,31 @@ public class AbilityManager : BaseManager
     /// </summary>
     public void EndStage()
     {
+        ClearLevelUpQueue();
         ClearWeapon();
+    }
+
+    /// <summary>
+    /// 레벨업 증강 선택 진입점. 선택지가 생기면 여기서 게임을 멈추고, 고르면 CompleteLevelUpOffer로 이어 간다.
+    /// </summary>
+    public void OfferLevelUp(int playerId, int level)
+    {
+        if (playerId != _playerId || level <= 0)
+        {
+            return;
+        }
+
+        _levelUpQueue.Enqueue(level);
+        PresentLevelUpQueue();
+    }
+
+    /// <summary>
+    /// 증강 선택이 끝났을 때 남은 레벨업을 이어서 연다.
+    /// </summary>
+    public void CompleteLevelUpOffer()
+    {
+        _waitingForChoice = false;
+        PresentLevelUpQueue();
     }
 
     /// <summary>
@@ -93,6 +127,39 @@ public class AbilityManager : BaseManager
     #endregion
 
     #region Private Methods
+
+    private void PresentLevelUpQueue()
+    {
+        if (_waitingForChoice)
+        {
+            return;
+        }
+
+        while (_levelUpQueue.Count > 0)
+        {
+            PendingLevelUpLevel = _levelUpQueue.Dequeue();
+            if (!HasUpgradeChoices())
+            {
+                continue;
+            }
+
+            // 증강 목록이 생기면 GameState.LevelUp과 timeScale 0으로 선택창을 연다.
+            _waitingForChoice = true;
+            return;
+        }
+    }
+
+    private bool HasUpgradeChoices()
+    {
+        return false;
+    }
+
+    private void ClearLevelUpQueue()
+    {
+        _levelUpQueue.Clear();
+        _waitingForChoice = false;
+        PendingLevelUpLevel = 0;
+    }
 
     private Weapon CreateWeapon()
     {
