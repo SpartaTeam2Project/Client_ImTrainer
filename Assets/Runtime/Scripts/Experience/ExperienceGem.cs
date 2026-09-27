@@ -19,6 +19,7 @@ public class ExperienceGem : MonoBehaviour
     [SerializeField] private Sprite[] _frames;
     [SerializeField] private float _framesPerSecond = DEFAULT_FRAMES_PER_SECOND;
 
+    private ExperienceSound _sound;
     private int _frameIndex;
     private float _frameTimer;
 
@@ -31,6 +32,7 @@ public class ExperienceGem : MonoBehaviour
     private void Awake()
     {
         CacheRenderer();
+        _sound = GetComponent<ExperienceSound>();
     }
 
     private void OnEnable()
@@ -86,6 +88,22 @@ public class ExperienceGem : MonoBehaviour
     public float GetDistanceSqr(Vector2 target)
     {
         return ((Vector2)transform.position - target).sqrMagnitude;
+    }
+
+    /// <summary>
+    /// 프리팹에 넣은 획득음을 재생한다.
+    /// </summary>
+    public void PlayPickupSound()
+    {
+        if (_sound == null)
+        {
+            _sound = GetComponent<ExperienceSound>();
+        }
+
+        if (_sound != null)
+        {
+            _sound.Play();
+        }
     }
 
     /// <summary>

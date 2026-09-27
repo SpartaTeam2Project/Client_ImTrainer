@@ -8,7 +8,6 @@ using UnityEngine;
 public class ExperienceManager : BaseManager
 {
     private const float DROP_SCATTER_RADIUS = 0.2f;
-    private const string PICKUP_SOUND_NAME = "exp";
 
     [Header("Magnet")]
     [SerializeField] private float _magnetRadius = 2.25f;
@@ -146,8 +145,8 @@ public class ExperienceManager : BaseManager
         }
 
         var xp = gem.Xp;
+        gem.PlayPickupSound();
         gem.Release();
-        PlayPickupSound();
         if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             playerManager.AddExperience(_playerId, xp);
@@ -220,16 +219,6 @@ public class ExperienceManager : BaseManager
 
         playerPosition = playerManager.PlayerTransform.position;
         return true;
-    }
-
-    private void PlayPickupSound()
-    {
-        if (!Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
-        {
-            return;
-        }
-
-        audioManager.PlaySound(PICKUP_SOUND_NAME);
     }
 
     #endregion

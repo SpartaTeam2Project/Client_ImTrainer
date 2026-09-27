@@ -14,6 +14,9 @@ public class AbilityManager : BaseManager
     [Header("Weapon")]
     [SerializeField] private Weapon _startingWeaponPrefab;
 
+    [Header("Level Up")]
+    [SerializeField] private AudioClip _levelUpFanfare;
+
     private readonly Queue<int> _levelUpQueue = new Queue<int>();
 
     private Weapon _weapon;
@@ -138,6 +141,7 @@ public class AbilityManager : BaseManager
         while (_levelUpQueue.Count > 0)
         {
             PendingLevelUpLevel = _levelUpQueue.Dequeue();
+            PlayLevelUpSound();
             if (!HasUpgradeChoices())
             {
                 continue;
@@ -147,6 +151,16 @@ public class AbilityManager : BaseManager
             _waitingForChoice = true;
             return;
         }
+    }
+
+    private void PlayLevelUpSound()
+    {
+        if (_levelUpFanfare == null || Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(_levelUpFanfare);
     }
 
     private bool HasUpgradeChoices()
