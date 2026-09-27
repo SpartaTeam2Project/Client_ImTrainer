@@ -3,7 +3,9 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 시간 기준 스폰과 킬 수를 담당한다.
+/// 시간 기준 스폰, 활성 적 목록, 킬 수와 Pool 수명을 담당한다.
+/// 흐름: Tick => Wave 조건 => Pool.Get => Enemy.Bind/Initialize => 기존 Enemy.Tick.
+/// 사망: NotifyDied => 목록/카운트 갱신 => 상태 정리 => Pool.Return.
 /// </summary>
 public class EnemyManager : BaseManager
 {
@@ -17,6 +19,8 @@ public class EnemyManager : BaseManager
 
     private readonly List<Enemy> _alive = new List<Enemy>();
     private readonly List<WaveRuntime> _waves = new List<WaveRuntime>();
+    private CombatObjectPool _pool;
+    private GameObject _fallbackPrefab;
 
     private int _playerId;
     private float _hpMultiplier = 1f;
@@ -35,16 +39,31 @@ public class EnemyManager : BaseManager
         return base.InitializeAsync();
     }
 
+    /// <summary>
+    /// Managers 정리 시에도 Pool 참조와 객체를 남기지 않는다.
+    /// </summary>
+    public override void Cleanup()
+    {
+        ClearStage();
+        base.Cleanup();
+    }
+
     #endregion
 
     #region Public Methods
 
     /// <summary>
-    /// 판을 열고 웨이브 시계를 맞춘다.
+    /// 판을 열고 웨이브 시계를 맞춘다. 같은 Scene의 Pool은 다음 판에도 재사용한다.
+    /// stageRoot를 생략하는 기존 호출은 현재 활성 Scene에 Pool을 만든다.
     /// </summary>
-    public void BeginStage(int playerId, StageData stage)
+    public void BeginStage(int playerId, StageData stage, Transform stageRoot = null)
     {
         ClearActors();
+        if (_pool != null && (_pool.Root == null || _pool.Root.parent != stageRoot))
+        {
+            ClearStage();
+        }
+
         KillCount = 0;
         _playerId = playerId;
         _stageActive = stage != null;
@@ -58,6 +77,11 @@ public class EnemyManager : BaseManager
             return;
         }
 
+        if (_pool == null)
+        {
+            _pool = new CombatObjectPool(stageRoot);
+        }
+
         for (var i = 0; i < stage.Waves.Length; i++)
         {
             var wave = stage.Waves[i];
@@ -68,6 +92,26 @@ public class EnemyManager : BaseManager
 
             _waves.Add(new WaveRuntime(i, wave));
         }
+    }
+
+    /// <summary>
+    /// 판 종료 시 활성 적을 반환한다. 결과에 쓸 KillCount와 재사용할 Pool은 유지한다.
+    /// </summary>
+    public void EndStage()
+    {
+        ClearActors();
+        _waves.Clear();
+    }
+
+    /// <summary>
+    /// Scene을 떠날 때 활성 적 반환 후 Pool 전체와 자리표시 원본을 정리한다.
+    /// </summary>
+    public void ClearStage()
+    {
+        EndStage();
+        _pool?.DestroyAll();
+        _pool = null;
+        _fallbackPrefab = null;
     }
 
     /// <summary>
@@ -200,8 +244,14 @@ public class EnemyManager : BaseManager
     {
         var wave = runtime.Spawn;
         var enemy = CreateActor(position);
+        if (enemy == null)
+        {
+            return;
+        }
+
         var maxHealth = Mathf.Max(1f, wave.MaxHealth * _hpMultiplier);
         var contactDamage = wave.ContactDamage * _damageMultiplier;
+        // 재사용 여부와 관계없이 기존 Enemy 계약으로 상태를 넣은 뒤 Tick에 등록한다.
         enemy.Bind(this);
         enemy.Initialize(_playerId, runtime.WaveIndex, maxHealth, contactDamage, wave.MoveSpeed);
         runtime.AliveCount++;
@@ -210,24 +260,36 @@ public class EnemyManager : BaseManager
 
     private Enemy CreateActor(Vector2 position)
     {
-        if (_enemyPrefab != null)
+        if (_pool == null || _pool.Root == null)
         {
-            var enemy = Instantiate(_enemyPrefab, position, Quaternion.identity);
-            enemy.gameObject.name = "Enemy";
-            return enemy;
+            return null;
         }
 
-        Debug.LogWarning("Enemy 프리팹이 없어 자리표시 액터를 만듭니다.");
-        var actorObject = new GameObject("Enemy");
-        actorObject.transform.position = position;
-        actorObject.transform.localScale = new Vector3(ACTOR_SIZE, ACTOR_SIZE, 1f);
+        var prefab = _enemyPrefab != null ? _enemyPrefab.gameObject : _fallbackPrefab;
+        if (prefab == null)
+        {
+            // 기존 Prefab 미지정 동작을 유지하되, 비활성 원본 하나를 Pool에서 복제한다.
+            Debug.LogWarning("Enemy 프리팹이 없어 자리표시 액터를 만듭니다.");
+            _fallbackPrefab = new GameObject("Enemy Fallback");
+            _fallbackPrefab.SetActive(false);
+            _fallbackPrefab.transform.SetParent(_pool.Root, false);
+            _fallbackPrefab.transform.localScale = new Vector3(ACTOR_SIZE, ACTOR_SIZE, 1f);
 
-        var renderer = actorObject.AddComponent<SpriteRenderer>();
-        renderer.sortingOrder = ACTOR_SORTING_ORDER;
+            var renderer = _fallbackPrefab.AddComponent<SpriteRenderer>();
+            renderer.sortingOrder = ACTOR_SORTING_ORDER;
+            _fallbackPrefab.AddComponent<Enemy>();
+            _fallbackPrefab.AddComponent<EnemyView>();
+            prefab = _fallbackPrefab;
+        }
 
-        var enemyFallback = actorObject.AddComponent<Enemy>();
-        actorObject.AddComponent<EnemyView>();
-        return enemyFallback;
+        var actorObject = _pool.Get(prefab, position, Quaternion.identity);
+        if (actorObject == null)
+        {
+            return null;
+        }
+
+        actorObject.name = "Enemy";
+        return actorObject.GetComponent<Enemy>();
     }
 
     private void UpdateEnemies(Vector2 playerPosition)
@@ -253,10 +315,7 @@ public class EnemyManager : BaseManager
         KillCount++;
         ReleaseWaveCount(enemy.WaveIndex);
         _alive.RemoveAt(index);
-        if (enemy != null)
-        {
-            Destroy(enemy.gameObject);
-        }
+        ReturnEnemy(enemy);
     }
 
     private void ReleaseWaveCount(int waveIndex)
@@ -293,17 +352,32 @@ public class EnemyManager : BaseManager
 
     private void ClearActors()
     {
+        _stageActive = false;
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
             var enemy = _alive[i];
             _alive.RemoveAt(i);
             if (enemy != null)
             {
-                Destroy(enemy.gameObject);
+                // Stage 종료는 처치가 아니다. KillCount를 올리지 않고 Wave 수만 줄인다.
+                ReleaseWaveCount(enemy.WaveIndex);
+                ReturnEnemy(enemy);
             }
         }
+    }
 
-        _stageActive = false;
+    private void ReturnEnemy(Enemy enemy)
+    {
+        if (enemy == null)
+        {
+            return;
+        }
+
+        // 비활성 보관 중의 피해/파괴 알림이 기존 판의 상태를 바꾸지 않도록 해제한다.
+        // Enemy 내부 수정 없이 기존 Initialize로 HP, WaveIndex, 접촉 시각 등을 비운다.
+        enemy.Bind(null);
+        enemy.Initialize(0, -1, 0f, 0f, 0f);
+        _pool?.Return(enemy.gameObject);
     }
 
     #endregion
