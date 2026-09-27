@@ -156,7 +156,8 @@ public class UIGameScene : MonoBehaviour
             return;
         }
 
-        _backgroundTint.Hide(hideInstantly);
+        var hideResultTint = state == GameState.Victory || state == GameState.Defeat;
+        _backgroundTint.Hide(hideInstantly || hideResultTint);
     }
 
 

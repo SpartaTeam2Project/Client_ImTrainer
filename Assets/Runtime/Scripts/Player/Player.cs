@@ -125,6 +125,7 @@ public class Player : MonoBehaviour
         if (_view != null)
         {
             _view.SetVisual(false, _lookDirection);
+            _view.ShowDeathLight();
         }
 
         if (_owner != null)

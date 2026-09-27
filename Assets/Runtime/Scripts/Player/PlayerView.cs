@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
@@ -17,10 +18,16 @@ public enum PlayerFacing
 public class PlayerView : MonoBehaviour
 {
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
+    private const int DEATH_SORTING_ORDER = 102;
+    private const float DEATH_FADE_DURATION = 0.3f;
+    private const float DEATH_BACKGROUND_ALPHA = 0.98f;
+    private const float DEATH_BOTTOM_ALPHA = 0.8f;
     private static readonly Color PLACEHOLDER_COLOR = new Color(0.95f, 0.85f, 0.2f, 1f);
 
     [Header("Renderer")]
     [SerializeField] private SpriteRenderer _spriteRenderer;
+    [SerializeField] private SpriteRenderer _deathBackground;
+    [SerializeField] private SpriteRenderer _deathBottom;
 
     [Header("Timing")]
     [SerializeField] private float _framesPerSecond = DEFAULT_FRAMES_PER_SECOND;
@@ -43,6 +50,8 @@ public class PlayerView : MonoBehaviour
     private Sprite[] _currentFrames;
     private int _frameIndex;
     private float _frameTimer;
+    private Tweener _backgroundFade;
+    private Tweener _bottomFade;
 
     #region Unity Methods
 
@@ -57,6 +66,14 @@ public class PlayerView : MonoBehaviour
     private void Update()
     {
         AdvanceFrames();
+    }
+
+    private void OnDisable()
+    {
+        KillFade(_backgroundFade);
+        KillFade(_bottomFade);
+        _backgroundFade = null;
+        _bottomFade = null;
     }
 
     #endregion
@@ -87,9 +104,50 @@ public class PlayerView : MonoBehaviour
         ApplyCurrentSprite();
     }
 
+    /// <summary>
+    /// 화면을 어둡게 덮고 발밑 원만 밝혀, 캐릭터 스프라이트가 그 위에 남게 한다.
+    /// 사망 직후 시간이 멈추므로 페이드는 스케일을 무시한다.
+    /// </summary>
+    public void ShowDeathLight()
+    {
+        if (_spriteRenderer != null)
+        {
+            _spriteRenderer.sortingOrder = DEATH_SORTING_ORDER;
+        }
+
+        _backgroundFade = FadeDeathSprite(_deathBackground, DEATH_BACKGROUND_ALPHA, _backgroundFade);
+        _bottomFade = FadeDeathSprite(_deathBottom, DEATH_BOTTOM_ALPHA, _bottomFade);
+    }
+
     #endregion
 
     #region Private Methods
+
+    private Tweener FadeDeathSprite(SpriteRenderer renderer, float alpha, Tweener current)
+    {
+        if (renderer == null)
+        {
+            Debug.LogError("사망 조명 스프라이트가 없습니다.");
+            return null;
+        }
+
+        KillFade(current);
+        renderer.gameObject.SetActive(true);
+        var color = renderer.color;
+        color.a = 0f;
+        renderer.color = color;
+        return renderer.DOFade(alpha, DEATH_FADE_DURATION).SetUpdate(true);
+    }
+
+    private static void KillFade(Tweener tween)
+    {
+        if (tween == null)
+        {
+            return;
+        }
+
+        tween.Kill();
+    }
 
     private void AdvanceFrames()
     {
