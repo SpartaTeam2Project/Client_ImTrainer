@@ -104,6 +104,37 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
+    /// 원점부터 사거리 안에서 가장 가까운 살아 있는 적을 찾는다.
+    /// </summary>
+    public bool TryGetClosest(Vector2 origin, float range, out Enemy enemy)
+    {
+        enemy = null;
+        var closestSqr = range * range;
+        var found = false;
+        for (var i = 0; i < _alive.Count; i++)
+        {
+            var candidate = _alive[i];
+            if (candidate == null || !candidate.IsAlive)
+            {
+                continue;
+            }
+
+            var offset = (Vector2)candidate.transform.position - origin;
+            var sqr = offset.sqrMagnitude;
+            if (sqr > closestSqr)
+            {
+                continue;
+            }
+
+            closestSqr = sqr;
+            enemy = candidate;
+            found = true;
+        }
+
+        return found;
+    }
+
+    /// <summary>
     /// 스폰된 적이 씬과 함께 사라지면 목록에서 뺀다.
     /// </summary>
     public void NotifyActorDestroyed(Enemy enemy)

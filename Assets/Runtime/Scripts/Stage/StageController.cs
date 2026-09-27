@@ -112,6 +112,10 @@ public class StageController : MonoBehaviour
 
         var playerId = playerManager.SpawnLocal(_characterStats);
         enemyManager.BeginStage(playerId, _stageData);
+        if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        {
+            abilityManager.BeginStage(playerId);
+        }
         if (!_deathSubscribed)
         {
             playerManager.OnPlayerDied += HandlePlayerDied;
@@ -212,6 +216,10 @@ public class StageController : MonoBehaviour
 
         _stageActive = false;
         UnsubscribeDeath();
+        if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        {
+            abilityManager.EndStage();
+        }
 
         var killCount = 0;
         if (Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
@@ -234,6 +242,11 @@ public class StageController : MonoBehaviour
         Time.timeScale = 1f;
         _stageActive = false;
         UnsubscribeDeath();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        {
+            abilityManager.EndStage();
+        }
+
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
             fieldManager.Clear();
