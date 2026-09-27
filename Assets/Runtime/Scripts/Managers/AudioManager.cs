@@ -7,6 +7,7 @@ using UnityEngine;
 /// </summary>
 public class AudioManager : BaseManager
 {
+    private const string MASTER_VOLUME_KEY = "Audio.MasterVolume";
     private const string SOUND_VOLUME_KEY = "Audio.SoundVolume";
     private const string MUSIC_VOLUME_KEY = "Audio.MusicVolume";
     private const int INITIAL_SOUND_POOL_SIZE = 2;
@@ -22,8 +23,20 @@ public class AudioManager : BaseManager
     private AudioListener _audioListener;
     private AudioSource _musicSource;
     private float _musicBaseVolume;
+    private float _masterVolume = DEFAULT_VOLUME;
     private float _soundVolume = DEFAULT_VOLUME;
     private float _musicVolume = DEFAULT_VOLUME;
+
+    public float MasterVolume
+    {
+        get => _masterVolume;
+        set
+        {
+            _masterVolume = Mathf.Clamp01(value);
+            ApplyMasterVolume();
+            SaveVolume(MASTER_VOLUME_KEY, _masterVolume);
+        }
+    }
 
     public float SoundVolume
     {
@@ -211,10 +224,20 @@ public class AudioManager : BaseManager
 
     private void LoadVolumes()
     {
-        _soundVolume = PlayerPrefs.GetFloat(SOUND_VOLUME_KEY, DEFAULT_VOLUME);
-        _musicVolume = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, DEFAULT_VOLUME);
-        _soundVolume = Mathf.Clamp01(_soundVolume);
-        _musicVolume = Mathf.Clamp01(_musicVolume);
+        _masterVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, DEFAULT_VOLUME));
+        _soundVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(SOUND_VOLUME_KEY, DEFAULT_VOLUME));
+        _musicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, DEFAULT_VOLUME));
+        ApplyMasterVolume();
+    }
+
+    private void ApplyMasterVolume()
+    {
+        if (_audioListener == null)
+        {
+            return;
+        }
+
+        AudioListener.volume = _masterVolume;
     }
 
     private void BuildLookup()
