@@ -59,10 +59,17 @@ public class UIPauseWindow : MonoBehaviour
     }
 
     /// <summary>
-    /// 설정 창은 이후 작업에서 연다.
+    /// 일시정지를 유지한 채 설정 창을 연다.
     /// </summary>
     public void OpenSettings()
     {
+        if (Managers.Instance == null || Managers.Instance.SettingsWindow == null)
+        {
+            Debug.LogError("설정 창이 없습니다.");
+            return;
+        }
+
+        Managers.Instance.SettingsWindow.Open();
     }
 
     /// <summary>

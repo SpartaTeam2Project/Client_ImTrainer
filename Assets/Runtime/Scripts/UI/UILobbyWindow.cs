@@ -20,7 +20,6 @@ public class UILobbyWindow : MonoBehaviour
     [SerializeField] private Button _loginButton;
     [SerializeField] private Button _registerButton;
     [SerializeField] private Button _settingsButton;
-    [SerializeField] private UISettingsWindow _settingsWindow;
     [SerializeField] private Sprite _idleSprite;
     [SerializeField] private Sprite _selectedSprite;
     [SerializeField] private GameObject _settingsSelect;
@@ -30,7 +29,7 @@ public class UILobbyWindow : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null || _settingsWindow == null)
+        if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null)
         {
             Debug.LogError("로비 버튼 선택에 필요한 참조가 없습니다.");
         }
@@ -46,7 +45,8 @@ public class UILobbyWindow : MonoBehaviour
 
     private void Update()
     {
-        if (_settingsWindow != null && _settingsWindow.IsOpen)
+        var settingsWindow = GetSettingsWindow();
+        if (settingsWindow != null && settingsWindow.IsOpen)
         {
             return;
         }
@@ -227,13 +227,24 @@ public class UILobbyWindow : MonoBehaviour
 
     private void OpenSettings()
     {
-        if (_settingsWindow == null)
+        var settingsWindow = GetSettingsWindow();
+        if (settingsWindow == null)
         {
             Debug.LogError("설정 창이 없습니다.");
             return;
         }
 
-        _settingsWindow.Open();
+        settingsWindow.Open();
+    }
+
+    private static UISettingsWindow GetSettingsWindow()
+    {
+        if (Managers.Instance == null)
+        {
+            return null;
+        }
+
+        return Managers.Instance.SettingsWindow;
     }
 
     private void PlayButtonClick()

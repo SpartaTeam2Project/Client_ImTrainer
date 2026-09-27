@@ -22,10 +22,16 @@ public class Managers : MonoBehaviour
     [SerializeField] private ExperienceManager _experienceManager;
     [SerializeField] private AbilityManager _abilityManager;
     [SerializeField] private SceneLoadManager _sceneLoadManager;
+    [SerializeField] private UISettingsWindow _settingsWindow;
 
     private readonly Dictionary<System.Type, BaseManager> _managers = new Dictionary<System.Type, BaseManager>();
 
     public GameState CurrentState { get; private set; } = GameState.Boot;
+
+    /// <summary>
+    /// 타이틀과 게임에서 같이 여는 설정 창.
+    /// </summary>
+    public UISettingsWindow SettingsWindow => _settingsWindow;
 
     public bool IsSimulationRunning => CurrentState == GameState.Playing;
 

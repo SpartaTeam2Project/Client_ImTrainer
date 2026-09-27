@@ -157,6 +157,12 @@ public class StageController : MonoBehaviour
 
     private void TogglePause(GameState state)
     {
+        var settingsWindow = Managers.Instance.SettingsWindow;
+        if (settingsWindow != null && settingsWindow.IsOpen)
+        {
+            return;
+        }
+
         if (!Managers.Instance.TryGetManager<InputManager>(out var inputManager) || !inputManager.ConsumePausePressed())
         {
             return;
