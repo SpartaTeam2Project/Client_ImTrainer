@@ -52,6 +52,11 @@ public class StageController : MonoBehaviour
         Time.timeScale = 1f;
         _stageActive = false;
         UnsubscribeDeath();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
+        {
+            enemyManager.ClearStage();
+        }
+
         ClearFieldRoot();
     }
 
@@ -111,7 +116,7 @@ public class StageController : MonoBehaviour
         }
 
         var playerId = playerManager.SpawnLocal(_characterStats);
-        enemyManager.BeginStage(playerId, _stageData);
+        enemyManager.BeginStage(playerId, _stageData, transform);
         if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
         {
             abilityManager.BeginStage(playerId);
@@ -235,6 +240,8 @@ public class StageController : MonoBehaviour
         if (Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
         {
             killCount = enemyManager.KillCount;
+            // 결과용 KillCount를 유지하면서 남아 있는 Enemy를 Pool로 반환한다.
+            enemyManager.EndStage();
         }
 
         LastResult = new StageResult(killCount, _gameController.ElapsedSeconds);
@@ -252,6 +259,11 @@ public class StageController : MonoBehaviour
         Time.timeScale = 1f;
         _stageActive = false;
         UnsubscribeDeath();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
+        {
+            enemyManager.ClearStage();
+        }
+
         if (Managers.Instance != null && Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
         {
             abilityManager.EndStage();
