@@ -62,6 +62,26 @@ public class AudioManager : BaseManager
 
     private void Awake()
     {
+        if (IsDuplicateManagers())
+        {
+            return;
+        }
+
+        EnsureAudioListener();
+    }
+
+    /// <summary>
+    /// 타이틀로 돌아올 때 씬에 다시 생긴 Managers는 파괴 전까지 Awake가 돈다.
+    /// 그 쪽에서 리스너를 붙이면 기존 리스너와 겹친다.
+    /// </summary>
+    private bool IsDuplicateManagers()
+    {
+        var managers = GetComponent<Managers>();
+        return managers != null && Managers.Instance != null && Managers.Instance != managers;
+    }
+
+    private void EnsureAudioListener()
+    {
         _audioListener = GetComponent<AudioListener>();
         if (_audioListener == null)
         {
