@@ -9,7 +9,10 @@ public class UIGameScene : MonoBehaviour
 {
     [SerializeField] private Button _pauseButton;
     [SerializeField] private GameObject _pauseWindow;
+    [SerializeField] private GameObject _combatHud;
     [SerializeField] private BackgroundTintUI _backgroundTint;
+    [SerializeField] private StageCompleteScreen _stageCompleteScreen;
+    [SerializeField] private StageFailedScreen _stageFailedScreen;
     [SerializeField] private TextMeshProUGUI _killText;
     [SerializeField] private TextMeshProUGUI _timerText;
     [SerializeField] private TextMeshProUGUI _levelText;
@@ -28,6 +31,7 @@ public class UIGameScene : MonoBehaviour
         Managers.Instance.GetManager<EventManager>().Subscribe<GameStateChanged>(HandleGameStateChanged);
         var state = Managers.Instance.CurrentState;
         ApplyPauseWindow(state, state != GameState.Paused);
+        ApplyResultScreens(state);
         RefreshExperience();
     }
 
@@ -81,6 +85,56 @@ public class UIGameScene : MonoBehaviour
     private void HandleGameStateChanged(GameStateChanged changed)
     {
         ApplyPauseWindow(changed.Next, changed.Previous != GameState.Paused);
+        ApplyResultScreens(changed.Next);
+    }
+
+    private void ApplyResultScreens(GameState state)
+    {
+        var showResult = state == GameState.Victory || state == GameState.Defeat;
+        if (_combatHud != null)
+        {
+            _combatHud.SetActive(!showResult);
+        }
+
+        if (state == GameState.Victory)
+        {
+            if (_stageFailedScreen != null)
+            {
+                _stageFailedScreen.Hide();
+            }
+
+            if (_stageCompleteScreen != null)
+            {
+                _stageCompleteScreen.Show();
+            }
+
+            return;
+        }
+
+        if (state == GameState.Defeat)
+        {
+            if (_stageCompleteScreen != null)
+            {
+                _stageCompleteScreen.Hide();
+            }
+
+            if (_stageFailedScreen != null)
+            {
+                _stageFailedScreen.Show();
+            }
+
+            return;
+        }
+
+        if (_stageCompleteScreen != null)
+        {
+            _stageCompleteScreen.Hide();
+        }
+
+        if (_stageFailedScreen != null)
+        {
+            _stageFailedScreen.Hide();
+        }
     }
 
     private void ApplyPauseWindow(GameState state, bool hideInstantly)
