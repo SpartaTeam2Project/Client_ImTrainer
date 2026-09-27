@@ -11,6 +11,7 @@ public class Player : MonoBehaviour
 
     private PlayerManager _owner;
     private PlayerView _view;
+    private HealthbarBehavior _healthbar;
     private Vector2 _lookDirection = Vector2.right;
 
     public float Speed { get; private set; }
@@ -73,6 +74,14 @@ public class Player : MonoBehaviour
         {
             _view.SetVisual(false, _lookDirection);
         }
+
+        _healthbar = GetComponentInChildren<HealthbarBehavior>(true);
+        if (_healthbar != null)
+        {
+            _healthbar.SetAutoShowOnChanged(true);
+            _healthbar.SetAutoHideWhenMax(true);
+            _healthbar.Apply(CurrentHealth, MaxHealth);
+        }
     }
 
     /// <summary>
@@ -116,6 +125,11 @@ public class Player : MonoBehaviour
         }
 
         CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+        if (_healthbar != null)
+        {
+            _healthbar.Apply(CurrentHealth, MaxHealth);
+        }
+
         if (CurrentHealth > 0f)
         {
             return;
