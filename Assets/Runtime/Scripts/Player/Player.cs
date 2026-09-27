@@ -1,11 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// 스폰된 플레이어 한 명의 체력, 이동, 시선을 담당한다.
+/// 스폰된 플레이어 한 명의 체력, 이동, 시선, 레벨을 담당한다.
 /// </summary>
 public class Player : MonoBehaviour
 {
     private const float MOVE_SQR_EPSILON = 0.0001f;
+    private const int STARTING_LEVEL = 1;
+    private const float STARTING_REQUIRED_XP = 5f;
 
     private PlayerManager _owner;
     private PlayerView _view;
@@ -20,6 +22,12 @@ public class Player : MonoBehaviour
     public float MaxHealth { get; private set; }
 
     public bool IsAlive { get; private set; }
+
+    public int Level { get; private set; } = STARTING_LEVEL;
+
+    public float CurrentXp { get; private set; }
+
+    public float RequiredXp { get; private set; } = STARTING_REQUIRED_XP;
 
     #region Unity Methods
 
@@ -58,6 +66,7 @@ public class Player : MonoBehaviour
         Speed = Mathf.Max(0f, speed);
         _lookDirection = Vector2.right;
         IsAlive = true;
+        SetProgress(STARTING_LEVEL, 0f, STARTING_REQUIRED_XP);
 
         _view = GetComponent<PlayerView>();
         if (_view != null)
@@ -122,6 +131,16 @@ public class Player : MonoBehaviour
         {
             _owner.NotifyDied(this);
         }
+    }
+
+    /// <summary>
+    /// 레벨과 경험치 게이지를 맞춘다.
+    /// </summary>
+    public void SetProgress(int level, float currentXp, float requiredXp)
+    {
+        Level = Mathf.Max(STARTING_LEVEL, level);
+        CurrentXp = Mathf.Max(0f, currentXp);
+        RequiredXp = Mathf.Max(1f, requiredXp);
     }
 
     #endregion

@@ -281,13 +281,25 @@ public class EnemyManager : BaseManager
 
     private void KillAt(int index, Enemy enemy)
     {
+        var dropPosition = enemy != null ? (Vector2)enemy.transform.position : Vector2.zero;
         KillCount++;
         ReleaseWaveCount(enemy.WaveIndex);
         _alive.RemoveAt(index);
+        DropExperience(dropPosition, enemy != null ? enemy.ExperienceGem : null);
         if (enemy != null)
         {
             Destroy(enemy.gameObject);
         }
+    }
+
+    private void DropExperience(Vector2 position, ExperienceGem gem)
+    {
+        if (gem == null || Managers.Instance == null || !Managers.Instance.TryGetManager<ExperienceManager>(out var experienceManager))
+        {
+            return;
+        }
+
+        experienceManager.Drop(_playerId, position, gem);
     }
 
     private void ReleaseWaveCount(int waveIndex)

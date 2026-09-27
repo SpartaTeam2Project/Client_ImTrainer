@@ -9,6 +9,9 @@ public class Enemy : MonoBehaviour
     private const float CONTACT_RADIUS = 0.75f;
     private const float CONTACT_INTERVAL = 0.6f;
 
+    [Header("Drop")]
+    [SerializeField] private ExperienceGem _experienceGem;
+
     private EnemyManager _owner;
     private EnemyView _view;
     private int _playerId;
@@ -23,6 +26,8 @@ public class Enemy : MonoBehaviour
     public int WaveIndex => _waveIndex;
 
     public bool IsAlive => _health > 0f;
+
+    public ExperienceGem ExperienceGem => _experienceGem;
 
     #region Unity Methods
 

@@ -370,6 +370,7 @@ GameObject:
   - component: {fileID: 700000025}
   - component: {fileID: 700000026}
   - component: {fileID: 700000027}
+  - component: {fileID: 700000029}
   - component: {fileID: 700000028}
   m_Layer: 0
   m_Name: Managers
@@ -412,6 +413,7 @@ MonoBehaviour:
   _cameraManager: {fileID: 700000026}
   _stageFieldManager: {fileID: 700000027}
   _enemyManager: {fileID: 700000007}
+  _experienceManager: {fileID: 700000029}
   _abilityManager: {fileID: 700000028}
   _sceneLoadManager: {fileID: 700000008}
 --- !u!114 &700000004
@@ -450,6 +452,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f590a26b524abfe44be00004a6666a8c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _baseRequiredXp: 5
+  _requiredGrowth: 1.25
   _playerPrefab: {fileID: 100004, guid: f46b9d7ca8239e1f3d5b6a7c8e9f0b1d, type: 3}
 --- !u!114 &700000007
 MonoBehaviour:
@@ -538,6 +542,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _startingWeaponPrefab: {fileID: 200004, guid: b7e1c4a29d0f4e6a8c1b2d3e4f5a6b81, type: 3}
+  _levelUpFanfare: {fileID: 8300000, guid: 408c37f972fdab44f9e35b0d993c650c, type: 3}
+--- !u!114 &700000029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7a1c9b24d8f4e6a9c0b1d2e3f4a5b70, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _magnetRadius: 1
+  _pickupRadius: 0.35
+  _attractSpeed: 12
 --- !u!1 &700000050
 GameObject:
   m_ObjectHideFlags: 0

@@ -3,13 +3,54 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
+/// 플레이어 경험치 게이지가 바뀌었다.
+/// </summary>
+public struct PlayerExperienceChanged
+{
+    public int PlayerId;
+    public int Level;
+    public float CurrentXp;
+    public float RequiredXp;
+
+    public PlayerExperienceChanged(int playerId, int level, float currentXp, float requiredXp)
+    {
+        PlayerId = playerId;
+        Level = level;
+        CurrentXp = currentXp;
+        RequiredXp = requiredXp;
+    }
+}
+
+/// <summary>
+/// 플레이어 레벨이 올랐다. 증강 선택은 이 값을 받아 나중에 연다.
+/// </summary>
+public struct PlayerLeveledUp
+{
+    public int PlayerId;
+    public int Level;
+
+    public PlayerLeveledUp(int playerId, int level)
+    {
+        PlayerId = playerId;
+        Level = level;
+    }
+}
+
+/// <summary>
 /// 로컬 플레이어의 식별자와 스폰된 플레이어 참조를 소유한다.
 /// </summary>
 public class PlayerManager : BaseManager
 {
     private const int LOCAL_PLAYER_ID_VALUE = 1;
+    private const int STARTING_LEVEL = 1;
+    private const int MAX_LEVEL_UPS_PER_GAIN = 20;
+    private const float MIN_REQUIRED_XP = 1f;
     private const float ACTOR_SIZE = 0.9f;
     private const int ACTOR_SORTING_ORDER = 10;
+
+    [Header("Experience")]
+    [SerializeField] private float _baseRequiredXp = 5f;
+    [SerializeField] private float _requiredGrowth = 1.25f;
 
     [Header("Player Settings")]
     [SerializeField] private Player _playerPrefab;
@@ -30,7 +71,15 @@ public class PlayerManager : BaseManager
 
     public bool IsAlive => _player != null && _player.IsAlive;
 
+    public int Level => _player == null ? STARTING_LEVEL : _player.Level;
+
+    public float CurrentXp => _player == null ? 0f : _player.CurrentXp;
+
+    public float RequiredXp => _player == null ? CalculateRequiredXp(STARTING_LEVEL) : _player.RequiredXp;
+
     public event Action<int> OnPlayerDied;
+
+    public event Action<int, int> OnLevelUp;
 
     #region Unity Methods
 
@@ -71,7 +120,42 @@ public class PlayerManager : BaseManager
         _player = CreatePlayer();
         _player.Bind(this);
         _player.Initialize(stats);
+        _player.SetProgress(STARTING_LEVEL, 0f, CalculateRequiredXp(STARTING_LEVEL));
         return LocalPlayerId;
+    }
+
+    /// <summary>
+    /// 플레이어 식별자에 경험치를 더한다. 필요량을 채우면 레벨을 올린다.
+    /// </summary>
+    public void AddExperience(int playerId, float amount)
+    {
+        if (playerId != LocalPlayerId || _player == null || amount <= 0f)
+        {
+            return;
+        }
+
+        var xp = _player.CurrentXp + amount;
+        var level = _player.Level;
+        var required = Mathf.Max(MIN_REQUIRED_XP, _player.RequiredXp);
+        var safety = 0;
+        while (xp >= required && safety < MAX_LEVEL_UPS_PER_GAIN)
+        {
+            xp -= required;
+            level++;
+            required = CalculateRequiredXp(level);
+            safety++;
+            _player.SetProgress(level, xp, required);
+            PublishExperience(playerId);
+            NotifyLevelUp(playerId, level);
+        }
+
+        if (safety > 0)
+        {
+            return;
+        }
+
+        _player.SetProgress(level, xp, required);
+        PublishExperience(playerId);
     }
 
     /// <summary>
@@ -116,6 +200,38 @@ public class PlayerManager : BaseManager
     #endregion
 
     #region Private Methods
+
+    private float CalculateRequiredXp(int level)
+    {
+        var step = Mathf.Max(STARTING_LEVEL, level);
+        var growth = Mathf.Max(1f, _requiredGrowth);
+        var required = Mathf.Max(MIN_REQUIRED_XP, _baseRequiredXp) * Mathf.Pow(growth, step - 1);
+        return Mathf.Max(MIN_REQUIRED_XP, required);
+    }
+
+    private void NotifyLevelUp(int playerId, int level)
+    {
+        OnLevelUp?.Invoke(playerId, level);
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(new PlayerLeveledUp(playerId, level));
+        }
+
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        {
+            abilityManager.OfferLevelUp(playerId, level);
+        }
+    }
+
+    private void PublishExperience(int playerId)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager) || _player == null)
+        {
+            return;
+        }
+
+        eventManager.Publish(new PlayerExperienceChanged(playerId, _player.Level, _player.CurrentXp, _player.RequiredXp));
+    }
 
     private Player CreatePlayer()
     {

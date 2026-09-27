@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 인게임 화면. 생존 시간, 킬, 체력과 승패 문구를 보여 준다.
+/// 인게임 화면. 생존 시간, 킬, 레벨, 경험치 게이지를 보여 준다.
 /// </summary>
 public class UIGameScene : MonoBehaviour
 {
@@ -12,6 +12,8 @@ public class UIGameScene : MonoBehaviour
     [SerializeField] private BackgroundTintUI _backgroundTint;
     [SerializeField] private TextMeshProUGUI _killText;
     [SerializeField] private TextMeshProUGUI _timerText;
+    [SerializeField] private TextMeshProUGUI _levelText;
+    [SerializeField] private RectMask2D _experienceMask;
 
     private GameController _gameController;
 
@@ -26,6 +28,7 @@ public class UIGameScene : MonoBehaviour
         Managers.Instance.GetManager<EventManager>().Subscribe<GameStateChanged>(HandleGameStateChanged);
         var state = Managers.Instance.CurrentState;
         ApplyPauseWindow(state, state != GameState.Paused);
+        RefreshExperience();
     }
 
     private void Start()
@@ -132,6 +135,37 @@ public class UIGameScene : MonoBehaviour
             _killText.text = $"처치 {kills}";
         }
 
+        RefreshExperience();
+    }
+
+    private void RefreshExperience()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return;
+        }
+
+        if (_levelText != null)
+        {
+            _levelText.text = $"LVL {playerManager.Level}";
+        }
+
+        if (_experienceMask == null)
+        {
+            return;
+        }
+
+        var width = _experienceMask.rectTransform.rect.width;
+        if (width <= 0f)
+        {
+            return;
+        }
+
+        var required = playerManager.RequiredXp;
+        var progress = required <= 0f ? 0f : Mathf.Clamp01(playerManager.CurrentXp / required);
+        var padding = _experienceMask.padding;
+        padding.z = width * (1f - progress);
+        _experienceMask.padding = padding;
     }
 
 
