@@ -14,13 +14,29 @@ public class Player : MonoBehaviour
     private HealthbarBehavior _healthbar;
     private Vector2 _lookDirection = Vector2.right;
 
-    public float Speed { get; private set; }
+    public float moveSpeed { get; private set; }
+
+    public float damageMultiplier { get; private set; } = 1f;
+
+    public float magnetRadius { get; private set; }
+
+    public float xpMultiplier { get; private set; } = 1f;
+
+    public float hpRegen { get; private set; }
+
+    public float cooldownMultiplier { get; private set; } = 1f;
+
+    public float projectileSpeedMultiplier { get; private set; } = 1f;
+
+    public float projectileMultiplier { get; private set; } = 1f;
+
+    public float invincibleSeconds { get; private set; }
 
     public Vector2 LookDirection => _lookDirection;
 
     public float CurrentHealth { get; private set; }
 
-    public float MaxHealth { get; private set; }
+    public float maxHealth { get; private set; }
 
     public bool IsAlive { get; private set; }
 
@@ -60,11 +76,17 @@ public class Player : MonoBehaviour
     /// </summary>
     public void Initialize(CharacterStats stats)
     {
-        var maxHealth = stats != null ? stats.MaxHealth : 1f;
-        var speed = stats != null ? stats.MoveSpeed : 0f;
-        MaxHealth = Mathf.Max(1f, maxHealth);
-        CurrentHealth = MaxHealth;
-        Speed = Mathf.Max(0f, speed);
+        maxHealth = Mathf.Max(1f, stats != null ? stats.MaxHealth : 1f);
+        CurrentHealth = maxHealth;
+        moveSpeed = Mathf.Max(0f, stats != null ? stats.MoveSpeed : 0f);
+        damageMultiplier = stats != null ? stats.DamageMultiplier : 1f;
+        magnetRadius = stats != null ? stats.MagnetRadius : 0f;
+        xpMultiplier = stats != null ? stats.XpMultiplier : 1f;
+        hpRegen = stats != null ? stats.HpRegen : 0f;
+        cooldownMultiplier = stats != null ? stats.CooldownMultiplier : 1f;
+        projectileSpeedMultiplier = stats != null ? stats.ProjectileSpeedMultiplier : 1f;
+        projectileMultiplier = stats != null ? stats.ProjectileMultiplier : 1f;
+        invincibleSeconds = stats != null ? stats.InvincibleSeconds : 0f;
         _lookDirection = Vector2.right;
         IsAlive = true;
         SetProgress(STARTING_LEVEL, 0f, STARTING_REQUIRED_XP);
@@ -80,7 +102,7 @@ public class Player : MonoBehaviour
         {
             _healthbar.SetAutoShowOnChanged(true);
             _healthbar.SetAutoHideWhenMax(true);
-            _healthbar.Apply(CurrentHealth, MaxHealth);
+            _healthbar.Apply(CurrentHealth, maxHealth);
         }
     }
 
@@ -100,7 +122,7 @@ public class Player : MonoBehaviour
             _lookDirection = movement.normalized;
         }
 
-        var delta = movement * Speed * Time.deltaTime;
+        var delta = movement * moveSpeed * Time.deltaTime;
         var next = (Vector2)transform.position + delta;
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
@@ -127,7 +149,7 @@ public class Player : MonoBehaviour
         CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
         if (_healthbar != null)
         {
-            _healthbar.Apply(CurrentHealth, MaxHealth);
+            _healthbar.Apply(CurrentHealth, maxHealth);
         }
 
         if (CurrentHealth > 0f)

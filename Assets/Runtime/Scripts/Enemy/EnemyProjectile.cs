@@ -7,7 +7,6 @@ public class EnemyProjectile : MonoBehaviour
 {
     private const float MOVE_SQR_EPSILON = 0.0001f;
     private const float PROJECTILE_SIZE = 0.45f;
-    private const float HIT_RADIUS = 0.55f;
     private const int PROJECTILE_SORTING_ORDER = 8;
     private static readonly Color PROJECTILE_COLOR = new Color(0.95f, 0.85f, 0.2f, 1f);
 
@@ -16,6 +15,7 @@ public class EnemyProjectile : MonoBehaviour
     private Vector2 _direction = Vector2.right;
     private float _speed;
     private float _remainingRange;
+    private float _hitRadius;
     private float _damage;
 
     public bool IsActive => gameObject.activeSelf;
@@ -83,13 +83,16 @@ public class EnemyProjectile : MonoBehaviour
     /// <summary>
     /// 발사 위치와 수치를 넣고 켠다. 사거리는 맞는 판정 두께만큼 더 간다.
     /// </summary>
-    public void Launch(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage)
+    public void Launch(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage, float hitRadius, float attackDistance)
     {
         _playerId = playerId;
         transform.position = position;
+        var size = Mathf.Max(0.01f, attackDistance);
+        transform.localScale = new Vector3(size, size, 1f);
         _direction = direction.sqrMagnitude > MOVE_SQR_EPSILON ? direction.normalized : Vector2.right;
         _speed = Mathf.Max(0f, speed);
-        _remainingRange = Mathf.Max(0f, range) + HIT_RADIUS;
+        _hitRadius = Mathf.Max(0f, hitRadius);
+        _remainingRange = Mathf.Max(0f, range) + _hitRadius;
         _damage = Mathf.Max(0f, damage);
         gameObject.SetActive(true);
     }
@@ -136,7 +139,7 @@ public class EnemyProjectile : MonoBehaviour
         }
 
         var offset = (Vector2)playerManager.PlayerTransform.position - (Vector2)transform.position;
-        if (offset.sqrMagnitude > HIT_RADIUS * HIT_RADIUS)
+        if (offset.sqrMagnitude > _hitRadius * _hitRadius)
         {
             return false;
         }

@@ -47,6 +47,7 @@ public class WaveSpawn
     [SerializeField] private float _endSeconds = 60f;
     [SerializeField] private int _count = 1;
     [SerializeField] private float _spawnInterval = 1.5f;
+    [SerializeField] private int _id;
     [SerializeField] private float _maxHealth = 10f;
     [Tooltip("근거리의 접촉 피해, 또는 원거리 투사체의 피해.")]
     [SerializeField] private float _contactDamage = 2f;
@@ -56,6 +57,8 @@ public class WaveSpawn
     [SerializeField, Min(0.5f)] private float _attackRange = 4f;
     [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
     [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
+    [SerializeField, Min(0f)] private float _hitRadius = 0.75f;
+    [SerializeField, Min(0.01f)] private float _attackDistance = 0.45f;
     [Tooltip("켜면 이 구간 몬스터만 종 크기 대신 아래 크기를 쓴다. 엘리트와 중간보스에 쓴다.")]
     [SerializeField] private bool _overrideScale;
     [SerializeField, Min(0.01f)] private float _scale = MonsterVisualData.DEFAULT_SCALE;
@@ -75,6 +78,8 @@ public class WaveSpawn
 
     public float SpawnInterval => _spawnInterval;
 
+    public int Id => _id;
+
     public float MaxHealth => _maxHealth;
 
     public float ContactDamage => _contactDamage;
@@ -88,6 +93,10 @@ public class WaveSpawn
     public float AttackInterval => _attackInterval;
 
     public float ProjectileSpeed => _projectileSpeed;
+
+    public float HitRadius => Mathf.Max(0f, _hitRadius);
+
+    public float AttackDistance => Mathf.Max(0.01f, _attackDistance);
 
     public bool OverrideScale => _overrideScale;
 

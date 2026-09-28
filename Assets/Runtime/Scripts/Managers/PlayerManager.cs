@@ -63,11 +63,11 @@ public class PlayerManager : BaseManager
 
     public Vector2 LookDirection => _player == null ? Vector2.right : _player.LookDirection;
 
-    public float Speed => _player == null ? 0f : _player.Speed;
+    public float Speed => _player == null ? 0f : _player.moveSpeed;
 
     public float CurrentHealth => _player == null ? 0f : _player.CurrentHealth;
 
-    public float MaxHealth => _player == null ? 0f : _player.MaxHealth;
+    public float MaxHealth => _player == null ? 0f : _player.maxHealth;
 
     public bool IsAlive => _player != null && _player.IsAlive;
 

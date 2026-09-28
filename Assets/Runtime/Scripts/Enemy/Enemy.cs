@@ -7,7 +7,6 @@ using UnityEngine;
 public class Enemy : MonoBehaviour
 {
     private const float MOVE_SQR_EPSILON = 0.0001f;
-    private const float CONTACT_RADIUS = 0.75f;
     private const float CONTACT_INTERVAL = 0.6f;
     private const float MIN_ATTACK_RANGE = 0.5f;
     private const float MIN_SHOT_INTERVAL = 0.05f;
@@ -27,12 +26,17 @@ public class Enemy : MonoBehaviour
     private EnemyAttackKind _attackKind;
     private float _attackRange;
     private float _attackInterval;
+    private int _id;
+    private float _hitRadius;
+    private float _attackDistance;
     private float _projectileSpeed;
     private Sprite _projectileSprite;
     private float _nextShotTime;
     private float _shootPoseUntil;
     private int _waveIndex;
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
+
+    public int Id => _id;
 
     public float Health => _health;
 
@@ -93,7 +97,7 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 스폰 직후 대상 플레이어, 체력, 피해, 이동, 공격 방식을 넣는다.
+    /// 스폰 직후 대상 플레이어, 도감 번호, 체력, 피해, 이동, 공격, 피격 반경을 넣는다.
     /// </summary>
     public void Initialize(
         int playerId,
@@ -105,16 +109,22 @@ public class Enemy : MonoBehaviour
         float attackRange = 0f,
         float attackInterval = 0f,
         float projectileSpeed = 0f,
-        Sprite projectileSprite = null)
+        Sprite projectileSprite = null,
+        int id = 0,
+        float hitRadius = 0f,
+        float attackDistance = 0.45f)
     {
         _playerId = playerId;
         _waveIndex = waveIndex;
+        _id = id;
         _health = maxHealth;
         _contactDamage = contactDamage;
         _moveSpeed = moveSpeed;
         _attackKind = attackKind;
         _attackRange = attackRange;
         _attackInterval = attackInterval;
+        _hitRadius = Mathf.Max(0f, hitRadius);
+        _attackDistance = Mathf.Max(0.01f, attackDistance);
         _projectileSpeed = projectileSpeed;
         _projectileSprite = projectileSprite;
         _nextContactTime = 0f;
@@ -186,7 +196,7 @@ public class Enemy : MonoBehaviour
     private bool TickContact(Vector2 playerPosition)
     {
         MoveToward(playerPosition, Time.deltaTime);
-        if (Vector2.Distance(transform.position, playerPosition) > CONTACT_RADIUS)
+        if (Vector2.Distance(transform.position, playerPosition) > _hitRadius)
         {
             return true;
         }
@@ -235,7 +245,7 @@ public class Enemy : MonoBehaviour
 
         _nextShotTime = Time.time + Mathf.Max(MIN_SHOT_INTERVAL, _attackInterval);
         _shootPoseUntil = Time.time + SHOOT_POSE_SECONDS;
-        _owner.LaunchProjectile(_playerId, origin, toPlayer, _projectileSpeed, _attackRange, _contactDamage, _projectileSprite);
+        _owner.LaunchProjectile(_playerId, origin, toPlayer, _projectileSpeed, _attackRange, _contactDamage, _hitRadius, _attackDistance, _projectileSprite);
         return true;
     }
 

@@ -142,7 +142,7 @@ public class EnemyManager : BaseManager
     /// <summary>
     /// 적 투사체를 풀에서 꺼내 플레이어 쪽으로 날린다.
     /// </summary>
-    public void LaunchProjectile(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage, Sprite sprite)
+    public void LaunchProjectile(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage, float hitRadius, float attackDistance, Sprite sprite)
     {
         var projectile = GetProjectile();
         if (projectile == null)
@@ -151,7 +151,7 @@ public class EnemyManager : BaseManager
         }
 
         projectile.ApplySprite(sprite);
-        projectile.Launch(playerId, position, direction, speed, range, damage);
+        projectile.Launch(playerId, position, direction, speed, range, damage, hitRadius, attackDistance);
     }
 
     /// <summary>
@@ -362,7 +362,10 @@ public class EnemyManager : BaseManager
             wave.AttackRange,
             wave.AttackInterval,
             wave.ProjectileSpeed,
-            visual != null ? visual.ProjectileSprite : null);
+            visual != null ? visual.ProjectileSprite : null,
+            wave.Id,
+            wave.HitRadius,
+            wave.AttackDistance);
         runtime.AliveCount++;
         _alive.Add(enemy);
     }
