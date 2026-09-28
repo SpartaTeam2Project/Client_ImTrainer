@@ -28,6 +28,7 @@ public enum WaveKind
 [Serializable]
 public class WaveSpawn
 {
+    [SerializeField] private EnemySpawnEntry[] _enemies = Array.Empty<EnemySpawnEntry>();
     [SerializeField] private WaveKind _kind = WaveKind.Continuous;
     [SerializeField] private float _startSeconds;
     [SerializeField] private float _endSeconds = 60f;
@@ -36,6 +37,9 @@ public class WaveSpawn
     [SerializeField] private float _maxHealth = 10f;
     [SerializeField] private float _contactDamage = 2f;
     [SerializeField] private float _moveSpeed = 1.5f;
+
+
+    public EnemySpawnEntry[] Enemies => _enemies;
 
     public WaveKind Kind => _kind;
 
@@ -52,6 +56,19 @@ public class WaveSpawn
     public float ContactDamage => _contactDamage;
 
     public float MoveSpeed => _moveSpeed;
+}
+
+/// <summary>
+/// 웨이브에서 스폰할 Enemy Prefab과 등장 가중치 등등을 정의합니다.
+/// </summary>
+[Serializable]
+public class EnemySpawnEntry
+{
+    [SerializeField] private Enemy _prefab;
+    [SerializeField,Min(1)] private int _weight = 1;
+
+    public Enemy Prefab => _prefab;
+    public int Weight => _weight;
 }
 
 /// <summary>

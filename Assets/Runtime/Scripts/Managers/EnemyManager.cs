@@ -274,7 +274,8 @@ public class EnemyManager : BaseManager
     private void CreateEnemy(WaveRuntime runtime, Vector2 position)
     {
         var wave = runtime.Spawn;
-        var enemy = CreateActor(position);
+        var prefab = SelectEnemyPrefab(wave);
+        var enemy = CreateActor(prefab, position);
         if (enemy == null)
         {
             return;
@@ -289,14 +290,47 @@ public class EnemyManager : BaseManager
         _alive.Add(enemy);
     }
 
-    private Enemy CreateActor(Vector2 position)
+    private Enemy SelectEnemyPrefab(WaveSpawn wave)
+    {
+        if (wave.Enemies == null || wave.Enemies.Length == 0)
+        {
+            return _enemyPrefab;
+        }
+
+        int totalWeight = 0;
+        foreach(var entry in wave.Enemies)
+        {
+            if(entry == null || entry.Prefab == null || entry.Weight <= 0)continue;
+            totalWeight += entry.Weight;
+        }
+        if (totalWeight <= 0)
+        {
+            return _enemyPrefab;
+        }
+        int roll = Random.Range(0, totalWeight);
+        foreach (var entry in wave.Enemies)
+        {
+            if (entry == null || entry.Prefab == null || entry.Weight <= 0) continue;
+
+            if (roll < entry.Weight)
+            {
+                return entry.Prefab;
+            }
+            roll -= entry.Weight;
+        }
+
+
+        return _enemyPrefab;
+    }
+
+    private Enemy CreateActor(Enemy selectedPrefab, Vector2 position)
     {
         if (_pool == null || _pool.Root == null)
         {
             return null;
         }
 
-        var prefab = _enemyPrefab != null ? _enemyPrefab.gameObject : _fallbackPrefab;
+        var prefab = selectedPrefab != null ? selectedPrefab.gameObject : _fallbackPrefab;
         if (prefab == null)
         {
             // 기존 Prefab 미지정 동작을 유지하되, 비활성 원본 하나를 Pool에서 복제한다.
