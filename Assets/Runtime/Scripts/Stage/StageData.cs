@@ -23,6 +23,17 @@ public enum WaveKind
 }
 
 /// <summary>
+/// 웨이브 몬스터의 공격. 근거리는 접촉이고, 원거리는 사거리에서 투사체를 던진다.
+/// </summary>
+public enum EnemyAttackKind
+{
+    [InspectorName("근거리")]
+    Contact = 0,
+    [InspectorName("원거리")]
+    Projectile = 1
+}
+
+/// <summary>
 /// 한 시간 구간의 스폰 수와 적 수치.
 /// </summary>
 [Serializable]
@@ -37,8 +48,14 @@ public class WaveSpawn
     [SerializeField] private int _count = 1;
     [SerializeField] private float _spawnInterval = 1.5f;
     [SerializeField] private float _maxHealth = 10f;
+    [Tooltip("근거리의 접촉 피해, 또는 원거리 투사체의 피해.")]
     [SerializeField] private float _contactDamage = 2f;
     [SerializeField] private float _moveSpeed = 1.5f;
+    [Tooltip("이 구간 몬스터의 공격. 원거리는 아래 사거리, 간격, 속도로 투사체를 던진다.")]
+    [SerializeField] private EnemyAttackKind _attackKind = EnemyAttackKind.Contact;
+    [SerializeField, Min(0.5f)] private float _attackRange = 4f;
+    [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
+    [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
     [Tooltip("켜면 이 구간 몬스터만 종 크기 대신 아래 크기를 쓴다. 엘리트와 중간보스에 쓴다.")]
     [SerializeField] private bool _overrideScale;
     [SerializeField, Min(0.01f)] private float _scale = MonsterVisualData.DEFAULT_SCALE;
@@ -63,6 +80,14 @@ public class WaveSpawn
     public float ContactDamage => _contactDamage;
 
     public float MoveSpeed => _moveSpeed;
+
+    public EnemyAttackKind AttackKind => _attackKind;
+
+    public float AttackRange => _attackRange;
+
+    public float AttackInterval => _attackInterval;
+
+    public float ProjectileSpeed => _projectileSpeed;
 
     public bool OverrideScale => _overrideScale;
 

@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 적 걷기 프레임을 재생한다. 8방향 그림은 스폰 때 받은 ScriptableObject만 쓴다.
+/// 적 걷기 프레임을 재생한다. 발사 중이고 사격 그림이 있으면 그 프레임을 쓴다.
+/// 8방향 그림은 스폰 때 받은 ScriptableObject만 쓴다.
 /// </summary>
 public class EnemyView : MonoBehaviour
 {
@@ -44,6 +45,7 @@ public class EnemyView : MonoBehaviour
 
     private MonsterVisualData _visual;
     private bool _isMoving;
+    private bool _isShooting;
     private bool _hasVisual;
     private bool _facesLeft;
     private EightWay _eightWay = EightWay.Right;
@@ -78,12 +80,13 @@ public class EnemyView : MonoBehaviour
     /// <summary>
     /// 이동 중이면 걷기 프레임을 돌린다. 8방향 모드는 추적 방향 그림을 고른다.
     /// </summary>
-    public void SetVisual(bool isMoving, Vector2 lookDirection)
+    public void SetVisual(bool isMoving, Vector2 lookDirection, bool shooting = false)
     {
         var directionChanged = ApplyDirection(lookDirection);
-        var motionChanged = !_hasVisual || isMoving != _isMoving;
+        var motionChanged = !_hasVisual || isMoving != _isMoving || shooting != _isShooting;
         _hasVisual = true;
         _isMoving = isMoving;
+        _isShooting = shooting;
 
         if (motionChanged)
         {
@@ -132,7 +135,7 @@ public class EnemyView : MonoBehaviour
     /// </summary>
     private void WrapFrameIndex()
     {
-        var frames = CurrentWalk();
+        var frames = CurrentFrames();
         if (!HasFrames(frames))
         {
             _frameIndex = 0;
@@ -154,7 +157,7 @@ public class EnemyView : MonoBehaviour
 
     private void AdvanceFrames()
     {
-        var frames = CurrentWalk();
+        var frames = CurrentFrames();
         if (!_isMoving || !HasFrames(frames) || frames.Length <= 1 || _framesPerSecond <= 0f)
         {
             return;
@@ -207,7 +210,7 @@ public class EnemyView : MonoBehaviour
 
     private Sprite GetCurrentSprite()
     {
-        var frames = CurrentWalk();
+        var frames = CurrentFrames();
         if (!HasFrames(frames))
         {
             return null;
@@ -221,11 +224,25 @@ public class EnemyView : MonoBehaviour
         return frames[_frameIndex];
     }
 
+    private Sprite[] CurrentFrames()
+    {
+        if (_isShooting)
+        {
+            var shoot = GetDirectionFrames(_visual != null ? _visual.Shoot : null, _eightWay);
+            if (HasFrames(shoot))
+            {
+                return shoot;
+            }
+        }
+
+        return CurrentWalk();
+    }
+
     private Sprite[] CurrentWalk()
     {
         if (UsesEightDirection)
         {
-            return GetEightWayFrames(_eightWay);
+            return GetDirectionFrames(_visual != null ? _visual.Walk : null, _eightWay);
         }
 
         return _walkSprites;
@@ -233,9 +250,9 @@ public class EnemyView : MonoBehaviour
 
     private bool UsesEightDirection => _visual != null || _facingMode == FacingMode.EightDirection;
 
-    private Sprite[] GetEightWayFrames(EightWay way)
+    private static Sprite[] GetDirectionFrames(EightDirectionFrames clip, EightWay way)
     {
-        if (_visual == null || _visual.Walk == null)
+        if (clip == null)
         {
             return null;
         }
@@ -243,21 +260,21 @@ public class EnemyView : MonoBehaviour
         switch (way)
         {
             case EightWay.UpRight:
-                return FirstFrames(_visual.Walk.UpRight, _visual.Walk.Right);
+                return FirstFrames(clip.UpRight, clip.Right);
             case EightWay.Up:
-                return FirstFrames(_visual.Walk.Up, _visual.Walk.Right);
+                return FirstFrames(clip.Up, clip.Right);
             case EightWay.UpLeft:
-                return FirstFrames(_visual.Walk.UpLeft, _visual.Walk.Right);
+                return FirstFrames(clip.UpLeft, clip.Right);
             case EightWay.Left:
-                return FirstFrames(_visual.Walk.Left, _visual.Walk.Right);
+                return FirstFrames(clip.Left, clip.Right);
             case EightWay.DownLeft:
-                return FirstFrames(_visual.Walk.DownLeft, _visual.Walk.Right);
+                return FirstFrames(clip.DownLeft, clip.Right);
             case EightWay.Down:
-                return FirstFrames(_visual.Walk.Down, _visual.Walk.Right);
+                return FirstFrames(clip.Down, clip.Right);
             case EightWay.DownRight:
-                return FirstFrames(_visual.Walk.DownRight, _visual.Walk.Right);
+                return FirstFrames(clip.DownRight, clip.Right);
             default:
-                return _visual.Walk.Right;
+                return clip.Right;
         }
     }
 

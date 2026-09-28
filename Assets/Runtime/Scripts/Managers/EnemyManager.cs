@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// 시간 기준 스폰, 활성 적 목록, 킬 수와 Pool 수명을 담당한다.
-/// 흐름: Tick => Wave 조건 => Pool.Get => Enemy.Bind/ApplyVisual/Initialize => 기존 Enemy.Tick.
+/// 흐름: Tick => Wave 조건 => Pool.Get => Enemy.Bind/ApplyVisual/Initialize => Enemy.Tick.
+/// 발사 몬스터의 투사체는 별도 목록에서 재사용한다.
 /// 사망: NotifyDied => 목록/카운트 갱신 => 상태 정리 => Pool.Return.
 /// </summary>
 public class EnemyManager : BaseManager
@@ -19,7 +20,9 @@ public class EnemyManager : BaseManager
 
     private readonly List<Enemy> _alive = new List<Enemy>();
     private readonly List<WaveRuntime> _waves = new List<WaveRuntime>();
+    private readonly List<EnemyProjectile> _projectiles = new List<EnemyProjectile>();
     private CombatObjectPool _pool;
+    private Transform _projectileRoot;
     private GameObject _fallbackPrefab;
 
     private int _playerId;
@@ -112,6 +115,8 @@ public class EnemyManager : BaseManager
         _pool?.DestroyAll();
         _pool = null;
         _fallbackPrefab = null;
+        _projectiles.Clear();
+        _projectileRoot = null;
     }
 
     /// <summary>
@@ -131,6 +136,22 @@ public class EnemyManager : BaseManager
 
         SpawnWaves(elapsedSeconds, playerPosition);
         UpdateEnemies(playerPosition);
+        TickProjectiles(Time.deltaTime);
+    }
+
+    /// <summary>
+    /// 적 투사체를 풀에서 꺼내 플레이어 쪽으로 날린다.
+    /// </summary>
+    public void LaunchProjectile(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage, Sprite sprite)
+    {
+        var projectile = GetProjectile();
+        if (projectile == null)
+        {
+            return;
+        }
+
+        projectile.ApplySprite(sprite);
+        projectile.Launch(playerId, position, direction, speed, range, damage);
     }
 
     /// <summary>
@@ -331,7 +352,17 @@ public class EnemyManager : BaseManager
         var visual = SelectMonsterVisual(wave);
         enemy.Bind(this);
         enemy.ApplyVisual(visual, ResolveScale(wave, visual));
-        enemy.Initialize(_playerId, runtime.WaveIndex, maxHealth, contactDamage, wave.MoveSpeed);
+        enemy.Initialize(
+            _playerId,
+            runtime.WaveIndex,
+            maxHealth,
+            contactDamage,
+            wave.MoveSpeed,
+            wave.AttackKind,
+            wave.AttackRange,
+            wave.AttackInterval,
+            wave.ProjectileSpeed,
+            visual != null ? visual.ProjectileSprite : null);
         runtime.AliveCount++;
         _alive.Add(enemy);
     }
@@ -499,9 +530,68 @@ public class EnemyManager : BaseManager
         return true;
     }
 
+    private void TickProjectiles(float deltaTime)
+    {
+        for (var i = 0; i < _projectiles.Count; i++)
+        {
+            var projectile = _projectiles[i];
+            if (projectile != null && projectile.IsActive)
+            {
+                projectile.Tick(deltaTime);
+            }
+        }
+    }
+
+    private EnemyProjectile GetProjectile()
+    {
+        for (var i = 0; i < _projectiles.Count; i++)
+        {
+            var projectile = _projectiles[i];
+            if (projectile != null && !projectile.IsActive)
+            {
+                return projectile;
+            }
+        }
+
+        EnsureProjectileRoot();
+        if (_projectileRoot == null)
+        {
+            return null;
+        }
+
+        var created = EnemyProjectile.Create(_projectileRoot);
+        _projectiles.Add(created);
+        return created;
+    }
+
+    private void EnsureProjectileRoot()
+    {
+        if (_projectileRoot != null || _pool == null || _pool.Root == null)
+        {
+            return;
+        }
+
+        var rootObject = new GameObject("EnemyProjectiles");
+        rootObject.transform.SetParent(_pool.Root, false);
+        _projectileRoot = rootObject.transform;
+    }
+
+    private void DeactivateProjectiles()
+    {
+        for (var i = 0; i < _projectiles.Count; i++)
+        {
+            var projectile = _projectiles[i];
+            if (projectile != null)
+            {
+                projectile.gameObject.SetActive(false);
+            }
+        }
+    }
+
     private void ClearActors()
     {
         _stageActive = false;
+        DeactivateProjectiles();
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
             var enemy = _alive[i];
