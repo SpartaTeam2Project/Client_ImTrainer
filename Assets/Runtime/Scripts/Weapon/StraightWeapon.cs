@@ -9,7 +9,6 @@ public class StraightWeapon : Weapon
     private const float LOOK_AXIS_EPSILON = 0.01f;
     private const float AIM_SQR_EPSILON = 0.0001f;
     private const float VOLLEY_SPREAD_DEGREES = 12f;
-    private const float PLACEHOLDER_SIZE = 0.65f;
     private const int SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
     private const float ATTACK_FACING_HOLD = 0.8f;
@@ -40,16 +39,6 @@ public class StraightWeapon : Weapon
     [SerializeField] private Sprite[] _idleFrames;
     [SerializeField] private float _framesPerSecond = DEFAULT_FRAMES_PER_SECOND;
 
-    [Header("Idle Eight Direction")]
-    [SerializeField] private Sprite[] _idleRight;
-    [SerializeField] private Sprite[] _idleUpRight;
-    [SerializeField] private Sprite[] _idleUp;
-    [SerializeField] private Sprite[] _idleUpLeft;
-    [SerializeField] private Sprite[] _idleLeft;
-    [SerializeField] private Sprite[] _idleDownLeft;
-    [SerializeField] private Sprite[] _idleDown;
-    [SerializeField] private Sprite[] _idleDownRight;
-
     [Header("Projectile")]
     [SerializeField] private WeaponProjectile _projectilePrefab;
 
@@ -58,6 +47,7 @@ public class StraightWeapon : Weapon
 
     private readonly List<WeaponProjectile> _projectiles = new List<WeaponProjectile>();
 
+    private WeaponVisualData _visual;
     private AbilityManager _owner;
     private SpriteRenderer _renderer;
     private Transform _projectileRoot;
@@ -112,6 +102,23 @@ public class StraightWeapon : Weapon
     public override void Bind(AbilityManager owner)
     {
         _owner = owner;
+    }
+
+    /// <summary>
+    /// 이번 무기에 쓸 8방향과 총알 그림을 넣는다.
+    /// </summary>
+    public override void ApplyVisual(WeaponVisualData visual)
+    {
+        _visual = visual;
+        _frameIndex = 0;
+        _frameTimer = 0f;
+        if (visual == null)
+        {
+            return;
+        }
+
+        var scale = visual.Scale;
+        transform.localScale = new Vector3(scale, scale, 1f);
     }
 
     /// <summary>
@@ -196,7 +203,7 @@ public class StraightWeapon : Weapon
     /// </summary>
     private void ApplyFacing(Vector2 lookDirection)
     {
-        if (_facingMode == FacingMode.EightDirection)
+        if (UsesEightDirection)
         {
             ApplyEightDirection(lookDirection);
             return;
@@ -287,12 +294,12 @@ public class StraightWeapon : Weapon
 
         _renderer.sprite = sprite;
         _renderer.color = Color.white;
-        _renderer.flipX = _facingMode == FacingMode.FlipHorizontal && _facingRight;
+        _renderer.flipX = !UsesEightDirection && _facingRight;
     }
 
     private Sprite[] CurrentFrames()
     {
-        if (_facingMode == FacingMode.EightDirection)
+        if (UsesEightDirection)
         {
             return GetEightWayFrames(_eightWay);
         }
@@ -300,26 +307,33 @@ public class StraightWeapon : Weapon
         return _idleFrames;
     }
 
+    private bool UsesEightDirection => _visual != null || _facingMode == FacingMode.EightDirection;
+
     private Sprite[] GetEightWayFrames(EightWay way)
     {
+        if (_visual == null)
+        {
+            return null;
+        }
+
         switch (way)
         {
             case EightWay.UpRight:
-                return FirstFrames(_idleUpRight, _idleRight);
+                return FirstFrames(_visual.IdleUpRight, _visual.IdleRight);
             case EightWay.Up:
-                return FirstFrames(_idleUp, _idleRight);
+                return FirstFrames(_visual.IdleUp, _visual.IdleRight);
             case EightWay.UpLeft:
-                return FirstFrames(_idleUpLeft, _idleRight);
+                return FirstFrames(_visual.IdleUpLeft, _visual.IdleRight);
             case EightWay.Left:
-                return FirstFrames(_idleLeft, _idleRight);
+                return FirstFrames(_visual.IdleLeft, _visual.IdleRight);
             case EightWay.DownLeft:
-                return FirstFrames(_idleDownLeft, _idleRight);
+                return FirstFrames(_visual.IdleDownLeft, _visual.IdleRight);
             case EightWay.Down:
-                return FirstFrames(_idleDown, _idleRight);
+                return FirstFrames(_visual.IdleDown, _visual.IdleRight);
             case EightWay.DownRight:
-                return FirstFrames(_idleDownRight, _idleRight);
+                return FirstFrames(_visual.IdleDownRight, _visual.IdleRight);
             default:
-                return _idleRight;
+                return _visual.IdleRight;
         }
     }
 
@@ -372,7 +386,6 @@ public class StraightWeapon : Weapon
 
         _renderer.sprite = PrototypeSprite.WhiteSquare;
         _renderer.color = PLACEHOLDER_COLOR;
-        transform.localScale = new Vector3(PLACEHOLDER_SIZE, PLACEHOLDER_SIZE, 1f);
     }
 
     private void TryAttack(float deltaTime)
@@ -432,6 +445,7 @@ public class StraightWeapon : Weapon
     private void LaunchOne(Vector2 origin, Vector2 direction)
     {
         var projectile = GetProjectile();
+        projectile.ApplySprite(_visual != null ? _visual.ProjectileSprite : null);
         projectile.Launch(origin, direction, _stats.ProjectileSpeed, _stats.AttackRange, _stats.HitRadius, _stats.Damage);
     }
 

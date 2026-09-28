@@ -13,6 +13,8 @@ public class AbilityManager : BaseManager
 
     [Header("Weapon")]
     [SerializeField] private Weapon _startingWeaponPrefab;
+    [Tooltip("시작 무기가 재생할 그림. Weapon001 같은 에셋을 넣는다.")]
+    [SerializeField] private WeaponVisualData _startingWeaponVisual;
 
     [Header("Level Up")]
     [SerializeField] private AudioClip _levelUpFanfare;
@@ -84,7 +86,7 @@ public class AbilityManager : BaseManager
             return;
         }
 
-        PlaceWeapon(STARTING_SLOT, _startingWeaponPrefab);
+        PlaceWeapon(STARTING_SLOT, _startingWeaponPrefab, _startingWeaponVisual);
     }
 
     /// <summary>
@@ -104,7 +106,7 @@ public class AbilityManager : BaseManager
                 continue;
             }
 
-            PlaceWeapon((WeaponSlot)i, prefab);
+            PlaceWeapon((WeaponSlot)i, prefab, null);
             return true;
         }
 
@@ -208,7 +210,7 @@ public class AbilityManager : BaseManager
         PendingLevelUpLevel = 0;
     }
 
-    private void PlaceWeapon(WeaponSlot slot, Weapon prefab)
+    private void PlaceWeapon(WeaponSlot slot, Weapon prefab, WeaponVisualData visual)
     {
         var index = (int)slot;
         if (index < 0 || index >= _weapons.Length || _weapons[index] != null)
@@ -224,6 +226,7 @@ public class AbilityManager : BaseManager
 
         _weapons[index] = weapon;
         weapon.Bind(this);
+        weapon.ApplyVisual(visual);
         weapon.Initialize(_playerId, slot);
         weapon.Tick(0f);
     }
