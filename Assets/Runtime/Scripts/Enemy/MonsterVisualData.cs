@@ -20,6 +20,11 @@ public class MonsterVisualData : ScriptableObject
     [Header("Projectile")]
     [SerializeField] private Sprite _projectileSprite;
 
+    [Header("Type")]
+    [SerializeField] private MonsterType _primaryType = MonsterType.Normal;
+    [SerializeField] private bool _hasSecondaryType;
+    [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
+
     public Sprite[] WalkDown => _walkDown;
 
     public Sprite[] WalkDownRight => _walkDownRight;
@@ -37,4 +42,26 @@ public class MonsterVisualData : ScriptableObject
     public Sprite[] WalkDownLeft => _walkDownLeft;
 
     public Sprite ProjectileSprite => _projectileSprite;
+
+    public MonsterType PrimaryType => _primaryType;
+
+    public bool HasSecondaryType => _hasSecondaryType && _secondaryType != _primaryType;
+
+    public MonsterType SecondaryType => _secondaryType;
+
+    /// <summary>
+    /// 방어 타입 목록. 서브가 없거나 메인과 같으면 길이 1이다.
+    /// </summary>
+    public MonsterType[] Types
+    {
+        get
+        {
+            if (!HasSecondaryType)
+            {
+                return new[] { _primaryType };
+            }
+
+            return new[] { _primaryType, _secondaryType };
+        }
+    }
 }

@@ -16,6 +16,7 @@ public class WeaponProjectile : MonoBehaviour
     private float _remainingRange;
     private float _hitRadius;
     private float _damage;
+    private MonsterType _attackType = MonsterType.Normal;
 
     public bool IsActive => gameObject.activeSelf;
 
@@ -74,7 +75,7 @@ public class WeaponProjectile : MonoBehaviour
     /// <summary>
     /// 발사 위치와 수치를 넣고 켠다.
     /// </summary>
-    public void Launch(Vector2 position, Vector2 direction, float speed, float range, float hitRadius, float damage)
+    public void Launch(Vector2 position, Vector2 direction, float speed, float range, float hitRadius, float damage, MonsterType attackType)
     {
         transform.position = position;
         _direction = direction.sqrMagnitude > MOVE_SQR_EPSILON ? direction.normalized : Vector2.right;
@@ -82,6 +83,7 @@ public class WeaponProjectile : MonoBehaviour
         _remainingRange = Mathf.Max(0f, range);
         _hitRadius = Mathf.Max(0f, hitRadius);
         _damage = Mathf.Max(0f, damage);
+        _attackType = attackType;
         gameObject.SetActive(true);
     }
 
@@ -128,7 +130,7 @@ public class WeaponProjectile : MonoBehaviour
             return false;
         }
 
-        enemy.ApplyDamage(_damage);
+        enemy.ApplyDamage(_damage, _attackType);
         return true;
     }
 }

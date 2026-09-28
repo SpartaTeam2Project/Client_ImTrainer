@@ -35,6 +35,9 @@ public class WeaponVisualData : ScriptableObject
     [Header("Projectile")]
     [SerializeField] private Sprite _projectileSprite;
 
+    [Header("Type")]
+    [SerializeField] private MonsterType _attackType = MonsterType.Normal;
+
     public float Scale => _scale > 0f ? _scale : DEFAULT_SCALE;
 
     public Sprite[] IdleDown => _idleDown;
@@ -70,4 +73,6 @@ public class WeaponVisualData : ScriptableObject
     public Sprite[] AttackDownLeft => _attackDownLeft;
 
     public Sprite ProjectileSprite => _projectileSprite;
+
+    public MonsterType AttackType => _attackType;
 }

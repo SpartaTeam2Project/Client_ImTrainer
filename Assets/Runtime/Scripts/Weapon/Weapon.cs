@@ -58,6 +58,8 @@ public abstract class Weapon : MonoBehaviour
 
     protected WeaponVisualData Visual => _visual;
 
+    protected MonsterType AttackType => Visual != null ? Visual.AttackType : MonsterType.Normal;
+
     #region Unity Methods
 
     private void Awake()

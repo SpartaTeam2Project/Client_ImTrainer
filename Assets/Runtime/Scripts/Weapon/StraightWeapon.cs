@@ -21,7 +21,7 @@ public class StraightWeapon : Weapon
     {
         var projectile = GetProjectile();
         projectile.ApplySprite(Visual != null ? Visual.ProjectileSprite : null);
-        projectile.Launch(origin, direction, Stats.ProjectileSpeed, Stats.AttackRange, Stats.HitRadius, Stats.Damage);
+        projectile.Launch(origin, direction, Stats.ProjectileSpeed, Stats.AttackRange, Stats.HitRadius, Stats.Damage, AttackType);
     }
 
     /// <summary>
