@@ -179,6 +179,51 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
+    /// 시작점에서 방향으로 길이만큼 그은 선에서, 두께 안에 있는 살아 있는 적을 모은다. 결과는 비운 뒤 채운다.
+    /// </summary>
+    public void CollectAlongSegment(Vector2 origin, Vector2 direction, float length, float radius, List<Enemy> results)
+    {
+        const float DIRECTION_SQR_EPSILON = 0.0001f;
+
+        if (results == null)
+        {
+            return;
+        }
+
+        results.Clear();
+        if (length <= 0f || direction.sqrMagnitude <= DIRECTION_SQR_EPSILON)
+        {
+            return;
+        }
+
+        var forward = direction.normalized;
+        var radiusSqr = radius * radius;
+        for (var i = 0; i < _alive.Count; i++)
+        {
+            var candidate = _alive[i];
+            if (candidate == null || !candidate.IsAlive)
+            {
+                continue;
+            }
+
+            var offset = (Vector2)candidate.transform.position - origin;
+            var along = Vector2.Dot(offset, forward);
+            if (along < 0f || along > length)
+            {
+                continue;
+            }
+
+            var lateral = offset - forward * along;
+            if (lateral.sqrMagnitude > radiusSqr)
+            {
+                continue;
+            }
+
+            results.Add(candidate);
+        }
+    }
+
+    /// <summary>
     /// 스폰된 적이 씬과 함께 사라지면 목록에서 뺀다.
     /// </summary>
     public void NotifyActorDestroyed(Enemy enemy)
