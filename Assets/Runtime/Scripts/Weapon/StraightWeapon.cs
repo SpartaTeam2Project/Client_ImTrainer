@@ -12,7 +12,7 @@ public class StraightWeapon : Weapon
     private const float PLACEHOLDER_SIZE = 0.65f;
     private const int SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
-    private const float ATTACK_FACING_HOLD = 0.2f;
+    private const float ATTACK_FACING_HOLD = 0.8f;
     private const float SECTOR_DEGREES = 45f;
     private const float SECTOR_HALF_DEGREES = 22.5f;
     private static readonly Color PLACEHOLDER_COLOR = new Color(0.35f, 0.75f, 0.95f, 1f);
