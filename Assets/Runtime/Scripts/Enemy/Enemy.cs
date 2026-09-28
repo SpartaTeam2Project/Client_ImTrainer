@@ -62,9 +62,9 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 스폰 직후 8방향 걷기와 총알 그림을 넣는다. 8방향은 이 에셋만 재생한다.
+    /// 스폰 직후 그림과 크기를 넣는다. 크기를 넘기지 않으면 종 크기를 쓴다.
     /// </summary>
-    public void ApplyVisual(MonsterVisualData visual)
+    public void ApplyVisual(MonsterVisualData visual, float? scale = null)
     {
         if (_view == null)
         {
@@ -72,6 +72,8 @@ public class Enemy : MonoBehaviour
         }
 
         _defenderTypes = visual != null ? visual.Types : DEFAULT_DEFENDER_TYPES;
+        var resolvedScale = scale ?? (visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE);
+        transform.localScale = new Vector3(resolvedScale, resolvedScale, 1f);
 
         if (_view != null)
         {

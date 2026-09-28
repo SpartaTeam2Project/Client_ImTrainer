@@ -39,6 +39,9 @@ public class WaveSpawn
     [SerializeField] private float _maxHealth = 10f;
     [SerializeField] private float _contactDamage = 2f;
     [SerializeField] private float _moveSpeed = 1.5f;
+    [Tooltip("켜면 이 구간 몬스터만 종 크기 대신 아래 크기를 쓴다. 엘리트와 중간보스에 쓴다.")]
+    [SerializeField] private bool _overrideScale;
+    [SerializeField, Min(0.01f)] private float _scale = MonsterVisualData.DEFAULT_SCALE;
 
 
     public MonsterVisualData Monster => _monster;
@@ -60,6 +63,10 @@ public class WaveSpawn
     public float ContactDamage => _contactDamage;
 
     public float MoveSpeed => _moveSpeed;
+
+    public bool OverrideScale => _overrideScale;
+
+    public float Scale => _scale > 0f ? _scale : MonsterVisualData.DEFAULT_SCALE;
 }
 
 /// <summary>
