@@ -116,6 +116,11 @@ public class StageController : MonoBehaviour
         }
 
         var playerId = playerManager.SpawnLocal(_characterStats);
+        if (Managers.Instance.TryGetManager<CurrenciesManager>(out var currenciesManager))
+        {
+            currenciesManager.ClearStage(playerId);
+        }
+
         enemyManager.BeginStage(playerId, _stageData, transform);
         if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
         {
@@ -250,7 +255,19 @@ public class StageController : MonoBehaviour
             enemyManager.EndStage();
         }
 
-        LastResult = new StageResult(killCount, _gameController.ElapsedSeconds);
+        var playerId = 0;
+        if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            playerId = playerManager.LocalPlayerId;
+        }
+
+        var currencies = System.Array.Empty<CurrencyAmount>();
+        if (Managers.Instance.TryGetManager<CurrenciesManager>(out var currenciesManager))
+        {
+            currencies = currenciesManager.FinishStage(playerId);
+        }
+
+        LastResult = new StageResult(playerId, killCount, _gameController.ElapsedSeconds, currencies);
         Time.timeScale = 0f;
         Managers.Instance.ChangeState(resultState);
     }

@@ -415,6 +415,7 @@ MonoBehaviour:
   _stageFieldManager: {fileID: 700000027}
   _enemyManager: {fileID: 700000007}
   _experienceManager: {fileID: 700000029}
+  _currenciesManager: {fileID: 700000030}
   _abilityManager: {fileID: 700000028}
   _sceneLoadManager: {fileID: 700000008}
   _settingsWindow: {fileID: 710000102}
@@ -561,6 +562,19 @@ MonoBehaviour:
   _magnetRadius: 1
   _pickupRadius: 0.35
   _attractSpeed: 12
+--- !u!114 &700000030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3a8e1f04b6d4e2a9f7c1d5b8e0a4f21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CurrenciesManager
+  _database: {fileID: 11400000, guid: 1a9c4e7b2d8f4a6c0e3b5d7f9a1c2e80, type: 2}
 --- !u!1 &700000050
 GameObject:
   m_ObjectHideFlags: 0
