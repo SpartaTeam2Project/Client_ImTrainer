@@ -10,6 +10,7 @@ public class WeaponProjectile : MonoBehaviour
     private const int PROJECTILE_SORTING_ORDER = 12;
     private static readonly Color PROJECTILE_COLOR = new Color(1f, 0.45f, 0.12f, 1f);
 
+    private SpriteRenderer _renderer;
     private Vector2 _direction = Vector2.right;
     private float _speed;
     private float _remainingRange;
@@ -20,10 +21,10 @@ public class WeaponProjectile : MonoBehaviour
 
     private void Awake()
     {
-        var renderer = GetComponent<SpriteRenderer>();
-        if (renderer != null && renderer.sprite == null)
+        _renderer = GetComponent<SpriteRenderer>();
+        if (_renderer != null && _renderer.sprite == null)
         {
-            renderer.sprite = PrototypeSprite.WhiteSquare;
+            _renderer.sprite = PrototypeSprite.WhiteSquare;
         }
     }
 
@@ -44,6 +45,30 @@ public class WeaponProjectile : MonoBehaviour
         var projectile = actorObject.AddComponent<WeaponProjectile>();
         actorObject.SetActive(false);
         return projectile;
+    }
+
+    /// <summary>
+    /// 총알 그림을 넣는다. 비어 있으면 기존 그림을 유지한다.
+    /// </summary>
+    public void ApplySprite(Sprite sprite)
+    {
+        if (sprite == null)
+        {
+            return;
+        }
+
+        if (_renderer == null)
+        {
+            _renderer = GetComponent<SpriteRenderer>();
+        }
+
+        if (_renderer == null)
+        {
+            return;
+        }
+
+        _renderer.sprite = sprite;
+        _renderer.color = Color.white;
     }
 
     /// <summary>

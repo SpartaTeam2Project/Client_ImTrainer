@@ -28,6 +28,8 @@ public enum WaveKind
 [Serializable]
 public class WaveSpawn
 {
+    [Tooltip("이 구간에 나올 몬스터 그림. Monster001 같은 에셋을 넣는다.")]
+    [SerializeField] private MonsterVisualData _monster;
     [SerializeField] private EnemySpawnEntry[] _enemies = Array.Empty<EnemySpawnEntry>();
     [SerializeField] private WaveKind _kind = WaveKind.Continuous;
     [SerializeField] private float _startSeconds;
@@ -38,6 +40,8 @@ public class WaveSpawn
     [SerializeField] private float _contactDamage = 2f;
     [SerializeField] private float _moveSpeed = 1.5f;
 
+
+    public MonsterVisualData Monster => _monster;
 
     public EnemySpawnEntry[] Enemies => _enemies;
 
@@ -59,15 +63,16 @@ public class WaveSpawn
 }
 
 /// <summary>
-/// 웨이브에서 스폰할 Enemy Prefab과 등장 가중치 등등을 정의합니다.
+/// 웨이브에서 스폰할 몬스터 그림과 등장 가중치.
 /// </summary>
 [Serializable]
 public class EnemySpawnEntry
 {
-    [SerializeField] private Enemy _prefab;
-    [SerializeField,Min(1)] private int _weight = 1;
+    [SerializeField] private MonsterVisualData _visual;
+    [SerializeField, Min(1)] private int _weight = 1;
 
-    public Enemy Prefab => _prefab;
+    public MonsterVisualData Visual => _visual;
+
     public int Weight => _weight;
 }
 

@@ -13,13 +13,15 @@ public class AbilityManager : BaseManager
 
     [Header("Weapon")]
     [SerializeField] private Weapon _startingWeaponPrefab;
+    [Tooltip("시작 무기가 재생할 그림. Weapon001 같은 에셋을 넣는다.")]
+    [SerializeField] private WeaponVisualData _startingWeaponVisual;
 
     [Header("Level Up")]
     [SerializeField] private AudioClip _levelUpFanfare;
 
     private readonly Queue<int> _levelUpQueue = new Queue<int>();
+    private readonly Weapon[] _weapons = new Weapon[WeaponSlots.MAX_COUNT];
 
-    private Weapon _weapon;
     private int _playerId;
     private bool _waitingForChoice;
 
@@ -37,12 +39,20 @@ public class AbilityManager : BaseManager
 
     private void LateUpdate()
     {
-        if (_weapon == null || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
+        if (Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
         {
             return;
         }
 
-        _weapon.Tick(Time.deltaTime);
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] == null)
+            {
+                continue;
+            }
+
+            _weapons[i].Tick(Time.deltaTime);
+        }
     }
 
     public override void Cleanup()
@@ -76,10 +86,31 @@ public class AbilityManager : BaseManager
             return;
         }
 
-        _weapon = CreateWeapon();
-        _weapon.Bind(this);
-        _weapon.Initialize(playerId, STARTING_SLOT);
-        _weapon.Tick(0f);
+        PlaceWeapon(STARTING_SLOT, _startingWeaponPrefab, _startingWeaponVisual);
+    }
+
+    /// <summary>
+    /// 비어 있는 시계 칸에 무기를 붙인다. 여섯 칸이 차 있으면 false.
+    /// </summary>
+    public bool TryAddWeapon(Weapon prefab)
+    {
+        if (prefab == null || _playerId == 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] != null)
+            {
+                continue;
+            }
+
+            PlaceWeapon((WeaponSlot)i, prefab, null);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -119,12 +150,16 @@ public class AbilityManager : BaseManager
     /// </summary>
     public void NotifyWeaponDestroyed(Weapon weapon)
     {
-        if (_weapon != weapon)
+        for (var i = 0; i < _weapons.Length; i++)
         {
+            if (_weapons[i] != weapon)
+            {
+                continue;
+            }
+
+            _weapons[i] = null;
             return;
         }
-
-        _weapon = null;
     }
 
     #endregion
@@ -175,11 +210,32 @@ public class AbilityManager : BaseManager
         PendingLevelUpLevel = 0;
     }
 
-    private Weapon CreateWeapon()
+    private void PlaceWeapon(WeaponSlot slot, Weapon prefab, WeaponVisualData visual)
     {
-        if (_startingWeaponPrefab != null)
+        var index = (int)slot;
+        if (index < 0 || index >= _weapons.Length || _weapons[index] != null)
         {
-            var weapon = Instantiate(_startingWeaponPrefab);
+            return;
+        }
+
+        var weapon = CreateWeapon(prefab);
+        if (weapon == null)
+        {
+            return;
+        }
+
+        _weapons[index] = weapon;
+        weapon.Bind(this);
+        weapon.ApplyVisual(visual);
+        weapon.Initialize(_playerId, slot);
+        weapon.Tick(0f);
+    }
+
+    private Weapon CreateWeapon(Weapon prefab)
+    {
+        if (prefab != null)
+        {
+            var weapon = Instantiate(prefab);
             weapon.gameObject.name = "Weapon";
             return weapon;
         }
@@ -194,16 +250,14 @@ public class AbilityManager : BaseManager
 
     private void ClearWeapon()
     {
-        if (_weapon == null)
+        for (var i = 0; i < _weapons.Length; i++)
         {
-            return;
-        }
-
-        var weapon = _weapon;
-        _weapon = null;
-        if (weapon != null)
-        {
-            Destroy(weapon.gameObject);
+            var weapon = _weapons[i];
+            _weapons[i] = null;
+            if (weapon != null)
+            {
+                Destroy(weapon.gameObject);
+            }
         }
     }
 

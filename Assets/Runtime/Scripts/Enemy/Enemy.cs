@@ -60,6 +60,22 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
+    /// 스폰 직후 8방향 걷기와 총알 그림을 넣는다. 8방향은 이 에셋만 재생한다.
+    /// </summary>
+    public void ApplyVisual(MonsterVisualData visual)
+    {
+        if (_view == null)
+        {
+            _view = GetComponent<EnemyView>();
+        }
+
+        if (_view != null)
+        {
+            _view.ApplyVisual(visual);
+        }
+    }
+
+    /// <summary>
     /// 스폰 직후 대상 플레이어, 체력, 접촉 피해, 이동 속도를 넣는다.
     /// </summary>
     public void Initialize(int playerId, int waveIndex, float maxHealth, float contactDamage, float moveSpeed)

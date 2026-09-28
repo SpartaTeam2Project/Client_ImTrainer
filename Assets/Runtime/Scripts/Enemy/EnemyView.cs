@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 적 걷기 프레임을 재생한다. 기본은 좌우 반전이고, 8방향 모드는 추적 방향 그림을 쓴다.
+/// 적 걷기 프레임을 재생한다. 8방향 그림은 스폰 때 받은 ScriptableObject만 쓴다.
 /// </summary>
 public class EnemyView : MonoBehaviour
 {
@@ -42,16 +42,7 @@ public class EnemyView : MonoBehaviour
     [Header("Walk")]
     [SerializeField] private Sprite[] _walkSprites;
 
-    [Header("Walk Eight Direction")]
-    [SerializeField] private Sprite[] _walkRight;
-    [SerializeField] private Sprite[] _walkUpRight;
-    [SerializeField] private Sprite[] _walkUp;
-    [SerializeField] private Sprite[] _walkUpLeft;
-    [SerializeField] private Sprite[] _walkLeft;
-    [SerializeField] private Sprite[] _walkDownLeft;
-    [SerializeField] private Sprite[] _walkDown;
-    [SerializeField] private Sprite[] _walkDownRight;
-
+    private MonsterVisualData _visual;
     private bool _isMoving;
     private bool _hasVisual;
     private bool _facesLeft;
@@ -72,6 +63,17 @@ public class EnemyView : MonoBehaviour
     #endregion
 
     #region Public Methods
+
+    /// <summary>
+    /// 이번 스폰에 쓸 그림 에셋을 넣는다. 8방향은 이 에셋만 재생한다.
+    /// </summary>
+    public void ApplyVisual(MonsterVisualData visual)
+    {
+        _visual = visual;
+        _frameIndex = 0;
+        _frameTimer = 0f;
+        _hasVisual = false;
+    }
 
     /// <summary>
     /// 이동 중이면 걷기 프레임을 돌린다. 8방향 모드는 추적 방향 그림을 고른다.
@@ -104,7 +106,7 @@ public class EnemyView : MonoBehaviour
 
     private bool ApplyDirection(Vector2 lookDirection)
     {
-        if (_facingMode != FacingMode.EightDirection)
+        if (!UsesEightDirection)
         {
             UpdateFacing(lookDirection);
             return false;
@@ -193,7 +195,7 @@ public class EnemyView : MonoBehaviour
             return;
         }
 
-        if (_facingMode == FacingMode.EightDirection)
+        if (UsesEightDirection)
         {
             _spriteRenderer.flipX = false;
             return;
@@ -221,7 +223,7 @@ public class EnemyView : MonoBehaviour
 
     private Sprite[] CurrentWalk()
     {
-        if (_facingMode == FacingMode.EightDirection)
+        if (UsesEightDirection)
         {
             return GetEightWayFrames(_eightWay);
         }
@@ -229,26 +231,33 @@ public class EnemyView : MonoBehaviour
         return _walkSprites;
     }
 
+    private bool UsesEightDirection => _visual != null || _facingMode == FacingMode.EightDirection;
+
     private Sprite[] GetEightWayFrames(EightWay way)
     {
+        if (_visual == null)
+        {
+            return null;
+        }
+
         switch (way)
         {
             case EightWay.UpRight:
-                return FirstFrames(_walkUpRight, _walkRight);
+                return FirstFrames(_visual.WalkUpRight, _visual.WalkRight);
             case EightWay.Up:
-                return FirstFrames(_walkUp, _walkRight);
+                return FirstFrames(_visual.WalkUp, _visual.WalkRight);
             case EightWay.UpLeft:
-                return FirstFrames(_walkUpLeft, _walkRight);
+                return FirstFrames(_visual.WalkUpLeft, _visual.WalkRight);
             case EightWay.Left:
-                return FirstFrames(_walkLeft, _walkRight);
+                return FirstFrames(_visual.WalkLeft, _visual.WalkRight);
             case EightWay.DownLeft:
-                return FirstFrames(_walkDownLeft, _walkRight);
+                return FirstFrames(_visual.WalkDownLeft, _visual.WalkRight);
             case EightWay.Down:
-                return FirstFrames(_walkDown, _walkRight);
+                return FirstFrames(_visual.WalkDown, _visual.WalkRight);
             case EightWay.DownRight:
-                return FirstFrames(_walkDownRight, _walkRight);
+                return FirstFrames(_visual.WalkDownRight, _visual.WalkRight);
             default:
-                return _walkRight;
+                return _visual.WalkRight;
         }
     }
 
