@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 시간 기준 스폰, 활성 적 목록, 킬 수와 Pool 수명을 담당한다.
-/// 흐름: Tick => Wave 조건 => Pool.Get => Enemy.Bind/Initialize => 기존 Enemy.Tick.
+/// 흐름: Tick => Wave 조건 => Pool.Get => Enemy.Bind/ApplyVisual/Initialize => 기존 Enemy.Tick.
 /// 사망: NotifyDied => 목록/카운트 갱신 => 상태 정리 => Pool.Return.
 /// </summary>
 public class EnemyManager : BaseManager
@@ -274,8 +274,7 @@ public class EnemyManager : BaseManager
     private void CreateEnemy(WaveRuntime runtime, Vector2 position)
     {
         var wave = runtime.Spawn;
-        var prefab = SelectEnemyPrefab(wave);
-        var enemy = CreateActor(prefab, position);
+        var enemy = CreateActor(_enemyPrefab, position);
         if (enemy == null)
         {
             return;
@@ -283,44 +282,61 @@ public class EnemyManager : BaseManager
 
         var maxHealth = Mathf.Max(1f, wave.MaxHealth * _hpMultiplier);
         var contactDamage = wave.ContactDamage * _damageMultiplier;
-        // 재사용 여부와 관계없이 기존 Enemy 계약으로 상태를 넣은 뒤 Tick에 등록한다.
+        // 재사용 여부와 관계없이 그림과 스탯을 넣은 뒤 Tick에 등록한다.
         enemy.Bind(this);
+        enemy.ApplyVisual(SelectMonsterVisual(wave));
         enemy.Initialize(_playerId, runtime.WaveIndex, maxHealth, contactDamage, wave.MoveSpeed);
         runtime.AliveCount++;
         _alive.Add(enemy);
     }
 
-    private Enemy SelectEnemyPrefab(WaveSpawn wave)
+    private MonsterVisualData SelectMonsterVisual(WaveSpawn wave)
     {
-        if (wave.Enemies == null || wave.Enemies.Length == 0)
+        if (wave.Monster != null)
         {
-            return _enemyPrefab;
+            return wave.Monster;
         }
 
-        int totalWeight = 0;
-        foreach(var entry in wave.Enemies)
+        if (wave.Enemies == null || wave.Enemies.Length == 0)
         {
-            if(entry == null || entry.Prefab == null || entry.Weight <= 0)continue;
+            return null;
+        }
+
+        var totalWeight = 0;
+        for (var i = 0; i < wave.Enemies.Length; i++)
+        {
+            var entry = wave.Enemies[i];
+            if (entry == null || entry.Visual == null || entry.Weight <= 0)
+            {
+                continue;
+            }
+
             totalWeight += entry.Weight;
         }
+
         if (totalWeight <= 0)
         {
-            return _enemyPrefab;
+            return null;
         }
-        int roll = Random.Range(0, totalWeight);
-        foreach (var entry in wave.Enemies)
+
+        var roll = Random.Range(0, totalWeight);
+        for (var i = 0; i < wave.Enemies.Length; i++)
         {
-            if (entry == null || entry.Prefab == null || entry.Weight <= 0) continue;
+            var entry = wave.Enemies[i];
+            if (entry == null || entry.Visual == null || entry.Weight <= 0)
+            {
+                continue;
+            }
 
             if (roll < entry.Weight)
             {
-                return entry.Prefab;
+                return entry.Visual;
             }
+
             roll -= entry.Weight;
         }
 
-
-        return _enemyPrefab;
+        return null;
     }
 
     private Enemy CreateActor(Enemy selectedPrefab, Vector2 position)
@@ -453,6 +469,7 @@ public class EnemyManager : BaseManager
         // 비활성 보관 중의 피해/파괴 알림이 기존 판의 상태를 바꾸지 않도록 해제한다.
         // Enemy 내부 수정 없이 기존 Initialize로 HP, WaveIndex, 접촉 시각 등을 비운다.
         enemy.Bind(null);
+        enemy.ApplyVisual(null);
         enemy.Initialize(0, -1, 0f, 0f, 0f);
         _pool?.Return(enemy.gameObject);
     }
