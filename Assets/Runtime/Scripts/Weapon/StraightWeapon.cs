@@ -12,6 +12,7 @@ public class StraightWeapon : Weapon
     private const float PLACEHOLDER_SIZE = 0.65f;
     private const int SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
+    private const float ATTACK_FACING_HOLD = 0.2f;
     private const float SECTOR_DEGREES = 45f;
     private const float SECTOR_HALF_DEGREES = 22.5f;
     private static readonly Color PLACEHOLDER_COLOR = new Color(0.35f, 0.75f, 0.95f, 1f);
@@ -63,6 +64,7 @@ public class StraightWeapon : Weapon
     private Vector2 _offset = Vector2.right;
     private int _playerId;
     private float _cooldownTimer;
+    private float _attackFacingTimer;
     private bool _facingRight;
     private EightWay _eightWay = EightWay.Right;
     private int _frameIndex;
@@ -125,6 +127,7 @@ public class StraightWeapon : Weapon
 
         _offset = WeaponSlots.GetDirection(slot) * _stats.FollowDistance;
         _cooldownTimer = 0f;
+        _attackFacingTimer = 0f;
         _facingRight = false;
         _eightWay = EightWay.Right;
         _frameIndex = 0;
@@ -153,7 +156,16 @@ public class StraightWeapon : Weapon
 
         var playerTransform = playerManager.PlayerTransform;
         transform.position = (Vector2)playerTransform.position + _offset;
-        ApplyFacing(playerManager.LookDirection);
+        if (_attackFacingTimer > 0f)
+        {
+            _attackFacingTimer -= deltaTime;
+        }
+
+        if (_attackFacingTimer <= 0f)
+        {
+            ApplyFacing(playerManager.LookDirection);
+        }
+
         AdvanceIdle(deltaTime);
         TryAttack(deltaTime);
         TickProjectiles(deltaTime);
@@ -395,6 +407,8 @@ public class StraightWeapon : Weapon
             aim.Normalize();
         }
 
+        ApplyFacing(aim);
+        _attackFacingTimer = ATTACK_FACING_HOLD;
         LaunchVolley(origin, aim);
         _cooldownTimer = _stats.Cooldown;
     }
