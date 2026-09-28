@@ -334,7 +334,7 @@ public class EnemyManager : BaseManager
         if (prefab == null)
         {
             // 기존 Prefab 미지정 동작을 유지하되, 비활성 원본 하나를 Pool에서 복제한다.
-            Debug.LogWarning("Enemy 프리팹이 없어 자리표시 액터를 만듭니다.");
+            Debug.LogWarning("유효한 Enemy Prefab이 없어 런타임 Fallback Enemy를 생성합니다. StageData와 EnemyManager 설정을 확인하세요.");
             _fallbackPrefab = new GameObject("Enemy Fallback");
             _fallbackPrefab.SetActive(false);
             _fallbackPrefab.transform.SetParent(_pool.Root, false);
