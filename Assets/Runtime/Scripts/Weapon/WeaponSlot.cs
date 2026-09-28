@@ -1,25 +1,25 @@
 using UnityEngine;
 
 /// <summary>
-/// 플레이어 주위에 무기를 붙여 두는 시계 칸.
+/// 플레이어 주위에 무기를 붙여 두는 시계 칸. 최대 여섯 자리다.
 /// </summary>
 public enum WeaponSlot
 {
-    Hour12 = 0,
-    Hour1 = 1,
-    Hour3 = 2,
-    Hour5 = 3,
-    Hour6 = 4,
-    Hour7 = 5,
-    Hour9 = 6,
-    Hour11 = 7
+    Hour1 = 0,
+    Hour3 = 1,
+    Hour5 = 2,
+    Hour7 = 3,
+    Hour9 = 4,
+    Hour11 = 5
 }
 
 /// <summary>
-/// 시계 칸을 플레이어 기준 방향으로 바꾼다. 12시가 위다.
+/// 시계 칸을 플레이어 기준 방향으로 바꾼다. 각도는 12시 방향을 위로 본다.
 /// </summary>
 public static class WeaponSlots
 {
+    public const int MAX_COUNT = 6;
+
     /// <summary>
     /// 칸의 단위 방향을 돌려준다.
     /// </summary>
@@ -27,16 +27,12 @@ public static class WeaponSlots
     {
         switch (slot)
         {
-            case WeaponSlot.Hour12:
-                return Direction(0f);
             case WeaponSlot.Hour1:
                 return Direction(30f);
             case WeaponSlot.Hour3:
                 return Direction(90f);
             case WeaponSlot.Hour5:
                 return Direction(150f);
-            case WeaponSlot.Hour6:
-                return Direction(180f);
             case WeaponSlot.Hour7:
                 return Direction(210f);
             case WeaponSlot.Hour9:
