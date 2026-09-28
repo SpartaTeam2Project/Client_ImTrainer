@@ -10,7 +10,7 @@ public abstract class Weapon : MonoBehaviour
     private const float VOLLEY_SPREAD_DEGREES = 12f;
     private const int SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
-    private const float ATTACK_FACING_HOLD = 0.8f;
+    private const float ATTACK_POSE_SECONDS = 0.6f;
     private const float SECTOR_DEGREES = 45f;
     private const float SECTOR_HALF_DEGREES = 22.5f;
     private static readonly Color PLACEHOLDER_COLOR = new Color(0.35f, 0.75f, 0.95f, 1f);
@@ -359,14 +359,14 @@ public abstract class Weapon : MonoBehaviour
     private void AdvanceAttack(float deltaTime)
     {
         var frames = GetAttackFrames(_eightWay);
-        if (!HasFrames(frames) || _framesPerSecond <= 0f)
+        if (!HasFrames(frames))
         {
             EndAttack();
             return;
         }
 
         _frameTimer += deltaTime;
-        var frameDuration = 1f / _framesPerSecond;
+        var frameDuration = ATTACK_POSE_SECONDS / frames.Length;
         while (_frameTimer >= frameDuration)
         {
             _frameTimer -= frameDuration;
@@ -390,7 +390,7 @@ public abstract class Weapon : MonoBehaviour
         if (!HasFrames(attackFrames))
         {
             _isAttacking = false;
-            _attackFacingTimer = ATTACK_FACING_HOLD;
+            _attackFacingTimer = ATTACK_POSE_SECONDS;
             return;
         }
 
