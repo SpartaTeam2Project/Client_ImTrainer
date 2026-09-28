@@ -8,6 +8,7 @@ public class Enemy : MonoBehaviour
     private const float MOVE_SQR_EPSILON = 0.0001f;
     private const float CONTACT_RADIUS = 0.75f;
     private const float CONTACT_INTERVAL = 0.6f;
+    private static readonly MonsterType[] DEFAULT_DEFENDER_TYPES = { MonsterType.Normal };
 
     [Header("Drop")]
     [SerializeField] private ExperienceGem _experienceGem;
@@ -20,6 +21,7 @@ public class Enemy : MonoBehaviour
     private float _moveSpeed;
     private float _nextContactTime;
     private int _waveIndex;
+    private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
 
     public float Health => _health;
 
@@ -68,6 +70,8 @@ public class Enemy : MonoBehaviour
         {
             _view = GetComponent<EnemyView>();
         }
+
+        _defenderTypes = visual != null ? visual.Types : DEFAULT_DEFENDER_TYPES;
 
         if (_view != null)
         {
@@ -130,16 +134,22 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 체력을 깎는다. 체력이 0이면 소유 매니저에 사망을 알린다.
+    /// 공격 타입 상성을 곱한 뒤 체력을 깎는다. 체력이 0이면 소유 매니저에 사망을 알린다.
     /// </summary>
-    public void ApplyDamage(float amount)
+    public void ApplyDamage(float amount, MonsterType attackType)
     {
-        if (!IsAlive || amount <= 0f)
+        if (!IsAlive)
         {
             return;
         }
 
-        _health = Mathf.Max(0f, _health - amount);
+        var dealt = amount * TypeChart.GetMultiplier(attackType, _defenderTypes);
+        if (dealt <= 0f)
+        {
+            return;
+        }
+
+        _health = Mathf.Max(0f, _health - dealt);
         if (_health > 0f)
         {
             return;

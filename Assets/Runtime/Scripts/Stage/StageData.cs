@@ -28,7 +28,7 @@ public enum WaveKind
 [Serializable]
 public class WaveSpawn
 {
-    [Tooltip("이 구간에 나올 몬스터 그림. Monster001 같은 에셋을 넣는다.")]
+    [Tooltip("이 구간에 나올 몬스터 그림. Monster0001 같은 에셋을 넣는다.")]
     [SerializeField] private MonsterVisualData _monster;
     [SerializeField] private EnemySpawnEntry[] _enemies = Array.Empty<EnemySpawnEntry>();
     [SerializeField] private WaveKind _kind = WaveKind.Continuous;

@@ -13,7 +13,7 @@ public class AbilityManager : BaseManager
 
     [Header("Weapon")]
     [SerializeField] private Weapon _startingWeaponPrefab;
-    [Tooltip("시작 무기가 재생할 그림. Weapon001 같은 에셋을 넣는다.")]
+    [Tooltip("시작 무기가 재생할 그림. Weapon0001 같은 에셋을 넣는다.")]
     [SerializeField] private WeaponVisualData _startingWeaponVisual;
 
     [Header("Level Up")]

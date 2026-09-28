@@ -235,7 +235,7 @@ public class EnemyView : MonoBehaviour
 
     private Sprite[] GetEightWayFrames(EightWay way)
     {
-        if (_visual == null)
+        if (_visual == null || _visual.Walk == null)
         {
             return null;
         }
@@ -243,21 +243,21 @@ public class EnemyView : MonoBehaviour
         switch (way)
         {
             case EightWay.UpRight:
-                return FirstFrames(_visual.WalkUpRight, _visual.WalkRight);
+                return FirstFrames(_visual.Walk.UpRight, _visual.Walk.Right);
             case EightWay.Up:
-                return FirstFrames(_visual.WalkUp, _visual.WalkRight);
+                return FirstFrames(_visual.Walk.Up, _visual.Walk.Right);
             case EightWay.UpLeft:
-                return FirstFrames(_visual.WalkUpLeft, _visual.WalkRight);
+                return FirstFrames(_visual.Walk.UpLeft, _visual.Walk.Right);
             case EightWay.Left:
-                return FirstFrames(_visual.WalkLeft, _visual.WalkRight);
+                return FirstFrames(_visual.Walk.Left, _visual.Walk.Right);
             case EightWay.DownLeft:
-                return FirstFrames(_visual.WalkDownLeft, _visual.WalkRight);
+                return FirstFrames(_visual.Walk.DownLeft, _visual.Walk.Right);
             case EightWay.Down:
-                return FirstFrames(_visual.WalkDown, _visual.WalkRight);
+                return FirstFrames(_visual.Walk.Down, _visual.Walk.Right);
             case EightWay.DownRight:
-                return FirstFrames(_visual.WalkDownRight, _visual.WalkRight);
+                return FirstFrames(_visual.Walk.DownRight, _visual.Walk.Right);
             default:
-                return _visual.WalkRight;
+                return _visual.Walk.Right;
         }
     }
 

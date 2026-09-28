@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -23,6 +25,7 @@ public class UISettingsWindow : MonoBehaviour
 
     private VolumeRow[] _rows;
     private int _selectedIndex;
+    private readonly List<PointerBinding> _pointerBindings = new List<PointerBinding>();
 
     public bool IsOpen => gameObject.activeSelf;
 
@@ -151,6 +154,9 @@ public class UISettingsWindow : MonoBehaviour
         SubscribeSlider(_masterRow, HandleMasterVolumeChanged);
         SubscribeSlider(_musicRow, HandleMusicVolumeChanged);
         SubscribeSlider(_soundRow, HandleSoundVolumeChanged);
+        SubscribePointer(_masterRow);
+        SubscribePointer(_musicRow);
+        SubscribePointer(_soundRow);
     }
 
     private void UnsubscribeControls()
@@ -158,6 +164,7 @@ public class UISettingsWindow : MonoBehaviour
         UnsubscribeSlider(_masterRow, HandleMasterVolumeChanged);
         UnsubscribeSlider(_musicRow, HandleMusicVolumeChanged);
         UnsubscribeSlider(_soundRow, HandleSoundVolumeChanged);
+        UnsubscribePointers();
     }
 
     private static void SubscribeSlider(VolumeRow row, UnityEngine.Events.UnityAction<float> handler)
@@ -178,6 +185,57 @@ public class UISettingsWindow : MonoBehaviour
         }
 
         row.Slider.onValueChanged.RemoveListener(handler);
+    }
+
+    // 드래그 중 값 변화에는 소리를 내지 않고, 누르고 뗄 때만 낸다.
+    private void SubscribePointer(VolumeRow row)
+    {
+        if (row == null || row.Slider == null)
+        {
+            return;
+        }
+
+        var trigger = row.Slider.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = row.Slider.gameObject.AddComponent<EventTrigger>();
+        }
+
+        AddPointerBinding(trigger, EventTriggerType.PointerDown);
+        AddPointerBinding(trigger, EventTriggerType.PointerUp);
+    }
+
+    private void AddPointerBinding(EventTrigger trigger, EventTriggerType eventType)
+    {
+        var entry = new EventTrigger.Entry
+        {
+            eventID = eventType
+        };
+        entry.callback.AddListener(HandleVolumePointer);
+        trigger.triggers.Add(entry);
+        _pointerBindings.Add(new PointerBinding(trigger, entry));
+    }
+
+    private void UnsubscribePointers()
+    {
+        for (var i = 0; i < _pointerBindings.Count; i++)
+        {
+            var binding = _pointerBindings[i];
+            if (binding.Trigger == null)
+            {
+                continue;
+            }
+
+            binding.Entry.callback.RemoveListener(HandleVolumePointer);
+            binding.Trigger.triggers.Remove(binding.Entry);
+        }
+
+        _pointerBindings.Clear();
+    }
+
+    private void HandleVolumePointer(BaseEventData _)
+    {
+        PlayMoveSound();
     }
 
     private void LoadSavedVolumes()
@@ -232,8 +290,14 @@ public class UISettingsWindow : MonoBehaviour
             return;
         }
 
-        var steps = Mathf.Round((row.Slider.value + direction * VOLUME_STEP) / VOLUME_STEP);
-        row.Slider.value = Mathf.Clamp01(steps * VOLUME_STEP);
+        var next = Mathf.Clamp01(Mathf.Round((row.Slider.value + direction * VOLUME_STEP) / VOLUME_STEP) * VOLUME_STEP);
+        if (Mathf.Approximately(row.Slider.value, next))
+        {
+            return;
+        }
+
+        row.Slider.value = next;
+        PlayMoveSound();
     }
 
     private void ApplySelection()
@@ -342,5 +406,18 @@ public class UISettingsWindow : MonoBehaviour
 
             _valueText.text = Mathf.RoundToInt(volume * PERCENT_SCALE).ToString();
         }
+    }
+
+    private readonly struct PointerBinding
+    {
+        public PointerBinding(EventTrigger trigger, EventTrigger.Entry entry)
+        {
+            Trigger = trigger;
+            Entry = entry;
+        }
+
+        public EventTrigger Trigger { get; }
+
+        public EventTrigger.Entry Entry { get; }
     }
 }

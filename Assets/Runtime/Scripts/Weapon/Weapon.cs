@@ -62,6 +62,8 @@ public abstract class Weapon : MonoBehaviour
 
     protected WeaponVisualData Visual => _visual;
 
+    protected MonsterType AttackType => Visual != null ? Visual.AttackType : MonsterType.Normal;
+
     #region Unity Methods
 
     private void Awake()
@@ -454,7 +456,7 @@ public abstract class Weapon : MonoBehaviour
 
     private Sprite[] GetEightWayFrames(EightWay way)
     {
-        if (_visual == null)
+        if (_visual == null || _visual.Idle == null)
         {
             return null;
         }
@@ -462,21 +464,21 @@ public abstract class Weapon : MonoBehaviour
         switch (way)
         {
             case EightWay.UpRight:
-                return FirstFrames(_visual.IdleUpRight, _visual.IdleRight);
+                return FirstFrames(_visual.Idle.UpRight, _visual.Idle.Right);
             case EightWay.Up:
-                return FirstFrames(_visual.IdleUp, _visual.IdleRight);
+                return FirstFrames(_visual.Idle.Up, _visual.Idle.Right);
             case EightWay.UpLeft:
-                return FirstFrames(_visual.IdleUpLeft, _visual.IdleRight);
+                return FirstFrames(_visual.Idle.UpLeft, _visual.Idle.Right);
             case EightWay.Left:
-                return FirstFrames(_visual.IdleLeft, _visual.IdleRight);
+                return FirstFrames(_visual.Idle.Left, _visual.Idle.Right);
             case EightWay.DownLeft:
-                return FirstFrames(_visual.IdleDownLeft, _visual.IdleRight);
+                return FirstFrames(_visual.Idle.DownLeft, _visual.Idle.Right);
             case EightWay.Down:
-                return FirstFrames(_visual.IdleDown, _visual.IdleRight);
+                return FirstFrames(_visual.Idle.Down, _visual.Idle.Right);
             case EightWay.DownRight:
-                return FirstFrames(_visual.IdleDownRight, _visual.IdleRight);
+                return FirstFrames(_visual.Idle.DownRight, _visual.Idle.Right);
             default:
-                return _visual.IdleRight;
+                return _visual.Idle.Right;
         }
     }
 
@@ -485,7 +487,7 @@ public abstract class Weapon : MonoBehaviour
     /// </summary>
     private Sprite[] GetAttackFrames(EightWay way)
     {
-        if (_visual == null)
+        if (_visual == null || _visual.Attack == null)
         {
             return null;
         }
@@ -493,21 +495,21 @@ public abstract class Weapon : MonoBehaviour
         switch (way)
         {
             case EightWay.UpRight:
-                return _visual.AttackUpRight;
+                return _visual.Attack.UpRight;
             case EightWay.Up:
-                return _visual.AttackUp;
+                return _visual.Attack.Up;
             case EightWay.UpLeft:
-                return _visual.AttackUpLeft;
+                return _visual.Attack.UpLeft;
             case EightWay.Left:
-                return _visual.AttackLeft;
+                return _visual.Attack.Left;
             case EightWay.DownLeft:
-                return _visual.AttackDownLeft;
+                return _visual.Attack.DownLeft;
             case EightWay.Down:
-                return _visual.AttackDown;
+                return _visual.Attack.Down;
             case EightWay.DownRight:
-                return _visual.AttackDownRight;
+                return _visual.Attack.DownRight;
             default:
-                return _visual.AttackRight;
+                return _visual.Attack.Right;
         }
     }
 

@@ -62,7 +62,7 @@ public class LaserBeam : MonoBehaviour
     /// <summary>
     /// 선분을 깔고, 두께 안의 적에게 한 번 피해를 준다. 보이는 동안에는 다시 맞지 않는다.
     /// </summary>
-    public void Fire(Vector2 origin, Vector2 direction, float length, float thickness, float duration, float damage)
+    public void Fire(Vector2 origin, Vector2 direction, float length, float thickness, float duration, float damage, MonsterType attackType)
     {
         var forward = direction.sqrMagnitude > DIRECTION_SQR_EPSILON ? direction.normalized : Vector2.right;
         var beamLength = Mathf.Max(0f, length);
@@ -73,7 +73,7 @@ public class LaserBeam : MonoBehaviour
         transform.localScale = new Vector3(beamLength, Mathf.Max(MIN_VISUAL_THICKNESS, thickness * 2f), 1f);
         _remaining = Mathf.Max(0f, duration);
         gameObject.SetActive(true);
-        ApplyDamageAlong(origin, forward, beamLength, thickness, damage);
+        ApplyDamageAlong(origin, forward, beamLength, thickness, damage, attackType);
     }
 
     /// <summary>
@@ -97,7 +97,7 @@ public class LaserBeam : MonoBehaviour
 
     #region Private Methods
 
-    private void ApplyDamageAlong(Vector2 origin, Vector2 forward, float length, float thickness, float damage)
+    private void ApplyDamageAlong(Vector2 origin, Vector2 forward, float length, float thickness, float damage, MonsterType attackType)
     {
         if (damage <= 0f || Managers.Instance == null || !Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
         {
@@ -110,7 +110,7 @@ public class LaserBeam : MonoBehaviour
             var enemy = _hits[i];
             if (enemy != null && enemy.IsAlive)
             {
-                enemy.ApplyDamage(damage);
+                enemy.ApplyDamage(damage, attackType);
             }
         }
     }
