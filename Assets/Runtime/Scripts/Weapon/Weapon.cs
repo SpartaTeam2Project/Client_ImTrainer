@@ -41,6 +41,9 @@ public abstract class Weapon : MonoBehaviour
     [Header("Stats")]
     [SerializeField] private WeaponStats _stats = new WeaponStats();
 
+    [Header("Upgrade")]
+    [SerializeField] private WeaponStatUpgrade[] _statUpgrades;
+
     private MonsterVisualData _visual;
     private AbilityManager _owner;
     private SpriteRenderer _renderer;
@@ -188,6 +191,20 @@ public abstract class Weapon : MonoBehaviour
         TickShots(deltaTime);
     }
 
+    /// <summary>
+    /// 고른 증강만 한 칸 올린다. 그 수치 칸이 없으면 false.
+    /// </summary>
+    public bool TryApplyUpgrade(WeaponStatKind stat)
+    {
+        if (_stats == null || !TryGetStatUpgrade(stat, out var upgrade))
+        {
+            return false;
+        }
+
+        _stats.AddStat(stat, upgrade.Amount);
+        return true;
+    }
+
     #endregion
 
     #region Protected Methods
@@ -221,6 +238,29 @@ public abstract class Weapon : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    private bool TryGetStatUpgrade(WeaponStatKind stat, out WeaponStatUpgrade upgrade)
+    {
+        upgrade = null;
+        if (_statUpgrades == null)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < _statUpgrades.Length; i++)
+        {
+            var candidate = _statUpgrades[i];
+            if (candidate == null || candidate.Stat != stat)
+            {
+                continue;
+            }
+
+            upgrade = candidate;
+            return true;
+        }
+
+        return false;
+    }
 
     private bool TryGetPlayer(out PlayerManager playerManager)
     {
