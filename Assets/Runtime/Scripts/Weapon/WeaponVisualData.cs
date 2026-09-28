@@ -1,36 +1,46 @@
 using UnityEngine;
 
 /// <summary>
-/// 무기 포켓몬 한 칸의 그림과 크기. 기획자는 번호 에셋에 아이들, 공격, 총알, 크기만 넣는다.
-/// 직선 사격 등 공격 프리팹은 이 에셋을 읽어 필요한 칸만 쓴다.
+/// 무기 포켓몬 한 칸의 그림과 크기. 기획자는 번호 에셋에 아이들, 공격, 추가 동작, 총알, 크기를 넣는다.
+/// 추가 동작은 비워 둘 수 있다. 직선 사격 등 공격 프리팹은 필요한 칸만 쓴다.
 /// </summary>
 [CreateAssetMenu(fileName = "WeaponVisual", menuName = "Weapon/Weapon Visual")]
-public class WeaponVisualData : ScriptableObject
+public class WeaponVisualData : ScriptableObject, ISerializationCallbackReceiver
 {
     public const float DEFAULT_SCALE = 2.7f;
 
     [Header("Size")]
     [SerializeField, Min(0.01f)] private float _scale = DEFAULT_SCALE;
 
-    [Header("Idle Eight Direction")]
-    [SerializeField] private Sprite[] _idleDown = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _idleDownRight = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _idleRight = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _idleUpRight = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _idleUp = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _idleUpLeft = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _idleLeft = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _idleDownLeft = System.Array.Empty<Sprite>();
+    [SerializeField] private EightDirectionFrames _idle = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _attack = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _sleep = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _hurt = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _charge = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _shoot = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _strike = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _swing = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _rotate = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _hop = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _faint = new EightDirectionFrames();
 
-    [Header("Attack Eight Direction")]
-    [SerializeField] private Sprite[] _attackDown = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _attackDownRight = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _attackRight = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _attackUpRight = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _attackUp = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _attackUpLeft = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _attackLeft = System.Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _attackDownLeft = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleDown = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleDownRight = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleRight = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleUpRight = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleUp = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleUpLeft = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleLeft = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _idleDownLeft = System.Array.Empty<Sprite>();
+
+    [SerializeField, HideInInspector] private Sprite[] _attackDown = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _attackDownRight = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _attackRight = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _attackUpRight = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _attackUp = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _attackUpLeft = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _attackLeft = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _attackDownLeft = System.Array.Empty<Sprite>();
 
     [Header("Projectile")]
     [SerializeField] private Sprite _projectileSprite;
@@ -40,39 +50,85 @@ public class WeaponVisualData : ScriptableObject
 
     public float Scale => _scale > 0f ? _scale : DEFAULT_SCALE;
 
-    public Sprite[] IdleDown => _idleDown;
+    public EightDirectionFrames Idle => _idle;
 
-    public Sprite[] IdleDownRight => _idleDownRight;
+    public EightDirectionFrames Attack => _attack;
 
-    public Sprite[] IdleRight => _idleRight;
+    public EightDirectionFrames Sleep => _sleep;
 
-    public Sprite[] IdleUpRight => _idleUpRight;
+    public EightDirectionFrames Hurt => _hurt;
 
-    public Sprite[] IdleUp => _idleUp;
+    public EightDirectionFrames Charge => _charge;
 
-    public Sprite[] IdleUpLeft => _idleUpLeft;
+    public EightDirectionFrames Shoot => _shoot;
 
-    public Sprite[] IdleLeft => _idleLeft;
+    public EightDirectionFrames Strike => _strike;
 
-    public Sprite[] IdleDownLeft => _idleDownLeft;
+    public EightDirectionFrames Swing => _swing;
 
-    public Sprite[] AttackDown => _attackDown;
+    public EightDirectionFrames Rotate => _rotate;
 
-    public Sprite[] AttackDownRight => _attackDownRight;
+    public EightDirectionFrames Hop => _hop;
 
-    public Sprite[] AttackRight => _attackRight;
-
-    public Sprite[] AttackUpRight => _attackUpRight;
-
-    public Sprite[] AttackUp => _attackUp;
-
-    public Sprite[] AttackUpLeft => _attackUpLeft;
-
-    public Sprite[] AttackLeft => _attackLeft;
-
-    public Sprite[] AttackDownLeft => _attackDownLeft;
+    public EightDirectionFrames Faint => _faint;
 
     public Sprite ProjectileSprite => _projectileSprite;
 
     public MonsterType AttackType => _attackType;
+
+    /// <summary>
+    /// 예전 평탄 필드에 있던 아이들·공격 그림을 접는 칸으로 옮긴다.
+    /// </summary>
+    public void OnAfterDeserialize()
+    {
+        EnsureFrames();
+        CopyLegacyIfEmpty(_idle, _idleDown, _idleDownRight, _idleRight, _idleUpRight, _idleUp, _idleUpLeft, _idleLeft, _idleDownLeft);
+        CopyLegacyIfEmpty(_attack, _attackDown, _attackDownRight, _attackRight, _attackUpRight, _attackUp, _attackUpLeft, _attackLeft, _attackDownLeft);
+    }
+
+    /// <summary>
+    /// 직렬화 전에 추가 작업은 없다.
+    /// </summary>
+    public void OnBeforeSerialize()
+    {
+    }
+
+    private void OnEnable()
+    {
+        EnsureFrames();
+    }
+
+    private void EnsureFrames()
+    {
+        _idle ??= new EightDirectionFrames();
+        _attack ??= new EightDirectionFrames();
+        _sleep ??= new EightDirectionFrames();
+        _hurt ??= new EightDirectionFrames();
+        _charge ??= new EightDirectionFrames();
+        _shoot ??= new EightDirectionFrames();
+        _strike ??= new EightDirectionFrames();
+        _swing ??= new EightDirectionFrames();
+        _rotate ??= new EightDirectionFrames();
+        _hop ??= new EightDirectionFrames();
+        _faint ??= new EightDirectionFrames();
+    }
+
+    private static void CopyLegacyIfEmpty(
+        EightDirectionFrames frames,
+        Sprite[] down,
+        Sprite[] downRight,
+        Sprite[] right,
+        Sprite[] upRight,
+        Sprite[] up,
+        Sprite[] upLeft,
+        Sprite[] left,
+        Sprite[] downLeft)
+    {
+        if (frames.HasFrames())
+        {
+            return;
+        }
+
+        frames.Assign(down, downRight, right, upRight, up, upLeft, left, downLeft);
+    }
 }
