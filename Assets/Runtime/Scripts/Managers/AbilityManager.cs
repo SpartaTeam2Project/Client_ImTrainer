@@ -146,6 +146,20 @@ public class AbilityManager : BaseManager
     }
 
     /// <summary>
+    /// 고른 시계 칸 무기에, 고른 수치만 한 칸 올린다.
+    /// </summary>
+    public bool SelectWeaponUpgrade(WeaponSlot slot, WeaponStatKind stat)
+    {
+        var index = (int)slot;
+        if (index < 0 || index >= _weapons.Length || _weapons[index] == null)
+        {
+            return false;
+        }
+
+        return _weapons[index].TryApplyUpgrade(stat);
+    }
+
+    /// <summary>
     /// 무기가 씬과 함께 사라지면 참조를 비운다.
     /// </summary>
     public void NotifyWeaponDestroyed(Weapon weapon)
@@ -177,14 +191,6 @@ public class AbilityManager : BaseManager
         {
             PendingLevelUpLevel = _levelUpQueue.Dequeue();
             PlayLevelUpSound();
-            if (!HasUpgradeChoices())
-            {
-                continue;
-            }
-
-            // 증강 목록이 생기면 GameState.LevelUp과 timeScale 0으로 선택창을 연다.
-            _waitingForChoice = true;
-            return;
         }
     }
 
@@ -196,11 +202,6 @@ public class AbilityManager : BaseManager
         }
 
         audioManager.PlaySound(_levelUpFanfare);
-    }
-
-    private bool HasUpgradeChoices()
-    {
-        return false;
     }
 
     private void ClearLevelUpQueue()

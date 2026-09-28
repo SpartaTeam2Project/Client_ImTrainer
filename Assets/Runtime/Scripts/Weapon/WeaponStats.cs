@@ -30,4 +30,26 @@ public class WeaponStats
     public float ProjectileSpeed => Mathf.Max(0f, _projectileSpeed);
 
     public float HitRadius => Mathf.Max(0f, _hitRadius);
+
+    /// <summary>
+    /// 고른 수치만 더한다. 쿨타임은 적힌 만큼 짧아진다.
+    /// </summary>
+    public void AddStat(WeaponStatKind stat, float amount)
+    {
+        switch (stat)
+        {
+            case WeaponStatKind.AttackRange:
+                _attackRange += amount;
+                break;
+            case WeaponStatKind.Cooldown:
+                _cooldown -= Mathf.Abs(amount);
+                break;
+            case WeaponStatKind.Width:
+                _hitRadius += amount;
+                break;
+            case WeaponStatKind.Damage:
+                _damage += amount;
+                break;
+        }
+    }
 }
