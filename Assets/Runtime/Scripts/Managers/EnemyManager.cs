@@ -328,11 +328,22 @@ public class EnemyManager : BaseManager
         var maxHealth = Mathf.Max(1f, wave.MaxHealth * _hpMultiplier);
         var contactDamage = wave.ContactDamage * _damageMultiplier;
         // 재사용 여부와 관계없이 그림과 스탯을 넣은 뒤 Tick에 등록한다.
+        var visual = SelectMonsterVisual(wave);
         enemy.Bind(this);
-        enemy.ApplyVisual(SelectMonsterVisual(wave));
+        enemy.ApplyVisual(visual, ResolveScale(wave, visual));
         enemy.Initialize(_playerId, runtime.WaveIndex, maxHealth, contactDamage, wave.MoveSpeed);
         runtime.AliveCount++;
         _alive.Add(enemy);
+    }
+
+    private static float ResolveScale(WaveSpawn wave, MonsterVisualData visual)
+    {
+        if (wave.OverrideScale)
+        {
+            return wave.Scale;
+        }
+
+        return visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE;
     }
 
     private MonsterVisualData SelectMonsterVisual(WaveSpawn wave)

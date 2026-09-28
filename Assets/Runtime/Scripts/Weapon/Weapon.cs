@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 /// <summary>
@@ -11,7 +10,7 @@ public abstract class Weapon : MonoBehaviour
     private const float VOLLEY_SPREAD_DEGREES = 12f;
     private const int SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
-    private const float ATTACK_FACING_HOLD = 0.6f;
+    private const float ATTACK_FACING_HOLD = 0.8f;
     private const float SECTOR_DEGREES = 45f;
     private const float SECTOR_HALF_DEGREES = 22.5f;
     private static readonly Color PLACEHOLDER_COLOR = new Color(0.35f, 0.75f, 0.95f, 1f);
@@ -42,10 +41,7 @@ public abstract class Weapon : MonoBehaviour
     [Header("Stats")]
     [SerializeField] private WeaponStats _stats = new WeaponStats();
 
-    [Header("Upgrade")]
-    [SerializeField] private WeaponStatUpgrade[] _statUpgrades = Array.Empty<WeaponStatUpgrade>();
-
-    private WeaponVisualData _visual;
+    private MonsterVisualData _visual;
     private AbilityManager _owner;
     private SpriteRenderer _renderer;
     private Vector2 _offset = Vector2.right;
@@ -60,9 +56,9 @@ public abstract class Weapon : MonoBehaviour
 
     protected WeaponStats Stats => _stats;
 
-    protected WeaponVisualData Visual => _visual;
+    protected MonsterVisualData Visual => _visual;
 
-    protected MonsterType AttackType => Visual != null ? Visual.AttackType : MonsterType.Normal;
+    protected MonsterType AttackType => Visual != null ? Visual.PrimaryType : MonsterType.Normal;
 
     #region Unity Methods
 
@@ -109,9 +105,9 @@ public abstract class Weapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 이번 무기에 쓸 8방향 그림을 넣는다. 총알과 빔 그림은 각 프리팹이 가진다.
+    /// 이번 무기에 쓸 종 그림을 넣는다. 크기와 총알은 그 에셋의 칸을 쓴다.
     /// </summary>
-    public virtual void ApplyVisual(WeaponVisualData visual)
+    public virtual void ApplyVisual(MonsterVisualData visual)
     {
         _visual = visual;
         _isAttacking = false;
@@ -169,17 +165,17 @@ public abstract class Weapon : MonoBehaviour
 
         var playerTransform = playerManager.PlayerTransform;
         transform.position = (Vector2)playerTransform.position + _offset;
-        if (_attackFacingTimer > 0f)
-        {
-            _attackFacingTimer -= deltaTime;
-        }
-
         if (_isAttacking)
         {
             AdvanceAttack(deltaTime);
         }
         else
         {
+            if (_attackFacingTimer > 0f)
+            {
+                _attackFacingTimer -= deltaTime;
+            }
+
             if (_attackFacingTimer <= 0f)
             {
                 ApplyFacing(playerManager.LookDirection);
@@ -190,20 +186,6 @@ public abstract class Weapon : MonoBehaviour
 
         TryAttack(deltaTime);
         TickShots(deltaTime);
-    }
-
-    /// <summary>
-    /// 고른 증강만 한 칸 올린다. 그 수치 칸이 없으면 false.
-    /// </summary>
-    public bool TryApplyUpgrade(WeaponStatKind stat)
-    {
-        if (_stats == null || !TryGetStatUpgrade(stat, out var upgrade))
-        {
-            return false;
-        }
-
-        _stats.AddStat(stat, upgrade.Amount);
-        return true;
     }
 
     #endregion
@@ -239,29 +221,6 @@ public abstract class Weapon : MonoBehaviour
     #endregion
 
     #region Private Methods
-
-    private bool TryGetStatUpgrade(WeaponStatKind stat, out WeaponStatUpgrade upgrade)
-    {
-        upgrade = null;
-        if (_statUpgrades == null)
-        {
-            return false;
-        }
-
-        for (var i = 0; i < _statUpgrades.Length; i++)
-        {
-            var candidate = _statUpgrades[i];
-            if (candidate == null || candidate.Stat != stat)
-            {
-                continue;
-            }
-
-            upgrade = candidate;
-            return true;
-        }
-
-        return false;
-    }
 
     private bool TryGetPlayer(out PlayerManager playerManager)
     {
@@ -383,19 +342,20 @@ public abstract class Weapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 조준 방향에 공격 장이 있으면 0번부터 재생한다. 방향은 공격 장 수와 상관없이 0.6초 유지한다.
+    /// 조준 방향에 공격 장이 있으면 0번부터 재생하고, 없으면 아이들 방향을 잠시 유지한다.
     /// </summary>
     private void BeginAttackPose()
     {
-        _attackFacingTimer = ATTACK_FACING_HOLD;
         var attackFrames = GetAttackFrames(_eightWay);
         if (!HasFrames(attackFrames))
         {
             _isAttacking = false;
+            _attackFacingTimer = ATTACK_FACING_HOLD;
             return;
         }
 
         _isAttacking = true;
+        _attackFacingTimer = 0f;
         _frameIndex = 0;
         _frameTimer = 0f;
         ShowCurrentFrame();
@@ -456,7 +416,7 @@ public abstract class Weapon : MonoBehaviour
 
     private Sprite[] GetEightWayFrames(EightWay way)
     {
-        if (_visual == null || _visual.Idle == null)
+        if (_visual == null || _visual.Walk == null)
         {
             return null;
         }
@@ -464,21 +424,21 @@ public abstract class Weapon : MonoBehaviour
         switch (way)
         {
             case EightWay.UpRight:
-                return FirstFrames(_visual.Idle.UpRight, _visual.Idle.Right);
+                return FirstFrames(_visual.Walk.UpRight, _visual.Walk.Right);
             case EightWay.Up:
-                return FirstFrames(_visual.Idle.Up, _visual.Idle.Right);
+                return FirstFrames(_visual.Walk.Up, _visual.Walk.Right);
             case EightWay.UpLeft:
-                return FirstFrames(_visual.Idle.UpLeft, _visual.Idle.Right);
+                return FirstFrames(_visual.Walk.UpLeft, _visual.Walk.Right);
             case EightWay.Left:
-                return FirstFrames(_visual.Idle.Left, _visual.Idle.Right);
+                return FirstFrames(_visual.Walk.Left, _visual.Walk.Right);
             case EightWay.DownLeft:
-                return FirstFrames(_visual.Idle.DownLeft, _visual.Idle.Right);
+                return FirstFrames(_visual.Walk.DownLeft, _visual.Walk.Right);
             case EightWay.Down:
-                return FirstFrames(_visual.Idle.Down, _visual.Idle.Right);
+                return FirstFrames(_visual.Walk.Down, _visual.Walk.Right);
             case EightWay.DownRight:
-                return FirstFrames(_visual.Idle.DownRight, _visual.Idle.Right);
+                return FirstFrames(_visual.Walk.DownRight, _visual.Walk.Right);
             default:
-                return _visual.Idle.Right;
+                return _visual.Walk.Right;
         }
     }
 

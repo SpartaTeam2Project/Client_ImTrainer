@@ -1,12 +1,17 @@
 using UnityEngine;
 
 /// <summary>
-/// 몬스터 한 칸의 그림. 기획자는 번호 에셋에 8방향 동작과 총알 스프라이트를 넣는다.
+/// 포켓몬 한 종의 그림, 타입, 크기. 몬스터와 무기가 같은 에셋을 쓴다.
 /// 걷기 외 동작은 비워 둘 수 있다. 추적, 사격, 보스 동작은 필요한 칸만 쓴다.
 /// </summary>
 [CreateAssetMenu(fileName = "MonsterVisual", menuName = "Monster/Monster Visual")]
 public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceiver
 {
+    public const float DEFAULT_SCALE = 2.7f;
+
+    [Header("Size")]
+    [SerializeField, Min(0.01f)] private float _scale = DEFAULT_SCALE;
+
     [SerializeField] private EightDirectionFrames _walk = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _sleep = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _hurt = new EightDirectionFrames();
@@ -35,6 +40,8 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [SerializeField] private MonsterType _primaryType = MonsterType.Normal;
     [SerializeField] private bool _hasSecondaryType;
     [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
+
+    public float Scale => _scale > 0f ? _scale : DEFAULT_SCALE;
 
     public EightDirectionFrames Walk => _walk;
 
