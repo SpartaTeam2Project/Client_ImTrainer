@@ -25,9 +25,6 @@ public class AccountManager : BaseManager
     private const int INTRO_COMPLETED_VALUE = 1;
     private const int DEFAULT_GENERATION = 1;
 
-    // TODO: 테스트가 끝나면 false로 바꾼다. 켜져 있으면 완료 여부와 관계없이 인트로를 다시 연다.
-    private const bool ALWAYS_SHOW_INTRO = true;
-
     [SerializeField] private MonsterVisualData[] _starterVisuals = System.Array.Empty<MonsterVisualData>();
     [SerializeField] private PlayableCharacterDatabase _playableCharacters;
 
@@ -38,12 +35,14 @@ public class AccountManager : BaseManager
     private int _generation = DEFAULT_GENERATION;
     private string _selectedPlayableName = string.Empty;
 
+    private bool _alwaysShowIntro;
+
     public bool IntroCompleted => _introCompleted;
 
     /// <summary>
-    /// 로그인 진입 때 인트로를 열지 판단한다. 테스트 중에는 완료 후에도 연다.
+    /// 타이틀의 임시 체크. 켜진 채로 로그인하면 보유 데이터를 지우고 인트로를 다시 연다.
     /// </summary>
-    public bool ShouldShowIntro => ALWAYS_SHOW_INTRO || !_introCompleted;
+    public bool AlwaysShowIntro => _alwaysShowIntro;
 
     public TrainerGender Gender => _gender;
 
@@ -135,11 +134,33 @@ public class AccountManager : BaseManager
     }
 
     /// <summary>
-    /// 저장된 세대와 성별이 같은 플레이어블이면 획득이다.
+    /// 타이틀 임시 체크 값을 세션에만 남긴다.
+    /// </summary>
+    public void SetAlwaysShowIntro(bool alwaysShowIntro)
+    {
+        _alwaysShowIntro = alwaysShowIntro;
+    }
+
+    /// <summary>
+    /// 보유 플레이어블과 스타터를 비운다. 인트로를 다시 고르게 한다.
+    /// </summary>
+    public void ResetOwnedProfile()
+    {
+        _introCompleted = false;
+        _starterVisualName = string.Empty;
+        _selectedPlayableName = string.Empty;
+        Save(ResolvePlayerId());
+    }
+
+    /// <summary>
+    /// 인트로를 끝낸 뒤, 저장된 세대와 성별이 같은 플레이어블이면 획득이다.
     /// </summary>
     public bool IsPlayableUnlocked(PlayableCharacterData data)
     {
-        return data != null && data.Generation == _generation && data.Gender == _gender;
+        return _introCompleted
+            && data != null
+            && data.Generation == _generation
+            && data.Gender == _gender;
     }
 
     /// <summary>

@@ -249,8 +249,9 @@ public class UILobbyWindow : MonoBehaviour
             return;
         }
 
-        if (!accountManager.ShouldShowIntro)
+        if (!accountManager.AlwaysShowIntro)
         {
+            ShowStorage();
             return;
         }
 
@@ -260,6 +261,7 @@ public class UILobbyWindow : MonoBehaviour
             return;
         }
 
+        accountManager.ResetOwnedProfile();
         _introScene.Open(ShowStorage);
     }
 
