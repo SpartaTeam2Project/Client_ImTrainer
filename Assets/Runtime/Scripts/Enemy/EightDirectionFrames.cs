@@ -7,14 +7,15 @@ using UnityEngine;
 [Serializable]
 public class EightDirectionFrames
 {
-    [SerializeField] private Sprite[] _down = Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _downRight = Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _right = Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _upRight = Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _up = Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _upLeft = Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _left = Array.Empty<Sprite>();
-    [SerializeField] private Sprite[] _downLeft = Array.Empty<Sprite>();
+    // Array.Empty는 공유 배열이라 인스펙터 +가 빈 칸에서 동작하지 않는다.
+    [SerializeField] private Sprite[] _down = new Sprite[0];
+    [SerializeField] private Sprite[] _downRight = new Sprite[0];
+    [SerializeField] private Sprite[] _right = new Sprite[0];
+    [SerializeField] private Sprite[] _upRight = new Sprite[0];
+    [SerializeField] private Sprite[] _up = new Sprite[0];
+    [SerializeField] private Sprite[] _upLeft = new Sprite[0];
+    [SerializeField] private Sprite[] _left = new Sprite[0];
+    [SerializeField] private Sprite[] _downLeft = new Sprite[0];
 
     public Sprite[] Down => _down;
 
@@ -60,14 +61,26 @@ public class EightDirectionFrames
         Sprite[] left,
         Sprite[] downLeft)
     {
-        _down = down ?? System.Array.Empty<Sprite>();
-        _downRight = downRight ?? System.Array.Empty<Sprite>();
-        _right = right ?? System.Array.Empty<Sprite>();
-        _upRight = upRight ?? System.Array.Empty<Sprite>();
-        _up = up ?? System.Array.Empty<Sprite>();
-        _upLeft = upLeft ?? System.Array.Empty<Sprite>();
-        _left = left ?? System.Array.Empty<Sprite>();
-        _downLeft = downLeft ?? System.Array.Empty<Sprite>();
+        _down = CopySprites(down);
+        _downRight = CopySprites(downRight);
+        _right = CopySprites(right);
+        _upRight = CopySprites(upRight);
+        _up = CopySprites(up);
+        _upLeft = CopySprites(upLeft);
+        _left = CopySprites(left);
+        _downLeft = CopySprites(downLeft);
+    }
+
+    private static Sprite[] CopySprites(Sprite[] frames)
+    {
+        if (frames == null || frames.Length == 0)
+        {
+            return new Sprite[0];
+        }
+
+        var copy = new Sprite[frames.Length];
+        Array.Copy(frames, copy, frames.Length);
+        return copy;
     }
 
     private static bool HasSprites(Sprite[] frames)
