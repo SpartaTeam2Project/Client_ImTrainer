@@ -67,7 +67,7 @@ public class AbilityManager : BaseManager
     #region Public Methods
 
     /// <summary>
-    /// 시작 무기 선택 없이 3시 칸에 시작 무기 프리팹을 붙인다.
+    /// 3시 칸에 시작 무기를 붙인다. 프로필에 스타터가 있으면 그 그림을 쓴다.
     /// </summary>
     public void BeginStage(int playerId)
     {
@@ -86,7 +86,7 @@ public class AbilityManager : BaseManager
             return;
         }
 
-        PlaceWeapon(STARTING_SLOT, _startingWeaponPrefab, _startingWeaponVisual);
+        PlaceWeapon(STARTING_SLOT, _startingWeaponPrefab, ResolveStartingVisual());
     }
 
     /// <summary>
@@ -209,6 +209,20 @@ public class AbilityManager : BaseManager
         _levelUpQueue.Clear();
         _waitingForChoice = false;
         PendingLevelUpLevel = 0;
+    }
+
+    private MonsterVisualData ResolveStartingVisual()
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<AccountManager>(out var accountManager))
+        {
+            var starter = accountManager.ResolveStarterVisual();
+            if (starter != null)
+            {
+                return starter;
+            }
+        }
+
+        return _startingWeaponVisual;
     }
 
     private void PlaceWeapon(WeaponSlot slot, Weapon prefab, MonsterVisualData visual)

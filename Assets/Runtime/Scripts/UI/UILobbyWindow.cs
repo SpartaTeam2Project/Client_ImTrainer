@@ -23,6 +23,7 @@ public class UILobbyWindow : MonoBehaviour
     [SerializeField] private Sprite _idleSprite;
     [SerializeField] private Sprite _selectedSprite;
     [SerializeField] private GameObject _settingsSelect;
+    [SerializeField] private UIIntroScene _introScene;
 
     private LobbyButton _selectedButton = LobbyButton.None;
     private LobbyButton _accountButtonBeforeSettings = LobbyButton.Login;
@@ -47,6 +48,11 @@ public class UILobbyWindow : MonoBehaviour
     {
         var settingsWindow = GetSettingsWindow();
         if (settingsWindow != null && settingsWindow.IsOpen)
+        {
+            return;
+        }
+
+        if (_introScene != null && _introScene.IsOpen)
         {
             return;
         }
@@ -192,11 +198,13 @@ public class UILobbyWindow : MonoBehaviour
         if (_loginButton != null)
         {
             _loginButton.onClick.AddListener(PlayButtonClick);
+            _loginButton.onClick.AddListener(EnterAccount);
         }
 
         if (_registerButton != null)
         {
             _registerButton.onClick.AddListener(PlayButtonClick);
+            _registerButton.onClick.AddListener(EnterAccount);
         }
 
         if (_settingsButton != null)
@@ -211,11 +219,13 @@ public class UILobbyWindow : MonoBehaviour
         if (_loginButton != null)
         {
             _loginButton.onClick.RemoveListener(PlayButtonClick);
+            _loginButton.onClick.RemoveListener(EnterAccount);
         }
 
         if (_registerButton != null)
         {
             _registerButton.onClick.RemoveListener(PlayButtonClick);
+            _registerButton.onClick.RemoveListener(EnterAccount);
         }
 
         if (_settingsButton != null)
@@ -223,6 +233,28 @@ public class UILobbyWindow : MonoBehaviour
             _settingsButton.onClick.RemoveListener(PlayButtonClick);
             _settingsButton.onClick.RemoveListener(OpenSettings);
         }
+    }
+
+    private void EnterAccount()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var accountManager))
+        {
+            Debug.LogError("AccountManager를 찾을 수 없습니다.");
+            return;
+        }
+
+        if (!accountManager.ShouldShowIntro)
+        {
+            return;
+        }
+
+        if (_introScene == null)
+        {
+            Debug.LogError("인트로 화면이 없습니다.");
+            return;
+        }
+
+        _introScene.Open();
     }
 
     private void OpenSettings()
