@@ -7,7 +7,16 @@ using UnityEngine.UI;
 /// </summary>
 public class UIStorageWindow : MonoBehaviour
 {
+    private enum StorageFocus
+    {
+        Characters,
+        FilterBoard,
+        Generation,
+    }
+
     private const string MENU_MOVE_SOUND = "cursor";
+    private const string FILTER_APPLY_SOUND = "select";
+
     [SerializeField] private Transform _trainerContent;
     [SerializeField] private StorageCharacterView _slotPrefab;
     [SerializeField] private GridLayoutGroup _grid;
@@ -16,8 +25,12 @@ public class UIStorageWindow : MonoBehaviour
     [SerializeField] private GameObject _notChosen;
     [SerializeField] private UIIntroScene _introScene;
     [SerializeField] private StorageInfoView _info;
+    [SerializeField] private FilterOptionView _generationCategory;
+    [SerializeField] private FilterGenerationView _generationFilter;
 
     private readonly List<StorageCharacterView> _slots = new List<StorageCharacterView>();
+    private StorageFocus _mode = StorageFocus.Characters;
+    private PlayableCharacterData _focusedCharacter;
     private int _focusIndex;
 
     public bool IsOpen => isActiveAndEnabled;
@@ -33,12 +46,14 @@ public class UIStorageWindow : MonoBehaviour
             return;
         }
 
-        Rebuild();
+        PrepareFilters();
+        Rebuild(false);
     }
 
     private void OnEnable()
     {
-        Rebuild();
+        PrepareFilters();
+        Rebuild(false);
     }
 
     private void Update()
@@ -53,25 +68,268 @@ public class UIStorageWindow : MonoBehaviour
             return;
         }
 
+        if (inputManager.ConsumeStorageFilter() && _mode == StorageFocus.Characters)
+        {
+            FocusFilterBoard(true);
+        }
+
         var move = inputManager.ConsumeMenuMove();
         if (move != Vector2Int.zero)
         {
-            MoveFocus(move);
+            HandleMove(move);
         }
 
         if (inputManager.ConsumeMenuSubmit())
         {
-            ConfirmFocused();
+            HandleSubmit();
         }
 
         if (inputManager.ConsumeMenuCancel())
         {
-            ClearEntry();
+            HandleCancel();
         }
     }
 
-    private void Rebuild()
+    private void PrepareFilters()
     {
+        _mode = StorageFocus.Characters;
+        _focusedCharacter = null;
+        if (_generationCategory == null || _generationFilter == null)
+        {
+            Debug.LogError("스토리지 필터 참조가 없습니다.");
+            return;
+        }
+
+        _generationCategory.Bind(OnCategoryFocus, OnCategoryConfirm);
+        _generationCategory.SetFocused(false);
+        _generationFilter.Bind(OnGenerationFocus, OnGenerationConfirm);
+        _generationFilter.ResetFilter();
+        _generationFilter.Close();
+    }
+
+    private void HandleMove(Vector2Int move)
+    {
+        if (_mode == StorageFocus.FilterBoard)
+        {
+            if (move.y < 0)
+            {
+                ReturnToCharacters(true);
+            }
+
+            return;
+        }
+
+        if (_mode == StorageFocus.Generation)
+        {
+            if (move.y == 0 || _generationFilter == null)
+            {
+                return;
+            }
+
+            var direction = move.y > 0 ? -1 : 1;
+            if (_generationFilter.Move(direction))
+            {
+                PlayCursor();
+            }
+
+            return;
+        }
+
+        if (move.y > 0 && IsTopRow())
+        {
+            FocusFilterBoard(true);
+            return;
+        }
+
+        MoveFocus(move);
+    }
+
+    private void HandleSubmit()
+    {
+        if (_mode == StorageFocus.FilterBoard)
+        {
+            OpenGeneration();
+            return;
+        }
+
+        if (_mode == StorageFocus.Generation)
+        {
+            ApplyGenerationFilter();
+            return;
+        }
+
+        ConfirmFocused();
+    }
+
+    private void HandleCancel()
+    {
+        if (_mode == StorageFocus.Generation)
+        {
+            CloseGeneration();
+            return;
+        }
+
+        if (_mode == StorageFocus.FilterBoard)
+        {
+            ReturnToCharacters(true);
+            return;
+        }
+
+        ClearEntry();
+    }
+
+    private void OnCategoryFocus(FilterOptionView option)
+    {
+        if (_mode != StorageFocus.Characters)
+        {
+            return;
+        }
+
+        FocusFilterBoard(true);
+    }
+
+    private void OnCategoryConfirm(FilterOptionView option)
+    {
+        if (_mode == StorageFocus.Characters)
+        {
+            FocusFilterBoard(false);
+        }
+
+        OpenGeneration();
+    }
+
+    private void OnGenerationFocus(FilterOptionView option)
+    {
+        if (_mode != StorageFocus.Generation || _generationFilter == null)
+        {
+            return;
+        }
+
+        if (_generationFilter.FocusOption(option))
+        {
+            PlayCursor();
+        }
+    }
+
+    private void OnGenerationConfirm(FilterOptionView option)
+    {
+        if (_mode != StorageFocus.Generation || _generationFilter == null)
+        {
+            return;
+        }
+
+        _generationFilter.ConfirmOption(option);
+        PlaySelect();
+        Rebuild(true);
+    }
+
+    private void FocusFilterBoard(bool playCursor)
+    {
+        if (_generationCategory == null)
+        {
+            return;
+        }
+
+        if (_mode == StorageFocus.Generation && _generationFilter != null)
+        {
+            _generationFilter.Close();
+        }
+
+        var entered = _mode != StorageFocus.FilterBoard;
+        _mode = StorageFocus.FilterBoard;
+        ClearSlotSelect();
+        _generationCategory.SetFocused(true);
+        if (playCursor && entered)
+        {
+            PlayCursor();
+        }
+    }
+
+    private void OpenGeneration()
+    {
+        if (_generationFilter == null || _generationCategory == null)
+        {
+            return;
+        }
+
+        _mode = StorageFocus.Generation;
+        _generationCategory.SetFocused(true);
+        _generationFilter.Open();
+        PlaySelect();
+    }
+
+    private void CloseGeneration()
+    {
+        if (_generationFilter != null)
+        {
+            _generationFilter.Close();
+        }
+
+        _mode = StorageFocus.FilterBoard;
+        if (_generationCategory != null)
+        {
+            _generationCategory.SetFocused(true);
+        }
+    }
+
+    private void ApplyGenerationFilter()
+    {
+        if (_generationFilter == null)
+        {
+            return;
+        }
+
+        _generationFilter.ApplyFocused();
+        PlaySelect();
+        Rebuild(true);
+    }
+
+    private void ReturnToCharacters(bool playCursor)
+    {
+        if (_generationFilter != null)
+        {
+            _generationFilter.Close();
+        }
+
+        if (_generationCategory != null)
+        {
+            _generationCategory.SetFocused(false);
+        }
+
+        _mode = StorageFocus.Characters;
+        SetFocus(_focusIndex, false);
+        if (playCursor)
+        {
+            PlayCursor();
+        }
+    }
+
+    private void ClearSlotSelect()
+    {
+        for (var i = 0; i < _slots.Count; i++)
+        {
+            _slots[i].SetFocused(false);
+        }
+    }
+
+    private bool IsTopRow()
+    {
+        return _slots.Count > 0 && _focusIndex < ColumnCount();
+    }
+
+    private bool PassesGeneration(PlayableCharacterData character)
+    {
+        if (_generationFilter == null || _generationFilter.AppliedGeneration == FilterGenerationView.ALL_GENERATION)
+        {
+            return true;
+        }
+
+        return character.Generation == _generationFilter.AppliedGeneration;
+    }
+
+    private void Rebuild(bool keepEntry)
+    {
+        var previousFocus = _focusedCharacter;
         ClearContent();
         if (_slotPrefab == null || _trainerContent == null)
         {
@@ -86,7 +344,7 @@ public class UIStorageWindow : MonoBehaviour
         for (var i = 0; i < characters.Length; i++)
         {
             var character = characters[i];
-            if (character == null)
+            if (character == null || !PassesGeneration(character))
             {
                 continue;
             }
@@ -98,8 +356,16 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         var selected = account != null ? account.ResolveSelectedPlayable() : null;
-        FocusInitial(selected);
-        ApplyEntry(null);
+        if (previousFocus != null)
+        {
+            SetFocus(IndexOfCharacter(previousFocus), false);
+        }
+        else
+        {
+            FocusInitial(selected);
+        }
+
+        ApplyEntry(keepEntry ? selected : null);
         LayoutSlots();
     }
 
@@ -139,6 +405,11 @@ public class UIStorageWindow : MonoBehaviour
 
     private void FocusSlot(StorageCharacterView slot)
     {
+        if (_mode != StorageFocus.Characters)
+        {
+            return;
+        }
+
         var index = _slots.IndexOf(slot);
         if (index < 0)
         {
@@ -181,6 +452,7 @@ public class UIStorageWindow : MonoBehaviour
         if (_slots.Count == 0)
         {
             _focusIndex = 0;
+            _focusedCharacter = null;
             ShowInfo(null);
             return;
         }
@@ -188,17 +460,37 @@ public class UIStorageWindow : MonoBehaviour
         var next = Mathf.Clamp(index, 0, _slots.Count - 1);
         var changed = next != _focusIndex;
         _focusIndex = next;
+        _focusedCharacter = _slots[_focusIndex].Data;
+        var showSlot = _mode == StorageFocus.Characters;
         for (var i = 0; i < _slots.Count; i++)
         {
-            _slots[i].SetFocused(i == _focusIndex);
+            _slots[i].SetFocused(showSlot && i == _focusIndex);
         }
 
-        if (playCursor && changed)
+        if (playCursor && changed && showSlot)
         {
             PlayCursor();
         }
 
         ShowInfo(_slots[_focusIndex]);
+    }
+
+    private int IndexOfCharacter(PlayableCharacterData data)
+    {
+        if (data == null)
+        {
+            return 0;
+        }
+
+        for (var i = 0; i < _slots.Count; i++)
+        {
+            if (_slots[i].Data == data)
+            {
+                return i;
+            }
+        }
+
+        return 0;
     }
 
     private void ShowInfo(StorageCharacterView slot)
@@ -221,6 +513,16 @@ public class UIStorageWindow : MonoBehaviour
         audioManager.PlaySound(MENU_MOVE_SOUND);
     }
 
+    private static void PlaySelect()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(FILTER_APPLY_SOUND);
+    }
+
     private void ConfirmFocused()
     {
         if (_focusIndex < 0 || _focusIndex >= _slots.Count)
@@ -233,6 +535,11 @@ public class UIStorageWindow : MonoBehaviour
 
     private void ConfirmSlot(StorageCharacterView slot)
     {
+        if (_mode != StorageFocus.Characters)
+        {
+            return;
+        }
+
         if (slot == null || slot.Data == null)
         {
             return;

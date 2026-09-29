@@ -2620,13 +2620,14 @@ GameObject:
   - component: {fileID: 1693333469453370910}
   - component: {fileID: 2249665768839957778}
   - component: {fileID: 2303212186592685585}
+  - component: {fileID: 8102345678901234502}
   m_Layer: 0
   m_Name: Filter_Generation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &4411258447753626263
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3005,6 +3006,7 @@ GameObject:
   - component: {fileID: 4734348701931187389}
   - component: {fileID: 5085974236871901303}
   - component: {fileID: 8227389841884631236}
+  - component: {fileID: 8102345678901234501}
   m_Layer: 0
   m_Name: FilterBoard
   m_TagString: Untagged
@@ -4321,6 +4323,35 @@ MonoBehaviour:
   _notChosen: {fileID: 6618601580725480467}
   _introScene: {fileID: 0}
   _info: {fileID: 8123456789012345682}
+  _generationCategory: {fileID: 8102345678901234501}
+  _generationFilter: {fileID: 8102345678901234502}
+--- !u!114 &8102345678901234501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2989260574809670262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7c3e1b94d2f4a6e8c0b1d3f5a7e9c21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FilterOptionView
+  _select: {fileID: 4921362280101174253}
+  _on: {fileID: 0}
+  _off: {fileID: 0}
+--- !u!114 &8102345678901234502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2643811663710179440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8d4f2c05e3a4b7f9d1c2e4a6b8d0f32, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FilterGenerationView
 --- !u!1 &4065710577851468907
 GameObject:
   m_ObjectHideFlags: 0
@@ -5487,7 +5518,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1933217967732055799
 RectTransform:
   m_ObjectHideFlags: 0
