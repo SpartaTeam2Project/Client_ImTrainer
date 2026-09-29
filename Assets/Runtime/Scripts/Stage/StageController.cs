@@ -5,7 +5,6 @@ using UnityEngine;
 /// </summary>
 public class StageController : MonoBehaviour
 {
-    [SerializeField] private CharacterStats _characterStats = new CharacterStats();
     [SerializeField] private StageData _stageData;
 
     private GameController _gameController;
@@ -115,7 +114,7 @@ public class StageController : MonoBehaviour
             fieldManager.Begin(_stageData);
         }
 
-        var playerId = playerManager.SpawnLocal(_characterStats);
+        var playerId = playerManager.SpawnLocal();
         if (Managers.Instance.TryGetManager<CurrenciesManager>(out var currenciesManager))
         {
             currenciesManager.ClearStage(playerId);
