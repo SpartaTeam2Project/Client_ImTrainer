@@ -24,14 +24,14 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [SerializeField] private EightDirectionFrames _hop = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _faint = new EightDirectionFrames();
 
-    [SerializeField, HideInInspector] private Sprite[] _walkDown = System.Array.Empty<Sprite>();
-    [SerializeField, HideInInspector] private Sprite[] _walkDownRight = System.Array.Empty<Sprite>();
-    [SerializeField, HideInInspector] private Sprite[] _walkRight = System.Array.Empty<Sprite>();
-    [SerializeField, HideInInspector] private Sprite[] _walkUpRight = System.Array.Empty<Sprite>();
-    [SerializeField, HideInInspector] private Sprite[] _walkUp = System.Array.Empty<Sprite>();
-    [SerializeField, HideInInspector] private Sprite[] _walkUpLeft = System.Array.Empty<Sprite>();
-    [SerializeField, HideInInspector] private Sprite[] _walkLeft = System.Array.Empty<Sprite>();
-    [SerializeField, HideInInspector] private Sprite[] _walkDownLeft = System.Array.Empty<Sprite>();
+    [SerializeField, HideInInspector] private Sprite[] _walkDown = new Sprite[0];
+    [SerializeField, HideInInspector] private Sprite[] _walkDownRight = new Sprite[0];
+    [SerializeField, HideInInspector] private Sprite[] _walkRight = new Sprite[0];
+    [SerializeField, HideInInspector] private Sprite[] _walkUpRight = new Sprite[0];
+    [SerializeField, HideInInspector] private Sprite[] _walkUp = new Sprite[0];
+    [SerializeField, HideInInspector] private Sprite[] _walkUpLeft = new Sprite[0];
+    [SerializeField, HideInInspector] private Sprite[] _walkLeft = new Sprite[0];
+    [SerializeField, HideInInspector] private Sprite[] _walkDownLeft = new Sprite[0];
 
     [Header("Projectile")]
     [SerializeField] private Sprite _projectileSprite;
@@ -90,12 +90,13 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     }
 
     /// <summary>
-    /// 예전 평탄 필드에 있던 걷기 그림을 접는 칸으로 옮긴다.
+    /// 예전 평탄 필드에 그림이 있을 때만 걷기 칸으로 옮긴다.
+    /// 빈 칸까지 덮어쓰면 인스펙터에서 추가한 슬롯이 바로 사라진다.
     /// </summary>
     public void OnAfterDeserialize()
     {
         EnsureFrames();
-        if (_walk.HasFrames())
+        if (_walk.HasFrames() || !HasLegacyWalkFrames())
         {
             return;
         }
@@ -121,6 +122,36 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     private void OnEnable()
     {
         EnsureFrames();
+    }
+
+    private bool HasLegacyWalkFrames()
+    {
+        return HasSprites(_walkDown)
+            || HasSprites(_walkDownRight)
+            || HasSprites(_walkRight)
+            || HasSprites(_walkUpRight)
+            || HasSprites(_walkUp)
+            || HasSprites(_walkUpLeft)
+            || HasSprites(_walkLeft)
+            || HasSprites(_walkDownLeft);
+    }
+
+    private static bool HasSprites(Sprite[] frames)
+    {
+        if (frames == null || frames.Length == 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < frames.Length; i++)
+        {
+            if (frames[i] != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void EnsureFrames()
