@@ -11,6 +11,7 @@ public class PlayableCharacterData : ScriptableObject
     [SerializeField] private string _characterName = string.Empty;
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
     [SerializeField] private TrainerGender _gender = TrainerGender.Boy;
+    [SerializeField] private string _unlockCondition = string.Empty;
     [SerializeField] private Sprite _inGameSprite;
     [SerializeField] private Sprite _portrait;
     [SerializeField] private Vector2 _portraitSize;
@@ -32,6 +33,8 @@ public class PlayableCharacterData : ScriptableObject
     public int Generation => _generation < MIN_GENERATION ? MIN_GENERATION : _generation;
 
     public TrainerGender Gender => _gender;
+
+    public string UnlockCondition => _unlockCondition ?? string.Empty;
 
     public Sprite InGameSprite => _inGameSprite;
 

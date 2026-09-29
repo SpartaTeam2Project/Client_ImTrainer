@@ -15,6 +15,7 @@ public class UIStorageWindow : MonoBehaviour
     [SerializeField] private Image _chooseImage;
     [SerializeField] private GameObject _notChosen;
     [SerializeField] private UIIntroScene _introScene;
+    [SerializeField] private StorageInfoView _info;
 
     private readonly List<StorageCharacterView> _slots = new List<StorageCharacterView>();
     private int _focusIndex;
@@ -76,6 +77,7 @@ public class UIStorageWindow : MonoBehaviour
         {
             Debug.LogError("트레이너 스토리지 슬롯 참조가 없습니다.");
             ApplyEntry(null);
+            ShowInfo(null);
             return;
         }
 
@@ -179,6 +181,7 @@ public class UIStorageWindow : MonoBehaviour
         if (_slots.Count == 0)
         {
             _focusIndex = 0;
+            ShowInfo(null);
             return;
         }
 
@@ -194,6 +197,18 @@ public class UIStorageWindow : MonoBehaviour
         {
             PlayCursor();
         }
+
+        ShowInfo(_slots[_focusIndex]);
+    }
+
+    private void ShowInfo(StorageCharacterView slot)
+    {
+        if (_info == null)
+        {
+            return;
+        }
+
+        _info.Show(slot);
     }
 
     private static void PlayCursor()
@@ -218,8 +233,14 @@ public class UIStorageWindow : MonoBehaviour
 
     private void ConfirmSlot(StorageCharacterView slot)
     {
-        if (slot == null || !slot.IsUnlocked || slot.Data == null)
+        if (slot == null || slot.Data == null)
         {
+            return;
+        }
+
+        if (!slot.IsUnlocked)
+        {
+            slot.PlayLockedSelect();
             return;
         }
 

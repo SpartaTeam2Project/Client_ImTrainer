@@ -9,6 +9,7 @@ using UnityEngine.UI;
 public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler
 {
     private const float PORTRAIT_TO_SLOT_SCALE = 3.2f;
+    private const string LOCKED_SELECT_SOUND = "error";
 
     [SerializeField] private Image _lockSilhouette;
     [SerializeField] private Image _unlockAnimation;
@@ -43,6 +44,19 @@ public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointe
         {
             _select.SetActive(focused);
         }
+    }
+
+    /// <summary>
+    /// 잠긴 칸을 고르면 에러 효과음을 낸다.
+    /// </summary>
+    public void PlayLockedSelect()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(LOCKED_SELECT_SOUND);
     }
 
     /// <summary>
