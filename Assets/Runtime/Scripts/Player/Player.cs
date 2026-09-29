@@ -124,6 +124,29 @@ public class Player : MonoBehaviour
     }
 
     /// <summary>
+    /// 선택한 플레이어블의 애니메이션 스프라이트로 모습을 바꾼다.
+    /// </summary>
+    public void ApplyPlayable(PlayableCharacterData data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        if (_view == null)
+        {
+            _view = GetComponent<PlayerView>();
+        }
+
+        if (_view == null)
+        {
+            return;
+        }
+
+        _view.ApplyPlayable(data);
+    }
+
+    /// <summary>
     /// 전달받은 이동량으로 움직인다. 입력 출처는 모른다.
     /// </summary>
     public void Move(Vector2 movement)

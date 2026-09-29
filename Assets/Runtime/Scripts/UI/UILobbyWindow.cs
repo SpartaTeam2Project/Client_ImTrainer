@@ -24,6 +24,7 @@ public class UILobbyWindow : MonoBehaviour
     [SerializeField] private Sprite _selectedSprite;
     [SerializeField] private GameObject _settingsSelect;
     [SerializeField] private UIIntroScene _introScene;
+    [SerializeField] private UIStorageWindow _storageWindow;
 
     private LobbyButton _selectedButton = LobbyButton.None;
     private LobbyButton _accountButtonBeforeSettings = LobbyButton.Login;
@@ -53,6 +54,11 @@ public class UILobbyWindow : MonoBehaviour
         }
 
         if (_introScene != null && _introScene.IsOpen)
+        {
+            return;
+        }
+
+        if (_storageWindow != null && _storageWindow.IsOpen)
         {
             return;
         }
@@ -254,7 +260,19 @@ public class UILobbyWindow : MonoBehaviour
             return;
         }
 
-        _introScene.Open();
+        _introScene.Open(ShowStorage);
+    }
+
+    private void ShowStorage()
+    {
+        if (_storageWindow == null)
+        {
+            Debug.LogError("스토리지 창이 없습니다.");
+            return;
+        }
+
+        gameObject.SetActive(false);
+        _storageWindow.Open();
     }
 
     private void OpenSettings()

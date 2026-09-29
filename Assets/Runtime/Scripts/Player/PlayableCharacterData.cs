@@ -1,0 +1,57 @@
+using UnityEngine;
+
+/// <summary>
+/// 고를 수 있는 트레이너 한 명. 세대와 성별이 같으면 인트로에서 획득한다.
+/// </summary>
+[CreateAssetMenu(fileName = "PlayableCharacter", menuName = "Player/Playable Character")]
+public class PlayableCharacterData : ScriptableObject
+{
+    private const int MIN_GENERATION = 1;
+
+    [SerializeField] private string _characterName = string.Empty;
+    [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
+    [SerializeField] private TrainerGender _gender = TrainerGender.Boy;
+    [SerializeField] private Sprite _inGameSprite;
+    [SerializeField] private Sprite _portrait;
+    [SerializeField] private Vector2 _portraitSize;
+
+    [Header("Idle")]
+    [SerializeField] private Sprite[] _idleDown = System.Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _idleUp = System.Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _idleLeft = System.Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _idleRight = System.Array.Empty<Sprite>();
+
+    [Header("Walk")]
+    [SerializeField] private Sprite[] _walkDown = System.Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _walkUp = System.Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _walkLeft = System.Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _walkRight = System.Array.Empty<Sprite>();
+
+    public string CharacterName => _characterName ?? string.Empty;
+
+    public int Generation => _generation < MIN_GENERATION ? MIN_GENERATION : _generation;
+
+    public TrainerGender Gender => _gender;
+
+    public Sprite InGameSprite => _inGameSprite;
+
+    public Sprite Portrait => _portrait;
+
+    public Vector2 PortraitSize => _portraitSize;
+
+    public Sprite[] IdleDown => _idleDown;
+
+    public Sprite[] IdleUp => _idleUp;
+
+    public Sprite[] IdleLeft => _idleLeft;
+
+    public Sprite[] IdleRight => _idleRight;
+
+    public Sprite[] WalkDown => _walkDown;
+
+    public Sprite[] WalkUp => _walkUp;
+
+    public Sprite[] WalkLeft => _walkLeft;
+
+    public Sprite[] WalkRight => _walkRight;
+}

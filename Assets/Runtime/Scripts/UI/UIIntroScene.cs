@@ -79,6 +79,7 @@ public class UIIntroScene : MonoBehaviour
     private bool _isTyping;
     private bool _oakFading;
     private bool _introPlaying;
+    private Action _onClosed;
 
     public bool IsOpen => gameObject.activeSelf;
 
@@ -117,10 +118,11 @@ public class UIIntroScene : MonoBehaviour
     #region Public Methods
 
     /// <summary>
-    /// 대사를 처음부터 보여 준다.
+    /// 대사를 처음부터 보여 준다. 닫히면 onClosed를 호출한다.
     /// </summary>
-    public void Open()
+    public void Open(Action onClosed = null)
     {
+        _onClosed = onClosed;
         BindStarters();
         _ignoreClickFrame = Time.frameCount;
         _phase = IntroPhase.Dialogue;
@@ -143,6 +145,9 @@ public class UIIntroScene : MonoBehaviour
     {
         PlayMusic(TITLE_MUSIC_NAME);
         gameObject.SetActive(false);
+        var onClosed = _onClosed;
+        _onClosed = null;
+        onClosed?.Invoke();
     }
 
     #endregion
