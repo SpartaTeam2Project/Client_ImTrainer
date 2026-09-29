@@ -59,6 +59,8 @@ public abstract class Weapon : MonoBehaviour
 
     protected WeaponStats Stats => _stats;
 
+    protected int PlayerId => _playerId;
+
     protected MonsterVisualData Visual => _visual;
 
     protected MonsterType AttackType => Visual != null ? Visual.PrimaryType : MonsterType.Normal;
@@ -213,6 +215,14 @@ public abstract class Weapon : MonoBehaviour
     /// 조준 방향으로 한 발을 낸다.
     /// </summary>
     protected abstract void LaunchOne(Vector2 origin, Vector2 direction);
+
+    /// <summary>
+    /// 쿨다운이 끝났을 때 발사체를 낸다. 배치가 다른 무기는 이 메서드를 바꾼다.
+    /// </summary>
+    protected virtual void LaunchAttack(Vector2 origin, Vector2 direction)
+    {
+        LaunchVolley(origin, direction);
+    }
 
     /// <summary>
     /// 이미 나간 발사체를 진행한다.
@@ -598,7 +608,7 @@ public abstract class Weapon : MonoBehaviour
 
         ApplyFacing(aim);
         BeginAttackPose();
-        LaunchVolley(origin, aim);
+        LaunchAttack(origin, aim);
         _cooldownTimer = _stats.Cooldown;
     }
 

@@ -200,6 +200,41 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
+    /// 원점부터 반경 안에 있는 살아 있는 적을 모은다. 결과는 비운 뒤 채운다.
+    /// </summary>
+    public void CollectInRadius(Vector2 origin, float radius, List<Enemy> results)
+    {
+        if (results == null)
+        {
+            return;
+        }
+
+        results.Clear();
+        if (radius <= 0f)
+        {
+            return;
+        }
+
+        var radiusSqr = radius * radius;
+        for (var i = 0; i < _alive.Count; i++)
+        {
+            var candidate = _alive[i];
+            if (candidate == null || !candidate.IsAlive)
+            {
+                continue;
+            }
+
+            var offset = (Vector2)candidate.transform.position - origin;
+            if (offset.sqrMagnitude > radiusSqr)
+            {
+                continue;
+            }
+
+            results.Add(candidate);
+        }
+    }
+
+    /// <summary>
     /// 시작점에서 방향으로 길이만큼 그은 선에서, 두께 안에 있는 살아 있는 적을 모은다. 결과는 비운 뒤 채운다.
     /// </summary>
     public void CollectAlongSegment(Vector2 origin, Vector2 direction, float length, float radius, List<Enemy> results)
