@@ -38,6 +38,7 @@ public class UIIntroScene : MonoBehaviour
     private const float CHARACTERS_PER_SECOND = 28f;
     private const float MIN_TYPE_DURATION = 0.15f;
     private const float OAK_FADE_DURATION = 0.6f;
+    private const float INTRO_STEP_DURATION = 0.4f;
 
     private static readonly Color SELECTED_COLOR = Color.white;
     private static readonly Color IDLE_COLOR = new Color(0.65f, 0.65f, 0.65f, 1f);
@@ -51,6 +52,9 @@ public class UIIntroScene : MonoBehaviour
 
     [SerializeField] private TMP_Text _dialogueText;
     [SerializeField] private Image _oakImage;
+    [SerializeField] private GameObject _background;
+    [SerializeField] private GameObject _introBase;
+    [SerializeField] private GameObject _board;
     [SerializeField] private RectTransform _choiceRoot;
     [SerializeField] private GameObject _genderRoot;
     [SerializeField] private GameObject _boyRow;
@@ -71,8 +75,10 @@ public class UIIntroScene : MonoBehaviour
     private Image[] _starterImages;
     private Tweener _typeTween;
     private Tweener _oakFade;
+    private Sequence _introSequence;
     private bool _isTyping;
     private bool _oakFading;
+    private bool _introPlaying;
 
     public bool IsOpen => gameObject.activeSelf;
 
@@ -92,6 +98,7 @@ public class UIIntroScene : MonoBehaviour
     {
         KillTypeTween();
         KillOakFade();
+        KillIntroSequence();
     }
 
     private void Update()
@@ -124,9 +131,9 @@ public class UIIntroScene : MonoBehaviour
         gameObject.SetActive(true);
         _opening = false;
         ShowOak();
-        ShowDialogueLine();
         SetChoiceVisible(false, false);
         PlayMusic(INTRO_MUSIC_NAME);
+        PlayIntroSequence();
     }
 
     /// <summary>
@@ -247,7 +254,7 @@ public class UIIntroScene : MonoBehaviour
             return;
         }
 
-        if (_oakFading)
+        if (_introPlaying || _oakFading)
         {
             return;
         }
@@ -403,6 +410,64 @@ public class UIIntroScene : MonoBehaviour
         var color = _oakImage.color;
         color.a = 1f;
         _oakImage.color = color;
+    }
+
+    private void PlayIntroSequence()
+    {
+        KillIntroSequence();
+        if (_dialogueText != null)
+        {
+            _dialogueText.text = string.Empty;
+        }
+
+        _introPlaying = true;
+        _introSequence = DOTween.Sequence().SetUpdate(true);
+        AppendIntroFade(_background);
+        AppendIntroFade(_introBase);
+        AppendIntroFade(_oakImage != null ? _oakImage.gameObject : null);
+        AppendIntroFade(_board);
+        _introSequence.OnComplete(FinishIntroSequence);
+    }
+
+    private void AppendIntroFade(GameObject target)
+    {
+        if (target == null || _introSequence == null)
+        {
+            return;
+        }
+
+        var group = GetOrAddCanvasGroup(target);
+        group.alpha = 0f;
+        _introSequence.Append(group.DOFade(1f, INTRO_STEP_DURATION).SetEase(Ease.OutSine));
+    }
+
+    private void FinishIntroSequence()
+    {
+        _introPlaying = false;
+        _introSequence = null;
+        ShowDialogueLine();
+    }
+
+    private void KillIntroSequence()
+    {
+        if (_introSequence != null && _introSequence.IsActive())
+        {
+            _introSequence.Kill();
+        }
+
+        _introSequence = null;
+        _introPlaying = false;
+    }
+
+    private static CanvasGroup GetOrAddCanvasGroup(GameObject target)
+    {
+        var group = target.GetComponent<CanvasGroup>();
+        if (group == null)
+        {
+            group = target.AddComponent<CanvasGroup>();
+        }
+
+        return group;
     }
 
     private void FadeOutOak()
