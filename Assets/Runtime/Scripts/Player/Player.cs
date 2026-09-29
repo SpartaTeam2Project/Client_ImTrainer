@@ -1,13 +1,30 @@
 using UnityEngine;
 
 /// <summary>
-/// 스폰된 플레이어 한 명의 체력, 이동, 시선, 레벨을 담당한다.
+/// 스폰된 플레이어 한 명의 스탯, 경험치, 체력, 이동, 시선을 담당한다.
 /// </summary>
 public class Player : MonoBehaviour
 {
     private const float MOVE_SQR_EPSILON = 0.0001f;
     private const int STARTING_LEVEL = 1;
-    private const float STARTING_REQUIRED_XP = 5f;
+    private const int MAX_LEVEL_UPS_PER_GAIN = 20;
+    private const float MIN_REQUIRED_XP = 1f;
+
+    [Header("Stats")]
+    [SerializeField] private float _maxHealth = 30f;
+    [SerializeField] private float _moveSpeed = 4f;
+    [SerializeField] private float _damageMultiplier = 1f;
+    [SerializeField] private float _magnetRadius = 1f;
+    [SerializeField] private float _xpMultiplier = 1f;
+    [SerializeField] private float _hpRegen;
+    [SerializeField] private float _cooldownMultiplier = 1f;
+    [SerializeField] private float _projectileSpeedMultiplier = 1f;
+    [SerializeField] private float _projectileMultiplier = 1f;
+    [SerializeField] private float _invincibleSeconds;
+
+    [Header("Experience")]
+    [SerializeField] private float _baseRequiredXp = 5f;
+    [SerializeField] private float _requiredGrowth = 1.25f;
 
     private PlayerManager _owner;
     private PlayerView _view;
@@ -44,7 +61,7 @@ public class Player : MonoBehaviour
 
     public float CurrentXp { get; private set; }
 
-    public float RequiredXp { get; private set; } = STARTING_REQUIRED_XP;
+    public float RequiredXp { get; private set; } = MIN_REQUIRED_XP;
 
     #region Unity Methods
 
@@ -72,24 +89,24 @@ public class Player : MonoBehaviour
     }
 
     /// <summary>
-    /// 스탯으로 체력과 속도를 맞추고 살아 있는 상태로 둔다.
+    /// 프리팹에 적힌 스탯과 경험치 곡선으로 한 판을 시작한다.
     /// </summary>
-    public void Initialize(CharacterStats stats)
+    public void Initialize()
     {
-        maxHealth = Mathf.Max(1f, stats != null ? stats.MaxHealth : 1f);
+        maxHealth = Mathf.Max(1f, _maxHealth);
         CurrentHealth = maxHealth;
-        moveSpeed = Mathf.Max(0f, stats != null ? stats.MoveSpeed : 0f);
-        damageMultiplier = stats != null ? stats.DamageMultiplier : 1f;
-        magnetRadius = stats != null ? stats.MagnetRadius : 0f;
-        xpMultiplier = stats != null ? stats.XpMultiplier : 1f;
-        hpRegen = stats != null ? stats.HpRegen : 0f;
-        cooldownMultiplier = stats != null ? stats.CooldownMultiplier : 1f;
-        projectileSpeedMultiplier = stats != null ? stats.ProjectileSpeedMultiplier : 1f;
-        projectileMultiplier = stats != null ? stats.ProjectileMultiplier : 1f;
-        invincibleSeconds = stats != null ? stats.InvincibleSeconds : 0f;
+        moveSpeed = Mathf.Max(0f, _moveSpeed);
+        damageMultiplier = Mathf.Max(0f, _damageMultiplier);
+        magnetRadius = Mathf.Max(0f, _magnetRadius);
+        xpMultiplier = Mathf.Max(0f, _xpMultiplier);
+        hpRegen = _hpRegen;
+        cooldownMultiplier = Mathf.Max(0f, _cooldownMultiplier);
+        projectileSpeedMultiplier = Mathf.Max(0f, _projectileSpeedMultiplier);
+        projectileMultiplier = Mathf.Max(0f, _projectileMultiplier);
+        invincibleSeconds = Mathf.Max(0f, _invincibleSeconds);
         _lookDirection = Vector2.right;
         IsAlive = true;
-        SetProgress(STARTING_LEVEL, 0f, STARTING_REQUIRED_XP);
+        SetProgress(STARTING_LEVEL, 0f, CalculateRequiredXp(STARTING_LEVEL));
 
         _view = GetComponent<PlayerView>();
         if (_view != null)
@@ -171,13 +188,48 @@ public class Player : MonoBehaviour
     }
 
     /// <summary>
-    /// 레벨과 경험치 게이지를 맞춘다.
+    /// 경험치를 더한다. 필요량을 채우면 레벨을 올리고, 오른 횟수를 돌려준다.
     /// </summary>
-    public void SetProgress(int level, float currentXp, float requiredXp)
+    public int AddExperience(float amount)
+    {
+        if (amount <= 0f)
+        {
+            return 0;
+        }
+
+        var xp = CurrentXp + amount;
+        var level = Level;
+        var required = Mathf.Max(MIN_REQUIRED_XP, RequiredXp);
+        var gained = 0;
+        while (xp >= required && gained < MAX_LEVEL_UPS_PER_GAIN)
+        {
+            xp -= required;
+            level++;
+            required = CalculateRequiredXp(level);
+            gained++;
+        }
+
+        SetProgress(level, xp, required);
+        return gained;
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private float CalculateRequiredXp(int level)
+    {
+        var step = Mathf.Max(STARTING_LEVEL, level);
+        var growth = Mathf.Max(1f, _requiredGrowth);
+        var required = Mathf.Max(MIN_REQUIRED_XP, _baseRequiredXp) * Mathf.Pow(growth, step - 1);
+        return Mathf.Max(MIN_REQUIRED_XP, required);
+    }
+
+    private void SetProgress(int level, float currentXp, float requiredXp)
     {
         Level = Mathf.Max(STARTING_LEVEL, level);
         CurrentXp = Mathf.Max(0f, currentXp);
-        RequiredXp = Mathf.Max(1f, requiredXp);
+        RequiredXp = Mathf.Max(MIN_REQUIRED_XP, requiredXp);
     }
 
     #endregion

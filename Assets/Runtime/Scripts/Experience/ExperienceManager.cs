@@ -3,14 +3,13 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 몬스터가 넘긴 경험치 구슬을 바닥에 두고, 자석 범위 안에서 빨려 들어가게 한다.
+/// 몬스터가 넘긴 경험치 구슬을 바닥에 두고, 플레이어의 자석 범위 안에서 빨려 들어가게 한다.
 /// </summary>
 public class ExperienceManager : BaseManager
 {
     private const float DROP_SCATTER_RADIUS = 0.2f;
 
-    [Header("Magnet")]
-    [SerializeField] private float _magnetRadius = 2.25f;
+    [Header("Pickup")]
     [SerializeField] private float _pickupRadius = 0.35f;
     [SerializeField] private float _attractSpeed = 12f;
 
@@ -19,7 +18,6 @@ public class ExperienceManager : BaseManager
 
     private int _playerId;
     private bool _active;
-    private float _magnetRadiusSqr;
     private float _pickupRadiusSqr;
 
     #region Unity Methods
@@ -45,7 +43,7 @@ public class ExperienceManager : BaseManager
             return;
         }
 
-        TickGems(playerPosition, Time.deltaTime);
+        TickGems(playerPosition, ResolveMagnetRadiusSqr(), Time.deltaTime);
     }
 
     /// <summary>
@@ -106,7 +104,7 @@ public class ExperienceManager : BaseManager
 
     #region Private Methods
 
-    private void TickGems(Vector2 playerPosition, float deltaTime)
+    private void TickGems(Vector2 playerPosition, float magnetRadiusSqr, float deltaTime)
     {
         var step = _attractSpeed * deltaTime;
         for (var i = 0; i < _gems.Count; i++)
@@ -122,7 +120,7 @@ public class ExperienceManager : BaseManager
                 continue;
             }
 
-            if (!gem.IsAttracting && gem.GetDistanceSqr(playerPosition) <= _magnetRadiusSqr)
+            if (!gem.IsAttracting && gem.GetDistanceSqr(playerPosition) <= magnetRadiusSqr)
             {
                 gem.BeginAttract();
             }
@@ -155,11 +153,20 @@ public class ExperienceManager : BaseManager
         return true;
     }
 
+    private float ResolveMagnetRadiusSqr()
+    {
+        if (!Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return 0f;
+        }
+
+        var magnet = Mathf.Max(0f, playerManager.MagnetRadius);
+        return magnet * magnet;
+    }
+
     private void CacheRadii()
     {
-        var magnet = Mathf.Max(0.1f, _magnetRadius);
         var pickup = Mathf.Max(0.05f, _pickupRadius);
-        _magnetRadiusSqr = magnet * magnet;
         _pickupRadiusSqr = pickup * pickup;
         _attractSpeed = Mathf.Max(0.1f, _attractSpeed);
     }

@@ -43,14 +43,8 @@ public class PlayerManager : BaseManager
 {
     private const int LOCAL_PLAYER_ID_VALUE = 1;
     private const int STARTING_LEVEL = 1;
-    private const int MAX_LEVEL_UPS_PER_GAIN = 20;
-    private const float MIN_REQUIRED_XP = 1f;
     private const float ACTOR_SIZE = 0.9f;
     private const int ACTOR_SORTING_ORDER = 10;
-
-    [Header("Experience")]
-    [SerializeField] private float _baseRequiredXp = 5f;
-    [SerializeField] private float _requiredGrowth = 1.25f;
 
     [Header("Player Settings")]
     [SerializeField] private Player _playerPrefab;
@@ -65,6 +59,8 @@ public class PlayerManager : BaseManager
 
     public float Speed => _player == null ? 0f : _player.moveSpeed;
 
+    public float MagnetRadius => _player == null ? 0f : _player.magnetRadius;
+
     public float CurrentHealth => _player == null ? 0f : _player.CurrentHealth;
 
     public float MaxHealth => _player == null ? 0f : _player.maxHealth;
@@ -75,7 +71,7 @@ public class PlayerManager : BaseManager
 
     public float CurrentXp => _player == null ? 0f : _player.CurrentXp;
 
-    public float RequiredXp => _player == null ? CalculateRequiredXp(STARTING_LEVEL) : _player.RequiredXp;
+    public float RequiredXp => _player == null ? 0f : _player.RequiredXp;
 
     public event Action<int> OnPlayerDied;
 
@@ -113,19 +109,18 @@ public class PlayerManager : BaseManager
     /// <summary>
     /// 로컬 플레이어를 만들고 식별자를 돌려준다.
     /// </summary>
-    public int SpawnLocal(CharacterStats stats)
+    public int SpawnLocal()
     {
         Despawn();
 
         _player = CreatePlayer();
         _player.Bind(this);
-        _player.Initialize(stats);
-        _player.SetProgress(STARTING_LEVEL, 0f, CalculateRequiredXp(STARTING_LEVEL));
+        _player.Initialize();
         return LocalPlayerId;
     }
 
     /// <summary>
-    /// 플레이어 식별자에 경험치를 더한다. 필요량을 채우면 레벨을 올린다.
+    /// 플레이어 식별자에 경험치를 넘긴다. 오른 레벨은 여기서 알린다.
     /// </summary>
     public void AddExperience(int playerId, float amount)
     {
@@ -134,28 +129,13 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        var xp = _player.CurrentXp + amount;
-        var level = _player.Level;
-        var required = Mathf.Max(MIN_REQUIRED_XP, _player.RequiredXp);
-        var safety = 0;
-        while (xp >= required && safety < MAX_LEVEL_UPS_PER_GAIN)
+        var levelBefore = _player.Level;
+        _player.AddExperience(amount);
+        PublishExperience(playerId);
+        for (var level = levelBefore + 1; level <= _player.Level; level++)
         {
-            xp -= required;
-            level++;
-            required = CalculateRequiredXp(level);
-            safety++;
-            _player.SetProgress(level, xp, required);
-            PublishExperience(playerId);
             NotifyLevelUp(playerId, level);
         }
-
-        if (safety > 0)
-        {
-            return;
-        }
-
-        _player.SetProgress(level, xp, required);
-        PublishExperience(playerId);
     }
 
     /// <summary>
@@ -200,14 +180,6 @@ public class PlayerManager : BaseManager
     #endregion
 
     #region Private Methods
-
-    private float CalculateRequiredXp(int level)
-    {
-        var step = Mathf.Max(STARTING_LEVEL, level);
-        var growth = Mathf.Max(1f, _requiredGrowth);
-        var required = Mathf.Max(MIN_REQUIRED_XP, _baseRequiredXp) * Mathf.Pow(growth, step - 1);
-        return Mathf.Max(MIN_REQUIRED_XP, required);
-    }
 
     private void NotifyLevelUp(int playerId, int level)
     {
