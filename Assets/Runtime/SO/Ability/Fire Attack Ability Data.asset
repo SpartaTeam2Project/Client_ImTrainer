@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb0e3e94b2cd6f34f992e2def3bab540, type: 3}
+  m_Name: Fire Attack Ability Data
+  m_EditorClassIdentifier: Assembly-CSharp::FireAttackAbilityData
+  type: 9
+  title: 
+  description: 
+  icon: {fileID: 0}
+  prefab: {fileID: 8666185439850298685, guid: 9baadb2220f82de488e6d4d5eb4ba662, type: 3}
+  isActiveAbility: 1
+  isWeaponAbility: 0
+  isEndgameAbility: 0
+  isEvolution: 0
+  evolutionRequirements: []
+  levels:
+  - projectilesCount: 1
+    timeBetweenFireballs: 0
+    abilityCooldown: 1
+    fireballLifetime: 5
+    speed: 3
+    damage: 15
+    projectileSize: 1
+    explosionRadius: 1

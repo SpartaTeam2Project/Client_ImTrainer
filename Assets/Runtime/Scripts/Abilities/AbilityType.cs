@@ -1,0 +1,57 @@
+/// <summary>
+/// 능력 종류. 0~17은 포켓몬 타입 공격, 100~110은 패시브, 200~217은 그 공격의 진화다.
+/// </summary>
+public enum AbilityType
+{
+    NormalAttack = 0,
+    FightingAttack = 1,
+    FlyingAttack = 2,
+    PoisonAttack = 3,
+    GroundAttack = 4,
+    RockAttack = 5,
+    BugAttack = 6,
+    GhostAttack = 7,
+    SteelAttack = 8,
+    FireAttack = 9,
+    WaterAttack = 10,
+    GrassAttack = 11,
+    ElectricAttack = 12,
+    PsychicAttack = 13,
+    IceAttack = 14,
+    DragonAttack = 15,
+    DarkAttack = 16,
+    FairyAttack = 17,
+
+    Magnet = 100,
+    MoveSpeed = 101,
+    Damage = 102,
+    MaxHP = 103,
+    XP = 104,
+    Cooldown = 105,
+    RestoreHP = 106,
+    DamageReduction = 107,
+    ProjectileSpeed = 108,
+    Size = 109,
+    Duration = 110,
+
+    NormalAttackEvolution = 200,
+    FightingAttackEvolution = 201,
+    FlyingAttackEvolution = 202,
+    PoisonAttackEvolution = 203,
+    GroundAttackEvolution = 204,
+    RockAttackEvolution = 205,
+    BugAttackEvolution = 206,
+    GhostAttackEvolution = 207,
+    SteelAttackEvolution = 208,
+    FireAttackEvolution = 209,
+    WaterAttackEvolution = 210,
+    GrassAttackEvolution = 211,
+    ElectricAttackEvolution = 212,
+    PsychicAttackEvolution = 213,
+    IceAttackEvolution = 214,
+    DragonAttackEvolution = 215,
+    DarkAttackEvolution = 216,
+    FairyAttackEvolution = 217,
+
+    HealEndgame = 2001
+}

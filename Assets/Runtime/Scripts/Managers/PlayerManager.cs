@@ -55,6 +55,21 @@ public class PlayerManager : BaseManager
 
     public Transform PlayerTransform => _player == null ? null : _player.transform;
 
+    /// <summary>
+    /// 식별자가 로컬 플레이어와 같으면 그 참조를 돌려준다.
+    /// </summary>
+    public bool TryGetPlayer(int playerId, out Player player)
+    {
+        if (playerId == LocalPlayerId && _player != null)
+        {
+            player = _player;
+            return true;
+        }
+
+        player = null;
+        return false;
+    }
+
     public Vector2 LookDirection => _player == null ? Vector2.right : _player.LookDirection;
 
     public float Speed => _player == null ? 0f : _player.moveSpeed;

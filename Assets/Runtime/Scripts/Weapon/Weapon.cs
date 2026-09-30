@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 시계 칸을 따라다니며 가장 가까운 적을 조준하는 무기. 발사만 하위 클래스가 맡는다.
+/// 시계 칸에 장착된 포켓몬. 플레이어를 따라가고 그림만 재생한다.
 /// </summary>
 public abstract class Weapon : MonoBehaviour
 {
@@ -52,6 +52,7 @@ public abstract class Weapon : MonoBehaviour
     private float _cooldownTimer;
     private float _attackFacingTimer;
     private bool _isAttacking;
+    private bool _shotPose;
     private bool _facingRight;
     private EightWay _eightWay = EightWay.Right;
     private int _frameIndex;
@@ -59,7 +60,7 @@ public abstract class Weapon : MonoBehaviour
 
     protected WeaponStats Stats => _stats;
 
-    protected int PlayerId => _playerId;
+    public int PlayerId => _playerId;
 
     protected MonsterVisualData Visual => _visual;
 
@@ -116,6 +117,7 @@ public abstract class Weapon : MonoBehaviour
     {
         _visual = visual;
         _isAttacking = false;
+        _shotPose = false;
         _frameIndex = 0;
         _frameTimer = 0f;
         if (visual == null)
@@ -142,6 +144,7 @@ public abstract class Weapon : MonoBehaviour
         _cooldownTimer = 0f;
         _attackFacingTimer = 0f;
         _isAttacking = false;
+        _shotPose = false;
         _facingRight = false;
         _eightWay = EightWay.Right;
         _frameIndex = 0;
@@ -159,7 +162,7 @@ public abstract class Weapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 플레이어를 따라가고, 쿨다운마다 사거리 안의 가장 가까운 적을 조준해 발사한다.
+    /// 플레이어 옆 시계 칸을 따라가고 포켓몬 그림을 재생한다.
     /// </summary>
     public void Tick(float deltaTime)
     {
@@ -170,27 +173,32 @@ public abstract class Weapon : MonoBehaviour
 
         var playerTransform = playerManager.PlayerTransform;
         transform.position = (Vector2)playerTransform.position + _offset;
-        if (_isAttacking)
+        if (_attackFacingTimer > 0f)
         {
-            AdvanceAttack(deltaTime);
-        }
-        else
-        {
-            if (_attackFacingTimer > 0f)
-            {
-                _attackFacingTimer -= deltaTime;
-            }
-
-            if (_attackFacingTimer <= 0f)
-            {
-                ApplyFacing(playerManager.LookDirection);
-            }
-
-            AdvanceIdle(deltaTime);
+            _attackFacingTimer -= deltaTime;
         }
 
-        TryAttack(deltaTime);
-        TickShots(deltaTime);
+        if (_attackFacingTimer <= 0f)
+        {
+            _shotPose = false;
+            ApplyFacing(playerManager.LookDirection);
+        }
+
+        AdvanceIdle(deltaTime);
+    }
+
+    /// <summary>
+    /// 발사 방향의 걷기 8방향을 한 바퀴 재생한다. 사격·공격으로 바꿀 때는 ShotFrames만 고친다.
+    /// </summary>
+    public void FaceShot(Vector2 direction)
+    {
+        _isAttacking = false;
+        _shotPose = true;
+        ApplyFacing(direction);
+        _frameIndex = 0;
+        _frameTimer = 0f;
+        _attackFacingTimer = ShotCycleSeconds();
+        ShowCurrentFrame();
     }
 
     /// <summary>
@@ -445,6 +453,15 @@ public abstract class Weapon : MonoBehaviour
 
     private Sprite[] CurrentFrames()
     {
+        if (_shotPose)
+        {
+            var shotFrames = ShotFrames();
+            if (HasFrames(shotFrames))
+            {
+                return shotFrames;
+            }
+        }
+
         if (_isAttacking)
         {
             var attackFrames = GetAttackFrames(_eightWay);
@@ -460,6 +477,25 @@ public abstract class Weapon : MonoBehaviour
         }
 
         return _idleFrames;
+    }
+
+    /// <summary>
+    /// 지금은 그 방향 걷기 장이다. 사격·공격으로 바꿀 때 이 반환만 고친다.
+    /// </summary>
+    private Sprite[] ShotFrames()
+    {
+        return GetEightWayFrames(_eightWay);
+    }
+
+    private float ShotCycleSeconds()
+    {
+        var frames = ShotFrames();
+        if (!HasFrames(frames) || _framesPerSecond <= 0f)
+        {
+            return ATTACK_POSE_SECONDS;
+        }
+
+        return frames.Length / _framesPerSecond;
     }
 
     private bool UsesEightDirection => _visual != null || _facingMode == FacingMode.EightDirection;
