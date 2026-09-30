@@ -444,9 +444,15 @@ public class UIStorageWindow : MonoBehaviour
 
     private void FocusSlot(StorageCharacterView slot)
     {
-        if (_showingMonsters || _mode != StorageFocus.Characters)
+        if (_showingMonsters || _mode == StorageFocus.Generation)
         {
             return;
+        }
+
+        var fromFilter = _mode == StorageFocus.FilterBoard;
+        if (fromFilter)
+        {
+            ReturnToCharacters(false);
         }
 
         var index = _slots.IndexOf(slot);
@@ -455,7 +461,12 @@ public class UIStorageWindow : MonoBehaviour
             return;
         }
 
+        var sameSlot = fromFilter && index == _focusIndex;
         SetFocus(index, true);
+        if (sameSlot)
+        {
+            PlayCursor();
+        }
     }
 
     private void MoveFocus(Vector2Int move)
@@ -842,9 +853,15 @@ public class UIStorageWindow : MonoBehaviour
 
     private void FocusMonsterSlot(StorageMonsterView slot)
     {
-        if (!_showingMonsters || _mode != StorageFocus.Characters)
+        if (!_showingMonsters || _mode == StorageFocus.Generation)
         {
             return;
+        }
+
+        var fromFilter = _mode == StorageFocus.FilterBoard;
+        if (fromFilter)
+        {
+            ReturnToCharacters(false);
         }
 
         var index = _monsterSlots.IndexOf(slot);
@@ -853,7 +870,12 @@ public class UIStorageWindow : MonoBehaviour
             return;
         }
 
+        var sameSlot = fromFilter && index == _focusIndex;
         SetFocus(index, true);
+        if (sameSlot)
+        {
+            PlayCursor();
+        }
     }
 
     private void SetMonsterFocus(int index, bool playCursor)
