@@ -27,6 +27,7 @@ public class AccountManager : BaseManager
 
     [SerializeField] private MonsterVisualData[] _starterVisuals = System.Array.Empty<MonsterVisualData>();
     [SerializeField] private PlayableCharacterDatabase _playableCharacters;
+    [SerializeField] private MonsterDatabase _monsters;
 
     private MonsterVisualData[] _boundStarters = System.Array.Empty<MonsterVisualData>();
     private bool _introCompleted;
@@ -55,6 +56,10 @@ public class AccountManager : BaseManager
     public PlayableCharacterData[] Playables => _playableCharacters != null
         ? _playableCharacters.Characters
         : System.Array.Empty<PlayableCharacterData>();
+
+    public MonsterVisualData[] Monsters => _monsters != null
+        ? _monsters.Monsters
+        : System.Array.Empty<MonsterVisualData>();
 
     /// <summary>
     /// 저장된 프로필을 읽는다.
@@ -150,6 +155,17 @@ public class AccountManager : BaseManager
         _starterVisualName = string.Empty;
         _selectedPlayableName = string.Empty;
         Save(ResolvePlayerId());
+    }
+
+    /// <summary>
+    /// 인트로에서 고른 스타터와 같은 포켓몬이면 보유다. 해금 규칙은 나중에 바뀐다.
+    /// </summary>
+    public bool IsMonsterUnlocked(MonsterVisualData data)
+    {
+        return _introCompleted
+            && data != null
+            && !string.IsNullOrEmpty(_starterVisualName)
+            && data.name == _starterVisualName;
     }
 
     /// <summary>

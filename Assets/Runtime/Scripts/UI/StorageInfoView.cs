@@ -3,11 +3,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 스토리지에서 포커스된 트레이너의 초상화, 세대, 이름, 잠금 조건을 보여 준다.
+/// 스토리지에서 포커스된 트레이너나 포켓몬의 초상화, 세대, 이름, 잠금 조건을 보여 준다.
 /// </summary>
 public class StorageInfoView : MonoBehaviour
 {
     private const string GENERATION_SUFFIX = "세대";
+    private const string DEX_NAME_FORMAT = "No.{0:0000} {1}";
     private static readonly Color32 LOCKED_PORTRAIT_COLOR = new Color32(0, 0, 0, 237);
     private static readonly Color32 UNLOCKED_PORTRAIT_COLOR = new Color32(255, 255, 255, 255);
 
@@ -37,6 +38,32 @@ public class StorageInfoView : MonoBehaviour
         if (_characterName != null)
         {
             _characterName.text = data.CharacterName;
+        }
+
+        ApplyUnlockCondition(!slot.IsUnlocked, data.UnlockCondition);
+    }
+
+    /// <summary>
+    /// 포커스된 포켓몬의 초상화, 세대, 도감 번호, 이름, 잠금 조건을 보여 준다.
+    /// </summary>
+    public void Show(StorageMonsterView slot)
+    {
+        if (slot == null || slot.Data == null)
+        {
+            Clear();
+            return;
+        }
+
+        var data = slot.Data;
+        ApplyPortrait(data.AnimationThumbnail, !slot.IsUnlocked);
+        if (_generation != null)
+        {
+            _generation.text = data.Generation + GENERATION_SUFFIX;
+        }
+
+        if (_characterName != null)
+        {
+            _characterName.text = string.Format(DEX_NAME_FORMAT, data.DexNumber, data.MonsterName);
         }
 
         ApplyUnlockCondition(!slot.IsUnlocked, data.UnlockCondition);

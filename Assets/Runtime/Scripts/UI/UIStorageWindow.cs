@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 타이틀 스토리지에서 플레이어블 캐릭터를 고른다.
+/// 타이틀 스토리지에서 플레이어블 캐릭터를 고르고, 고른 뒤에는 포켓몬을 본다.
 /// </summary>
 public class UIStorageWindow : MonoBehaviour
 {
@@ -27,10 +27,21 @@ public class UIStorageWindow : MonoBehaviour
     [SerializeField] private StorageInfoView _info;
     [SerializeField] private FilterOptionView _generationCategory;
     [SerializeField] private FilterGenerationView _generationFilter;
+    [SerializeField] private GameObject _trainerScroll;
+    [SerializeField] private GameObject _monsterScroll;
+    [SerializeField] private Transform _monsterContent;
+    [SerializeField] private StorageMonsterView _monsterSlotPrefab;
+    [SerializeField] private GridLayoutGroup _monsterGrid;
+    [SerializeField] private Image[] _entryMonsters = System.Array.Empty<Image>();
 
     private readonly List<StorageCharacterView> _slots = new List<StorageCharacterView>();
+    private readonly List<StorageMonsterView> _monsterSlots = new List<StorageMonsterView>();
     private StorageFocus _mode = StorageFocus.Characters;
     private PlayableCharacterData _focusedCharacter;
+    private MonsterVisualData _focusedMonster;
+    private MonsterVisualData[] _entryVisuals = System.Array.Empty<MonsterVisualData>();
+    private Sprite[] _entryDefaultSprites = System.Array.Empty<Sprite>();
+    private bool _showingMonsters;
     private int _focusIndex;
 
     public bool IsOpen => isActiveAndEnabled;
@@ -94,6 +105,10 @@ public class UIStorageWindow : MonoBehaviour
     {
         _mode = StorageFocus.Characters;
         _focusedCharacter = null;
+        _focusedMonster = null;
+        _showingMonsters = false;
+        ClearMonsterEntries();
+        SetScrolls();
         if (_generationCategory == null || _generationFilter == null)
         {
             Debug.LogError("스토리지 필터 참조가 없습니다.");
@@ -172,6 +187,11 @@ public class UIStorageWindow : MonoBehaviour
         if (_mode == StorageFocus.FilterBoard)
         {
             ReturnToCharacters(true);
+            return;
+        }
+
+        if (_showingMonsters && ClearLastMonsterEntry())
+        {
             return;
         }
 
@@ -310,24 +330,40 @@ public class UIStorageWindow : MonoBehaviour
         {
             _slots[i].SetFocused(false);
         }
+
+        for (var i = 0; i < _monsterSlots.Count; i++)
+        {
+            _monsterSlots[i].SetFocused(false);
+        }
     }
 
     private bool IsTopRow()
     {
-        return _slots.Count > 0 && _focusIndex < ColumnCount();
+        return ActiveSlotCount > 0 && _focusIndex < ColumnCount();
     }
 
-    private bool PassesGeneration(PlayableCharacterData character)
+    private bool PassesGeneration(int generation)
     {
         if (_generationFilter == null || _generationFilter.AppliedGeneration == FilterGenerationView.ALL_GENERATION)
         {
             return true;
         }
 
-        return character.Generation == _generationFilter.AppliedGeneration;
+        return generation == _generationFilter.AppliedGeneration;
     }
 
     private void Rebuild(bool keepEntry)
+    {
+        if (_showingMonsters)
+        {
+            RebuildMonsters();
+            return;
+        }
+
+        RebuildCharacters(keepEntry);
+    }
+
+    private void RebuildCharacters(bool keepEntry)
     {
         var previousFocus = _focusedCharacter;
         ClearContent();
@@ -344,7 +380,7 @@ public class UIStorageWindow : MonoBehaviour
         for (var i = 0; i < characters.Length; i++)
         {
             var character = characters[i];
-            if (character == null || !PassesGeneration(character))
+            if (character == null || !PassesGeneration(character.Generation))
             {
                 continue;
             }
@@ -405,7 +441,7 @@ public class UIStorageWindow : MonoBehaviour
 
     private void FocusSlot(StorageCharacterView slot)
     {
-        if (_mode != StorageFocus.Characters)
+        if (_showingMonsters || _mode != StorageFocus.Characters)
         {
             return;
         }
@@ -421,7 +457,8 @@ public class UIStorageWindow : MonoBehaviour
 
     private void MoveFocus(Vector2Int move)
     {
-        if (_slots.Count == 0)
+        var count = ActiveSlotCount;
+        if (count == 0)
         {
             return;
         }
@@ -432,13 +469,13 @@ public class UIStorageWindow : MonoBehaviour
         if (move.x != 0)
         {
             var rowStart = index - index % columns;
-            var rowEnd = Mathf.Min(rowStart + columns, _slots.Count) - 1;
+            var rowEnd = Mathf.Min(rowStart + columns, count) - 1;
             index = Mathf.Clamp(index + move.x, rowStart, rowEnd);
         }
         else if (move.y != 0)
         {
             var next = index - move.y * columns;
-            if (next >= 0 && next < _slots.Count)
+            if (next >= 0 && next < count)
             {
                 index = next;
             }
@@ -449,6 +486,12 @@ public class UIStorageWindow : MonoBehaviour
 
     private void SetFocus(int index, bool playCursor = false)
     {
+        if (_showingMonsters)
+        {
+            SetMonsterFocus(index, playCursor);
+            return;
+        }
+
         if (_slots.Count == 0)
         {
             _focusIndex = 0;
@@ -525,6 +568,17 @@ public class UIStorageWindow : MonoBehaviour
 
     private void ConfirmFocused()
     {
+        if (_showingMonsters)
+        {
+            if (_focusIndex < 0 || _focusIndex >= _monsterSlots.Count)
+            {
+                return;
+            }
+
+            ConfirmMonsterSlot(_monsterSlots[_focusIndex]);
+            return;
+        }
+
         if (_focusIndex < 0 || _focusIndex >= _slots.Count)
         {
             return;
@@ -559,6 +613,7 @@ public class UIStorageWindow : MonoBehaviour
 
         account.SelectPlayable(slot.Data);
         ApplyEntry(slot.Data);
+        EnterMonsterScroll();
     }
 
     private void ClearEntry()
@@ -569,7 +624,15 @@ public class UIStorageWindow : MonoBehaviour
             account.ClearSelectedPlayable();
         }
 
+        var restoreCharacters = _showingMonsters;
+        _showingMonsters = false;
+        ClearMonsterEntries();
+        SetScrolls();
         ApplyEntry(null);
+        if (restoreCharacters)
+        {
+            RebuildCharacters(false);
+        }
     }
 
     private void ApplyEntry(PlayableCharacterData data)
@@ -593,29 +656,31 @@ public class UIStorageWindow : MonoBehaviour
 
     private void LayoutSlots()
     {
-        if (_grid != null)
+        var grid = ActiveGrid;
+        if (grid != null)
         {
-            _grid.enabled = false;
+            grid.enabled = false;
         }
 
-        var content = _trainerContent as RectTransform;
-        if (content == null || _slots.Count == 0)
+        var content = ActiveContent;
+        var count = ActiveSlotCount;
+        if (content == null || count == 0)
         {
             return;
         }
 
         Canvas.ForceUpdateCanvases();
-        var padding = _grid != null ? _grid.padding : new RectOffset();
-        var spacing = _grid != null ? _grid.spacing : Vector2.zero;
+        var padding = grid != null ? grid.padding : new RectOffset();
+        var spacing = grid != null ? grid.spacing : Vector2.zero;
         var contentWidth = content.rect.width;
         var innerRight = contentWidth - padding.right;
         var x = (float)padding.left;
         var y = (float)padding.top;
         var rowHeight = 0f;
 
-        for (var i = 0; i < _slots.Count; i++)
+        for (var i = 0; i < count; i++)
         {
-            var rect = _slots[i].transform as RectTransform;
+            var rect = ActiveSlotRect(i);
             if (rect == null)
             {
                 continue;
@@ -642,20 +707,21 @@ public class UIStorageWindow : MonoBehaviour
 
     private int ColumnCount()
     {
-        if (_slots.Count == 0)
+        if (ActiveSlotCount == 0)
         {
             return 1;
         }
 
-        var slot = _slots[0].transform as RectTransform;
-        var content = _trainerContent as RectTransform;
+        var slot = ActiveSlotRect(0);
+        var content = ActiveContent;
+        var grid = ActiveGrid;
         if (slot == null || content == null)
         {
             return 1;
         }
 
-        var spacing = _grid != null ? _grid.spacing.x : 0f;
-        var padding = _grid != null ? _grid.padding.left + _grid.padding.right : 0;
+        var spacing = grid != null ? grid.spacing.x : 0f;
+        var padding = grid != null ? grid.padding.left + grid.padding.right : 0;
         var stride = slot.sizeDelta.x + spacing;
         if (stride <= 0.01f)
         {
@@ -664,6 +730,271 @@ public class UIStorageWindow : MonoBehaviour
 
         var inner = content.rect.width - padding + spacing;
         return Mathf.Max(1, Mathf.FloorToInt((inner + 0.001f) / stride));
+    }
+
+    private int ActiveSlotCount => _showingMonsters ? _monsterSlots.Count : _slots.Count;
+
+    private RectTransform ActiveContent => (_showingMonsters ? _monsterContent : _trainerContent) as RectTransform;
+
+    private GridLayoutGroup ActiveGrid => _showingMonsters ? _monsterGrid : _grid;
+
+    private RectTransform ActiveSlotRect(int index)
+    {
+        if (_showingMonsters)
+        {
+            if (index < 0 || index >= _monsterSlots.Count)
+            {
+                return null;
+            }
+
+            return _monsterSlots[index].transform as RectTransform;
+        }
+
+        if (index < 0 || index >= _slots.Count)
+        {
+            return null;
+        }
+
+        return _slots[index].transform as RectTransform;
+    }
+
+    private void SetScrolls()
+    {
+        if (_trainerScroll != null)
+        {
+            _trainerScroll.SetActive(!_showingMonsters);
+        }
+
+        if (_monsterScroll != null)
+        {
+            _monsterScroll.SetActive(_showingMonsters);
+        }
+    }
+
+    private void EnterMonsterScroll()
+    {
+        _showingMonsters = true;
+        ClearSlotSelect();
+        SetScrolls();
+        RebuildMonsters();
+    }
+
+    private void RebuildMonsters()
+    {
+        var previousFocus = _focusedMonster;
+        ClearMonsterContent();
+        if (_monsterSlotPrefab == null || _monsterContent == null)
+        {
+            Debug.LogError("포켓몬 스토리지 슬롯 참조가 없습니다.");
+            ShowMonsterInfo(null);
+            return;
+        }
+
+        var account = GetAccount();
+        var monsters = account != null ? account.Monsters : System.Array.Empty<MonsterVisualData>();
+        for (var i = 0; i < monsters.Length; i++)
+        {
+            var monster = monsters[i];
+            if (monster == null || !PassesGeneration(monster.Generation))
+            {
+                continue;
+            }
+
+            var slot = Instantiate(_monsterSlotPrefab, _monsterContent);
+            var unlocked = account != null && account.IsMonsterUnlocked(monster);
+            slot.Bind(monster, unlocked, FocusMonsterSlot, ConfirmMonsterSlot);
+            _monsterSlots.Add(slot);
+        }
+
+        SetFocus(IndexOfMonster(previousFocus), false);
+        LayoutSlots();
+    }
+
+    private void ClearMonsterContent()
+    {
+        _monsterSlots.Clear();
+        if (_monsterContent == null)
+        {
+            return;
+        }
+
+        for (var i = _monsterContent.childCount - 1; i >= 0; i--)
+        {
+            var child = _monsterContent.GetChild(i).gameObject;
+            child.SetActive(false);
+            Destroy(child);
+        }
+    }
+
+    private void FocusMonsterSlot(StorageMonsterView slot)
+    {
+        if (!_showingMonsters || _mode != StorageFocus.Characters)
+        {
+            return;
+        }
+
+        var index = _monsterSlots.IndexOf(slot);
+        if (index < 0)
+        {
+            return;
+        }
+
+        SetFocus(index, true);
+    }
+
+    private void SetMonsterFocus(int index, bool playCursor)
+    {
+        if (_monsterSlots.Count == 0)
+        {
+            _focusIndex = 0;
+            _focusedMonster = null;
+            ShowMonsterInfo(null);
+            return;
+        }
+
+        var next = Mathf.Clamp(index, 0, _monsterSlots.Count - 1);
+        var changed = next != _focusIndex;
+        _focusIndex = next;
+        _focusedMonster = _monsterSlots[_focusIndex].Data;
+        var showSlot = _mode == StorageFocus.Characters;
+        for (var i = 0; i < _monsterSlots.Count; i++)
+        {
+            _monsterSlots[i].SetFocused(showSlot && i == _focusIndex);
+        }
+
+        if (playCursor && changed && showSlot)
+        {
+            PlayCursor();
+        }
+
+        ShowMonsterInfo(_monsterSlots[_focusIndex]);
+    }
+
+    private int IndexOfMonster(MonsterVisualData data)
+    {
+        if (data == null)
+        {
+            return 0;
+        }
+
+        for (var i = 0; i < _monsterSlots.Count; i++)
+        {
+            if (_monsterSlots[i].Data == data)
+            {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+    private void ShowMonsterInfo(StorageMonsterView slot)
+    {
+        if (_info == null)
+        {
+            return;
+        }
+
+        _info.Show(slot);
+    }
+
+    private void ConfirmMonsterSlot(StorageMonsterView slot)
+    {
+        if (!_showingMonsters || _mode != StorageFocus.Characters)
+        {
+            return;
+        }
+
+        if (slot == null || slot.Data == null)
+        {
+            return;
+        }
+
+        if (!slot.IsUnlocked)
+        {
+            slot.PlayLockedSelect();
+            return;
+        }
+
+        TryFillEntry(slot.Data);
+    }
+
+    private void EnsureEntryState()
+    {
+        var count = _entryMonsters != null ? _entryMonsters.Length : 0;
+        if (_entryVisuals.Length == count && _entryDefaultSprites.Length == count)
+        {
+            return;
+        }
+
+        _entryVisuals = new MonsterVisualData[count];
+        _entryDefaultSprites = new Sprite[count];
+        for (var i = 0; i < count; i++)
+        {
+            _entryDefaultSprites[i] = _entryMonsters[i] != null ? _entryMonsters[i].sprite : null;
+        }
+    }
+
+    private void ClearMonsterEntries()
+    {
+        EnsureEntryState();
+        for (var i = 0; i < _entryVisuals.Length; i++)
+        {
+            _entryVisuals[i] = null;
+            ApplyEntrySprite(i, null);
+        }
+    }
+
+    private bool ClearLastMonsterEntry()
+    {
+        EnsureEntryState();
+        for (var i = _entryVisuals.Length - 1; i >= 0; i--)
+        {
+            if (_entryVisuals[i] == null)
+            {
+                continue;
+            }
+
+            _entryVisuals[i] = null;
+            ApplyEntrySprite(i, null);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void TryFillEntry(MonsterVisualData data)
+    {
+        EnsureEntryState();
+        for (var i = 0; i < _entryVisuals.Length; i++)
+        {
+            if (_entryVisuals[i] != null)
+            {
+                continue;
+            }
+
+            _entryVisuals[i] = data;
+            ApplyEntrySprite(i, data != null ? data.Portrait : null);
+            return;
+        }
+    }
+
+    private void ApplyEntrySprite(int index, Sprite portrait)
+    {
+        if (_entryMonsters == null || index < 0 || index >= _entryMonsters.Length)
+        {
+            return;
+        }
+
+        var image = _entryMonsters[index];
+        if (image == null)
+        {
+            return;
+        }
+
+        var filled = portrait != null;
+        image.sprite = filled ? portrait : _entryDefaultSprites[index];
+        image.preserveAspect = filled;
     }
 
     private static bool TryGetInput(out InputManager inputManager)
