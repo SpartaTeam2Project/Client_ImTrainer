@@ -20,6 +20,8 @@ public class Player : MonoBehaviour
     [SerializeField] private float _cooldownMultiplier = 1f;
     [SerializeField] private float _projectileSpeedMultiplier = 1f;
     [SerializeField] private float _projectileMultiplier = 1f;
+    [SerializeField] private float _sizeMultiplier = 1f;
+    [SerializeField] private float _durationMultiplier = 1f;
     [SerializeField] private float _invincibleSeconds;
 
     [Header("Experience")]
@@ -46,6 +48,12 @@ public class Player : MonoBehaviour
     public float projectileSpeedMultiplier { get; private set; } = 1f;
 
     public float projectileMultiplier { get; private set; } = 1f;
+
+    public float sizeMultiplier { get; private set; } = 1f;
+
+    public float durationMultiplier { get; private set; } = 1f;
+
+    public float damageReductionPercent { get; private set; }
 
     public float invincibleSeconds { get; private set; }
 
@@ -103,6 +111,9 @@ public class Player : MonoBehaviour
         cooldownMultiplier = Mathf.Max(0f, _cooldownMultiplier);
         projectileSpeedMultiplier = Mathf.Max(0f, _projectileSpeedMultiplier);
         projectileMultiplier = Mathf.Max(0f, _projectileMultiplier);
+        sizeMultiplier = Mathf.Max(0f, _sizeMultiplier);
+        durationMultiplier = Mathf.Max(0f, _durationMultiplier);
+        damageReductionPercent = 0f;
         invincibleSeconds = Mathf.Max(0f, _invincibleSeconds);
         _lookDirection = Vector2.right;
         IsAlive = true;
@@ -186,7 +197,8 @@ public class Player : MonoBehaviour
             return;
         }
 
-        CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+        var reduced = amount * (100f - Mathf.Clamp(damageReductionPercent, 0f, 100f)) / 100f;
+        CurrentHealth = Mathf.Max(0f, CurrentHealth - reduced);
         if (_healthbar != null)
         {
             _healthbar.Apply(CurrentHealth, maxHealth);
@@ -220,7 +232,7 @@ public class Player : MonoBehaviour
             return 0;
         }
 
-        var xp = CurrentXp + amount;
+        var xp = CurrentXp + amount * Mathf.Max(0f, xpMultiplier);
         var level = Level;
         var required = Mathf.Max(MIN_REQUIRED_XP, RequiredXp);
         var gained = 0;
@@ -234,6 +246,110 @@ public class Player : MonoBehaviour
 
         SetProgress(level, xp, required);
         return gained;
+    }
+
+    /// <summary>
+    /// 최대 체력 비율만큼 회복한다.
+    /// </summary>
+    public void RestoreHp(float percent)
+    {
+        if (!IsAlive || percent <= 0f)
+        {
+            return;
+        }
+
+        CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + maxHealth * (percent / 100f));
+        if (_healthbar != null)
+        {
+            _healthbar.Apply(CurrentHealth, maxHealth);
+        }
+    }
+
+    /// <summary>
+    /// 공격력 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateDamage(float multiplier)
+    {
+        damageMultiplier = Mathf.Max(0f, _damageMultiplier) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 이동 속도 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateMoveSpeed(float multiplier)
+    {
+        moveSpeed = Mathf.Max(0f, _moveSpeed) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 최대 체력 배율을 기본값에 곱하고, 현재 체력 비율은 유지한다.
+    /// </summary>
+    public void RecalculateMaxHp(float multiplier)
+    {
+        var previous = Mathf.Max(1f, maxHealth);
+        var ratio = Mathf.Clamp01(CurrentHealth / previous);
+        maxHealth = Mathf.Max(1f, _maxHealth) * Mathf.Max(0f, multiplier);
+        CurrentHealth = maxHealth * ratio;
+        if (_healthbar != null)
+        {
+            _healthbar.Apply(CurrentHealth, maxHealth);
+        }
+    }
+
+    /// <summary>
+    /// 경험치 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateXpMultiplier(float multiplier)
+    {
+        xpMultiplier = Mathf.Max(0f, _xpMultiplier) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 쿨다운 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateCooldownMultiplier(float multiplier)
+    {
+        cooldownMultiplier = Mathf.Max(0f, _cooldownMultiplier) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 자석 반경 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateMagnetRadius(float multiplier)
+    {
+        magnetRadius = Mathf.Max(0f, _magnetRadius) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 투사체 속도 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateProjectileSpeedMultiplier(float multiplier)
+    {
+        projectileSpeedMultiplier = Mathf.Max(0f, _projectileSpeedMultiplier) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 능력 크기 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateSizeMultiplier(float multiplier)
+    {
+        sizeMultiplier = Mathf.Max(0f, _sizeMultiplier) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 지속 시간 배율을 기본값에 곱한다.
+    /// </summary>
+    public void RecalculateDurationMultiplier(float multiplier)
+    {
+        durationMultiplier = Mathf.Max(0f, _durationMultiplier) * Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
+    /// 받는 피해를 줄이는 퍼센트를 정한다. 0이면 그대로, 100이면 피해가 없다.
+    /// </summary>
+    public void RecalculateDamageReduction(float percent)
+    {
+        damageReductionPercent = Mathf.Clamp(percent, 0f, 100f);
     }
 
     #endregion

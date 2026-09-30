@@ -37,6 +37,9 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [Header("Projectile")]
     [SerializeField] private Sprite _projectileSprite;
 
+    [Header("Ability")]
+    [SerializeField] private AbilityData _ability;
+
     [Header("Type")]
     [SerializeField] private MonsterType _primaryType = MonsterType.Normal;
     [SerializeField] private bool _hasSecondaryType;
@@ -76,6 +79,8 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     public EightDirectionFrames Faint => _faint;
 
     public Sprite ProjectileSprite => _projectileSprite;
+
+    public AbilityData Ability => _ability;
 
     public MonsterType PrimaryType => _primaryType;
 
