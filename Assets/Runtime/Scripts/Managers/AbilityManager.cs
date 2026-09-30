@@ -67,7 +67,7 @@ public class AbilityManager : BaseManager
     #region Public Methods
 
     /// <summary>
-    /// 3시 칸에 시작 무기를 붙인다. 프로필에 스타터가 있으면 그 그림을 쓴다.
+    /// 3시 칸에 시작 무기를 붙인다. 엔트리 포켓몬이 있으면 그 그림을 쓰고, 없으면 스타터를 쓴다.
     /// </summary>
     public void BeginStage(int playerId)
     {
@@ -215,6 +215,12 @@ public class AbilityManager : BaseManager
     {
         if (Managers.Instance != null && Managers.Instance.TryGetManager<AccountManager>(out var accountManager))
         {
+            var runMonster = accountManager.ResolveRunMonster();
+            if (runMonster != null)
+            {
+                return runMonster;
+            }
+
             var starter = accountManager.ResolveStarterVisual();
             if (starter != null)
             {

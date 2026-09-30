@@ -64,6 +64,27 @@ public class UIStorageWindow : MonoBehaviour
         Rebuild(false);
     }
 
+    /// <summary>
+    /// 잠기지 않은 엔트리 칸 중 채워진 첫 포켓몬을 돌려준다.
+    /// </summary>
+    public bool TryGetFirstEntryMonster(out MonsterVisualData data)
+    {
+        EnsureEntryState();
+        for (var i = 0; i < _entryVisuals.Length; i++)
+        {
+            if (IsEntryLocked(i) || _entryVisuals[i] == null)
+            {
+                continue;
+            }
+
+            data = _entryVisuals[i];
+            return true;
+        }
+
+        data = null;
+        return false;
+    }
+
     private void OnEnable()
     {
         PrepareFilters();

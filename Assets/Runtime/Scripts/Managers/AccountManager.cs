@@ -35,6 +35,7 @@ public class AccountManager : BaseManager
     private string _starterVisualName = string.Empty;
     private int _generation = DEFAULT_GENERATION;
     private string _selectedPlayableName = string.Empty;
+    private MonsterVisualData _runMonster;
 
     private bool _alwaysShowIntro;
 
@@ -228,6 +229,22 @@ public class AccountManager : BaseManager
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 이번 판의 시작 포켓몬을 세션에만 남긴다.
+    /// </summary>
+    public void SetRunMonster(MonsterVisualData data)
+    {
+        _runMonster = data;
+    }
+
+    /// <summary>
+    /// 이번 판에 고른 시작 포켓몬. 없으면 null.
+    /// </summary>
+    public MonsterVisualData ResolveRunMonster()
+    {
+        return _runMonster;
     }
 
     private MonsterVisualData[] ActiveStarters()
