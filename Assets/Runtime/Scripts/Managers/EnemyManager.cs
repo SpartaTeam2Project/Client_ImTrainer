@@ -12,7 +12,7 @@ using UnityEngine;
 public class EnemyManager : BaseManager
 {
     private const float FALLBACK_SPAWN_RADIUS = 8f;
-    private const int MAX_ALIVE = 1000;
+    private const int MAX_ALIVE = 40;
     private const float ACTOR_SIZE = 0.7f;
     private const int ACTOR_SORTING_ORDER = 5;
     private const float DIAGONAL_DISTANCE_MULTIPLIER = 1.3f;
