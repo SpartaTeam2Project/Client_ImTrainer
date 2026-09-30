@@ -626,6 +626,7 @@ public class UIStorageWindow : MonoBehaviour
 
         account.SelectPlayable(slot.Data);
         ApplyEntry(slot.Data);
+        PlaySelect();
         EnterMonsterScroll();
     }
 
@@ -1020,6 +1021,7 @@ public class UIStorageWindow : MonoBehaviour
 
             _entryVisuals[i] = data;
             ApplyEntrySprite(i, data != null ? data.Portrait : null);
+            PlaySelect();
             return;
         }
 
