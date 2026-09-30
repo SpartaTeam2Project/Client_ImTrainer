@@ -17,6 +17,7 @@ public class UIStorageWindow : MonoBehaviour
     private const string MENU_MOVE_SOUND = "cursor";
     private const string FILTER_APPLY_SOUND = "select";
     private const string ENTRY_LOCKED_SOUND = "error";
+    private const string STORAGE_MUSIC_NAME = "storage";
 
     [SerializeField] private Transform _trainerContent;
     [SerializeField] private StorageCharacterView _slotPrefab;
@@ -54,6 +55,7 @@ public class UIStorageWindow : MonoBehaviour
     /// </summary>
     public void Open()
     {
+        PlayStorageMusic();
         if (!gameObject.activeSelf)
         {
             gameObject.SetActive(true);
@@ -579,6 +581,16 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         _info.Show(slot);
+    }
+
+    private static void PlayStorageMusic()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlayMusic(STORAGE_MUSIC_NAME);
     }
 
     private static void PlayCursor()
