@@ -1,26 +1,44 @@
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 시간 기준 스폰, 활성 적 목록, 킬 수와 Pool 수명을 담당한다.
-/// 흐름: Tick => Wave 조건 => Pool.Get => Enemy.Bind/ApplyVisual/Initialize => Enemy.Tick.
+/// 타임라인 클립이 요청한 스폰, 활성 적 목록, 킬 수와 Pool 수명을 담당한다.
+/// 흐름: SpawnWave => Pool.Get => Enemy.Bind/ApplyVisual/Initialize => Enemy.Tick.
 /// 발사 몬스터의 투사체는 별도 목록에서 재사용한다.
 /// 사망: NotifyDied => 목록/카운트 갱신 => 상태 정리 => Pool.Return.
 /// </summary>
 public class EnemyManager : BaseManager
 {
-    private const float SPAWN_RADIUS = 8f;
+    private const float FALLBACK_SPAWN_RADIUS = 8f;
     private const int MAX_ALIVE = 40;
     private const float ACTOR_SIZE = 0.7f;
     private const int ACTOR_SORTING_ORDER = 5;
+    private const float DIAGONAL_DISTANCE_MULTIPLIER = 1.3f;
+    private const float TELEPORT_CONE_SIZE = 0.8f;
+    private const int TELEPORT_CAP = 100;
+    private const float TELEPORT_ANGLE = 45f;
+    private const int TELEPORT_FRAME_DIVISOR = 20;
+    private const int TELEPORT_FRAME_MIN = 1;
+    private const int TELEPORT_FRAME_MAX = 100;
+    private const float SPAWN_OUTSIDE_PADDING = 0.5f;
+    private const float SPAWN_PADDING_RANDOM = 0.2f;
+    private const float CIRCULAR_DISTANCE_MULTIPLIER = 1.05f;
+    private const float CIRCULAR_PADDING_RANDOM = 0.2f;
+    private const int LARGE_SPAWN_AMOUNT = 100;
+    private const float LARGE_SPAWN_SPREAD = 0.1f;
+    private const int SPAWN_POSITION_TRIES = 10;
+    private const int SPAWN_PULL_STEPS = 10;
+    private const float POSITION_ACCEPT_SQR = 0.0025f;
+    private const float LOOK_SQR_EPSILON = 0.0001f;
 
     [Header("Enemy Settings")]
     [SerializeField] private Enemy _enemyPrefab;
 
     private readonly List<Enemy> _alive = new List<Enemy>();
-    private readonly List<WaveRuntime> _waves = new List<WaveRuntime>();
     private readonly List<EnemyProjectile> _projectiles = new List<EnemyProjectile>();
+    private readonly Dictionary<Enemy, Action<Enemy>> _deathCallbacks = new Dictionary<Enemy, Action<Enemy>>();
     private CombatObjectPool _pool;
     private Transform _projectileRoot;
     private GameObject _fallbackPrefab;
@@ -29,6 +47,7 @@ public class EnemyManager : BaseManager
     private float _hpMultiplier = 1f;
     private float _damageMultiplier = 1f;
     private bool _stageActive;
+    private bool _bossFightActive;
 
     public int KillCount { get; private set; }
 
@@ -56,7 +75,7 @@ public class EnemyManager : BaseManager
     #region Public Methods
 
     /// <summary>
-    /// 판을 열고 웨이브 시계를 맞춘다. 같은 Scene의 Pool은 다음 판에도 재사용한다.
+    /// 판을 열고 스폰 배율을 맞춘다. 같은 Scene의 Pool은 다음 판에도 재사용한다.
     /// stageRoot를 생략하는 기존 호출은 현재 활성 Scene에 Pool을 만든다.
     /// </summary>
     public void BeginStage(int playerId, StageData stage, Transform stageRoot = null)
@@ -69,12 +88,12 @@ public class EnemyManager : BaseManager
 
         KillCount = 0;
         _playerId = playerId;
+        _bossFightActive = false;
         _stageActive = stage != null;
         _hpMultiplier = stage != null ? Mathf.Max(0.01f, stage.EnemyHpMultiplier) : 1f;
         _damageMultiplier = stage != null ? Mathf.Max(0f, stage.EnemyDamageMultiplier) : 1f;
-        _waves.Clear();
 
-        if (stage == null || stage.Waves == null)
+        if (stage == null)
         {
             Debug.LogError("StageData가 없어 적을 스폰하지 않습니다.");
             return;
@@ -84,17 +103,6 @@ public class EnemyManager : BaseManager
         {
             _pool = new CombatObjectPool(stageRoot);
         }
-
-        for (var i = 0; i < stage.Waves.Length; i++)
-        {
-            var wave = stage.Waves[i];
-            if (wave == null)
-            {
-                continue;
-            }
-
-            _waves.Add(new WaveRuntime(i, wave));
-        }
     }
 
     /// <summary>
@@ -103,7 +111,6 @@ public class EnemyManager : BaseManager
     public void EndStage()
     {
         ClearActors();
-        _waves.Clear();
     }
 
     /// <summary>
@@ -120,9 +127,9 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
-    /// Playing 동안 스폰을 진행하고 살아 있는 적에게 플레이어 위치를 넘긴다.
+    /// Playing 동안 살아 있는 적에게 플레이어 위치를 넘기고, 화면 밖 적을 앞으로 옮긴다.
     /// </summary>
-    public void Tick(int playerId, float elapsedSeconds)
+    public void Tick(int playerId)
     {
         if (!_stageActive || playerId != _playerId)
         {
@@ -134,9 +141,56 @@ public class EnemyManager : BaseManager
             return;
         }
 
-        SpawnWaves(elapsedSeconds, playerPosition);
-        UpdateEnemies(playerPosition);
+        if (!UpdateEnemies(playerPosition))
+        {
+            return;
+        }
+
         TickProjectiles(Time.deltaTime);
+        TeleportOffscreen(playerPosition);
+    }
+
+    /// <summary>
+    /// 타임라인 클립이 요청한 수만큼 낸다. 실제로 낸 마리 수를 반환한다.
+    /// </summary>
+    public int SpawnWave(int playerId, MonsterWaveProfile profile, int count, bool circularSpawn, Action<Enemy> onDied)
+    {
+        if (!_stageActive || _bossFightActive || playerId != _playerId || profile == null || count <= 0)
+        {
+            return 0;
+        }
+
+        if (!TryGetPlayerPosition(out var playerPosition))
+        {
+            return 0;
+        }
+
+        var spawned = 0;
+        for (var i = 0; i < count; i++)
+        {
+            if (_alive.Count >= MAX_ALIVE)
+            {
+                break;
+            }
+
+            var position = ResolveSpawnPosition(playerPosition, count, circularSpawn);
+            if (CreateEnemy(profile, position, onDied) == null)
+            {
+                break;
+            }
+
+            spawned++;
+        }
+
+        return spawned;
+    }
+
+    /// <summary>
+    /// 보스전이 켜지면 일반 스폰과 화면 밖 재배치를 멈춘다.
+    /// </summary>
+    public void SetBossFightActive(bool active)
+    {
+        _bossFightActive = active;
     }
 
     /// <summary>
@@ -165,6 +219,7 @@ public class EnemyManager : BaseManager
             return;
         }
 
+        InvokeDeathCallback(enemy);
         KillAt(index, enemy);
     }
 
@@ -290,7 +345,7 @@ public class EnemyManager : BaseManager
             return;
         }
 
-        ReleaseWaveCount(enemy.WaveIndex);
+        InvokeDeathCallback(enemy);
         _alive.RemoveAt(index);
     }
 
@@ -298,170 +353,218 @@ public class EnemyManager : BaseManager
 
     #region Private Methods
 
-    private void SpawnWaves(float elapsedSeconds, Vector2 playerPosition)
+    private Enemy CreateEnemy(MonsterWaveProfile profile, Vector2 position, Action<Enemy> onDied)
     {
-        for (var i = 0; i < _waves.Count; i++)
-        {
-            var runtime = _waves[i];
-            var wave = runtime.Spawn;
-            if (elapsedSeconds < wave.StartSeconds || elapsedSeconds > wave.EndSeconds)
-            {
-                continue;
-            }
-
-            switch (wave.Kind)
-            {
-                case WaveKind.Burst:
-                    SpawnBurst(runtime, playerPosition);
-                    break;
-                case WaveKind.Maintain:
-                    SpawnMaintain(runtime, elapsedSeconds, playerPosition);
-                    break;
-                default:
-                    SpawnContinuous(runtime, elapsedSeconds, playerPosition);
-                    break;
-            }
-        }
-    }
-
-    private void SpawnBurst(WaveRuntime runtime, Vector2 playerPosition)
-    {
-        if (runtime.BurstFired)
-        {
-            return;
-        }
-
-        runtime.BurstFired = true;
-        SpawnCircle(runtime, playerPosition, Mathf.Max(1, runtime.Spawn.Count));
-    }
-
-    private void SpawnMaintain(WaveRuntime runtime, float elapsedSeconds, Vector2 playerPosition)
-    {
-        if (runtime.AliveCount >= runtime.Spawn.Count || elapsedSeconds < runtime.NextSpawnElapsed)
-        {
-            return;
-        }
-
-        runtime.NextSpawnElapsed = elapsedSeconds + Mathf.Max(0.05f, runtime.Spawn.SpawnInterval);
-        SpawnCircle(runtime, playerPosition, 1);
-    }
-
-    private void SpawnContinuous(WaveRuntime runtime, float elapsedSeconds, Vector2 playerPosition)
-    {
-        if (elapsedSeconds < runtime.NextSpawnElapsed)
-        {
-            return;
-        }
-
-        runtime.NextSpawnElapsed = elapsedSeconds + Mathf.Max(0.05f, runtime.Spawn.SpawnInterval);
-        SpawnCircle(runtime, playerPosition, 1);
-    }
-
-    private void SpawnCircle(WaveRuntime runtime, Vector2 origin, int count)
-    {
-        for (var i = 0; i < count; i++)
-        {
-            if (_alive.Count >= MAX_ALIVE)
-            {
-                return;
-            }
-
-            var angle = (Mathf.PI * 2f * i / count) + Random.Range(-0.25f, 0.25f);
-            var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * SPAWN_RADIUS;
-            CreateEnemy(runtime, origin + offset);
-        }
-    }
-
-    private void CreateEnemy(WaveRuntime runtime, Vector2 position)
-    {
-        var wave = runtime.Spawn;
         var enemy = CreateActor(_enemyPrefab, position);
         if (enemy == null)
         {
-            return;
+            return null;
         }
 
-        var maxHealth = Mathf.Max(1f, wave.MaxHealth * _hpMultiplier);
-        var contactDamage = wave.ContactDamage * _damageMultiplier;
-        // 재사용 여부와 관계없이 그림과 스탯을 넣은 뒤 Tick에 등록한다.
-        var visual = SelectMonsterVisual(wave);
+        var visual = profile.Monster;
+        var maxHealth = Mathf.Max(1f, profile.MaxHealth * _hpMultiplier);
+        var contactDamage = profile.ContactDamage * _damageMultiplier;
         enemy.Bind(this);
-        enemy.ApplyVisual(visual, ResolveScale(wave, visual));
+        enemy.ApplyVisual(visual, ResolveScale(profile));
         enemy.Initialize(
             _playerId,
-            runtime.WaveIndex,
+            -1,
             maxHealth,
             contactDamage,
-            wave.MoveSpeed,
-            wave.AttackKind,
-            wave.AttackRange,
-            wave.AttackInterval,
-            wave.ProjectileSpeed,
+            profile.MoveSpeed,
+            profile.AttackKind,
+            profile.AttackRange,
+            profile.AttackInterval,
+            profile.ProjectileSpeed,
             visual != null ? visual.ProjectileSprite : null,
-            wave.Id,
-            wave.HitRadius,
-            wave.AttackDistance);
-        runtime.AliveCount++;
-        _alive.Add(enemy);
-    }
-
-    private static float ResolveScale(WaveSpawn wave, MonsterVisualData visual)
-    {
-        if (wave.OverrideScale)
+            profile.Id,
+            profile.HitRadius,
+            profile.AttackDistance);
+        enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
+        if (onDied != null)
         {
-            return wave.Scale;
+            _deathCallbacks[enemy] = onDied;
         }
 
+        _alive.Add(enemy);
+        return enemy;
+    }
+
+    private static float ResolveScale(MonsterWaveProfile profile)
+    {
+        if (profile.OverrideScale)
+        {
+            return profile.Scale;
+        }
+
+        var visual = profile.Monster;
         return visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE;
     }
 
-    private MonsterVisualData SelectMonsterVisual(WaveSpawn wave)
+    private Vector2 ResolveSpawnPosition(Vector2 playerPosition, int amount, bool circularSpawn)
     {
-        if (wave.Monster != null)
+        var extra = amount > LARGE_SPAWN_AMOUNT ? Mathf.Sqrt(_alive.Count) * LARGE_SPAWN_SPREAD : 0f;
+        if (!TryGetCamera(out var camera) || camera.ViewDiagonal <= 0f)
         {
-            return wave.Monster;
+            var angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            return AcceptOrBorder(playerPosition + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * FALLBACK_SPAWN_RADIUS, playerPosition);
         }
 
-        if (wave.Enemies == null || wave.Enemies.Length == 0)
+        var diagonal = camera.ViewDiagonal;
+        var lastCandidate = playerPosition;
+        for (var attempt = 0; attempt < SPAWN_POSITION_TRIES; attempt++)
         {
-            return null;
+            lastCandidate = circularSpawn
+                ? playerPosition + RandomDirection() * (diagonal * CIRCULAR_DISTANCE_MULTIPLIER + UnityEngine.Random.value * CIRCULAR_PADDING_RANDOM + extra)
+                : camera.GetRandomPointOutside(SPAWN_OUTSIDE_PADDING + UnityEngine.Random.value * SPAWN_PADDING_RANDOM + extra);
+            if (TryAcceptPosition(lastCandidate, out var accepted))
+            {
+                return accepted;
+            }
         }
 
-        var totalWeight = 0;
-        for (var i = 0; i < wave.Enemies.Length; i++)
+        return AcceptOrBorder(lastCandidate, playerPosition);
+    }
+
+    private Vector2 AcceptOrBorder(Vector2 candidate, Vector2 playerPosition)
+    {
+        if (TryAcceptPosition(candidate, out var accepted))
         {
-            var entry = wave.Enemies[i];
-            if (entry == null || entry.Visual == null || entry.Weight <= 0)
+            return accepted;
+        }
+
+        for (var step = 1; step < SPAWN_PULL_STEPS; step++)
+        {
+            var pulled = Vector2.Lerp(candidate, playerPosition, 1f - step / (float)SPAWN_PULL_STEPS);
+            if (TryAcceptPosition(pulled, out var pulledAccepted))
+            {
+                return pulledAccepted;
+            }
+        }
+
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            return fieldManager.GetRandomPositionOnBorder();
+        }
+
+        return playerPosition;
+    }
+
+    private void TeleportOffscreen(Vector2 playerPosition)
+    {
+        if (_bossFightActive || _alive.Count == 0 || _alive.Count > TELEPORT_CAP)
+        {
+            return;
+        }
+
+        if (!TryGetCamera(out var camera) || camera.ViewDiagonal <= 0f)
+        {
+            return;
+        }
+
+        if (!TryGetLookDirection(out var lookDirection))
+        {
+            return;
+        }
+
+        var diagonal = camera.ViewDiagonal * DIAGONAL_DISTANCE_MULTIPLIER;
+        var thresholdSqr = diagonal * diagonal;
+        var behindDot = TELEPORT_CONE_SIZE - 1f;
+        var stride = Mathf.Clamp(_alive.Count / TELEPORT_FRAME_DIVISOR, TELEPORT_FRAME_MIN, TELEPORT_FRAME_MAX);
+        var frame = Time.frameCount % stride;
+        for (var i = frame; i < _alive.Count; i += stride)
+        {
+            var enemy = _alive[i];
+            if (enemy == null || !enemy.IsAlive || enemy.IsRushing || enemy.DisableOffscreenTeleport)
             {
                 continue;
             }
 
-            totalWeight += entry.Weight;
-        }
-
-        if (totalWeight <= 0)
-        {
-            return null;
-        }
-
-        var roll = Random.Range(0, totalWeight);
-        for (var i = 0; i < wave.Enemies.Length; i++)
-        {
-            var entry = wave.Enemies[i];
-            if (entry == null || entry.Visual == null || entry.Weight <= 0)
+            var offset = (Vector2)enemy.transform.position - playerPosition;
+            if (offset.sqrMagnitude <= thresholdSqr)
             {
                 continue;
             }
 
-            if (roll < entry.Weight)
+            var away = offset.normalized;
+            if (Vector2.Dot(away, lookDirection) >= behindDot)
             {
-                return entry.Visual;
+                continue;
             }
 
-            roll -= entry.Weight;
+            var turned = (Vector2)(Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(-TELEPORT_ANGLE, TELEPORT_ANGLE)) * (Vector3)lookDirection);
+            var destination = playerPosition + turned * diagonal;
+            if (!TryAcceptPosition(destination, out var accepted))
+            {
+                continue;
+            }
+
+            enemy.transform.position = accepted;
+        }
+    }
+
+    private bool TryAcceptPosition(Vector2 candidate, out Vector2 accepted)
+    {
+        accepted = candidate;
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            return true;
         }
 
-        return null;
+        var clamped = fieldManager.ValidatePosition(candidate);
+        if ((clamped - candidate).sqrMagnitude > POSITION_ACCEPT_SQR)
+        {
+            return false;
+        }
+
+        accepted = clamped;
+        return true;
+    }
+
+    private bool TryGetCamera(out CameraManager camera)
+    {
+        camera = null;
+        return Managers.Instance != null && Managers.Instance.TryGetManager(out camera) && camera.HasView;
+    }
+
+    private bool TryGetLookDirection(out Vector2 lookDirection)
+    {
+        lookDirection = Vector2.right;
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return false;
+        }
+
+        var look = playerManager.LookDirection;
+        if (look.sqrMagnitude <= LOOK_SQR_EPSILON)
+        {
+            return true;
+        }
+
+        lookDirection = look.normalized;
+        return true;
+    }
+
+    private static Vector2 RandomDirection()
+    {
+        var direction = UnityEngine.Random.insideUnitCircle;
+        if (direction.sqrMagnitude <= LOOK_SQR_EPSILON)
+        {
+            return Vector2.right;
+        }
+
+        return direction.normalized;
+    }
+
+    private void InvokeDeathCallback(Enemy enemy)
+    {
+        if (enemy == null || !_deathCallbacks.TryGetValue(enemy, out var callback))
+        {
+            return;
+        }
+
+        _deathCallbacks.Remove(enemy);
+        callback?.Invoke(enemy);
     }
 
     private Enemy CreateActor(Enemy selectedPrefab, Vector2 position)
@@ -498,7 +601,7 @@ public class EnemyManager : BaseManager
         return actorObject.GetComponent<Enemy>();
     }
 
-    private void UpdateEnemies(Vector2 playerPosition)
+    private bool UpdateEnemies(Vector2 playerPosition)
     {
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
@@ -511,16 +614,17 @@ public class EnemyManager : BaseManager
 
             if (!enemy.Tick(playerPosition))
             {
-                return;
+                return false;
             }
         }
+
+        return true;
     }
 
     private void KillAt(int index, Enemy enemy)
     {
         var dropPosition = enemy != null ? (Vector2)enemy.transform.position : Vector2.zero;
         KillCount++;
-        ReleaseWaveCount(enemy.WaveIndex);
         _alive.RemoveAt(index);
         DropExperience(dropPosition, enemy != null ? enemy.ExperienceGem : null);
         ReturnEnemy(enemy);
@@ -534,20 +638,6 @@ public class EnemyManager : BaseManager
         }
 
         experienceManager.Drop(_playerId, position, gem);
-    }
-
-    private void ReleaseWaveCount(int waveIndex)
-    {
-        for (var i = 0; i < _waves.Count; i++)
-        {
-            if (_waves[i].WaveIndex != waveIndex)
-            {
-                continue;
-            }
-
-            _waves[i].AliveCount = Mathf.Max(0, _waves[i].AliveCount - 1);
-            return;
-        }
     }
 
     private bool TryGetPlayerPosition(out Vector2 playerPosition)
@@ -636,11 +726,12 @@ public class EnemyManager : BaseManager
             _alive.RemoveAt(i);
             if (enemy != null)
             {
-                // Stage 종료는 처치가 아니다. KillCount를 올리지 않고 Wave 수만 줄인다.
-                ReleaseWaveCount(enemy.WaveIndex);
+                // 판 종료는 처치가 아니다. KillCount를 올리지 않는다.
                 ReturnEnemy(enemy);
             }
         }
+
+        _deathCallbacks.Clear();
     }
 
     private void ReturnEnemy(Enemy enemy)
@@ -651,7 +742,8 @@ public class EnemyManager : BaseManager
         }
 
         // 비활성 보관 중의 피해/파괴 알림이 기존 판의 상태를 바꾸지 않도록 해제한다.
-        // Enemy 내부 수정 없이 기존 Initialize로 HP, WaveIndex, 접촉 시각 등을 비운다.
+        // 사망 콜백은 이미 죽었을 때만 부르고, 판 종료에서는 호출하지 않는다.
+        _deathCallbacks.Remove(enemy);
         enemy.Bind(null);
         enemy.ApplyVisual(null);
         enemy.Initialize(0, -1, 0f, 0f, 0f);
@@ -659,24 +751,4 @@ public class EnemyManager : BaseManager
     }
 
     #endregion
-
-    private sealed class WaveRuntime
-    {
-        public WaveRuntime(int waveIndex, WaveSpawn spawn)
-        {
-            WaveIndex = waveIndex;
-            Spawn = spawn;
-            NextSpawnElapsed = spawn.StartSeconds;
-        }
-
-        public int WaveIndex { get; }
-
-        public WaveSpawn Spawn { get; }
-
-        public float NextSpawnElapsed { get; set; }
-
-        public bool BurstFired { get; set; }
-
-        public int AliveCount { get; set; }
-    }
 }

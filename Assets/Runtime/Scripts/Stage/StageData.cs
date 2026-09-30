@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Timeline;
 
 /// <summary>
 /// 배경을 이어 붙이는 방식.
@@ -118,7 +119,7 @@ public class EnemySpawnEntry
 }
 
 /// <summary>
-/// 스테이지의 제한 시간과 적 배율, 웨이브 목록.
+/// 스테이지의 제한 시간과 적 배율, 스폰 타임라인.
 /// </summary>
 [CreateAssetMenu(fileName = "StageData", menuName = "Stage/Stage Data")]
 public class StageData : ScriptableObject
@@ -130,6 +131,8 @@ public class StageData : ScriptableObject
     [SerializeField] private StageType _stageType = StageType.Endless;
     [SerializeField] private StageFieldData _fieldData;
     [SerializeField] private bool _spawnProp;
+    [SerializeField] private TimelineAsset _timeline;
+    [Tooltip("예전 구간 데이터다. 스폰은 타임라인이 맡는다.")]
     [SerializeField] private WaveSpawn[] _waves = Array.Empty<WaveSpawn>();
 
     public bool EndsOnTime => _endsOnTime;
@@ -145,6 +148,8 @@ public class StageData : ScriptableObject
     public StageFieldData FieldData => _fieldData;
 
     public bool SpawnProp => _spawnProp;
+
+    public TimelineAsset Timeline => _timeline;
 
     public WaveSpawn[] Waves => _waves;
 }
