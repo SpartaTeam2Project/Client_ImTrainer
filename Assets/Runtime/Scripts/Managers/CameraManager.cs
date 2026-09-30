@@ -24,6 +24,8 @@ public class CameraManager : BaseManager
 
     public float BottomBound => Position.y - HalfHeight;
 
+    public float ViewDiagonal => HasView ? Mathf.Sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight) : 0f;
+
     #region Unity Methods
 
     private void LateUpdate()
@@ -79,6 +81,27 @@ public class CameraManager : BaseManager
 
         _camera = null;
         _cameraTransform = null;
+    }
+
+    /// <summary>
+    /// 시야 사각형 밖의 임의 점. padding은 경계에서 더 떨어진 거리.
+    /// </summary>
+    public Vector2 GetRandomPointOutside(float padding)
+    {
+        if (!HasView)
+        {
+            return Position;
+        }
+
+        var aspect = _camera.aspect;
+        if (Random.value > aspect / (aspect + 1f))
+        {
+            var x = Random.value > 0.5f ? LeftBound - padding : RightBound + padding;
+            return new Vector2(x, Random.Range(BottomBound - padding, TopBound + padding));
+        }
+
+        var y = Random.value > 0.5f ? TopBound + padding : BottomBound - padding;
+        return new Vector2(Random.Range(LeftBound - padding, RightBound + padding), y);
     }
 
     #endregion

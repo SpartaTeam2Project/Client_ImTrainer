@@ -34,6 +34,8 @@ public class Enemy : MonoBehaviour
     private float _nextShotTime;
     private float _shootPoseUntil;
     private int _waveIndex;
+    private bool _disableOffscreenTeleport;
+    private bool _isRushing;
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
 
     public int Id => _id;
@@ -43,6 +45,10 @@ public class Enemy : MonoBehaviour
     public int WaveIndex => _waveIndex;
 
     public bool IsAlive => _health > 0f;
+
+    public bool DisableOffscreenTeleport => _disableOffscreenTeleport;
+
+    public bool IsRushing => _isRushing;
 
     public ExperienceGem ExperienceGem => _experienceGem;
 
@@ -130,6 +136,8 @@ public class Enemy : MonoBehaviour
         _nextContactTime = 0f;
         _nextShotTime = 0f;
         _shootPoseUntil = 0f;
+        _disableOffscreenTeleport = false;
+        _isRushing = false;
 
         if (_view == null)
         {
@@ -140,6 +148,15 @@ public class Enemy : MonoBehaviour
         {
             _view.SetVisual(false, Vector2.down);
         }
+    }
+
+    /// <summary>
+    /// 화면 밖 재배치를 끌지, 러시 중인지 표시한다. 러시는 나중에 트랙이 켠다.
+    /// </summary>
+    public void SetLaneFlags(bool disableOffscreenTeleport, bool isRushing)
+    {
+        _disableOffscreenTeleport = disableOffscreenTeleport;
+        _isRushing = isRushing;
     }
 
     /// <summary>
