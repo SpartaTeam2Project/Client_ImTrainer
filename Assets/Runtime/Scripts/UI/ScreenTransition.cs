@@ -12,7 +12,7 @@ public class ScreenTransition : MonoBehaviour
 {
     private const string WIPE_MATERIAL_PATH = "Materials/ScreenWipe";
     private const float DEFAULT_DURATION = 0.76f;
-    private const float CLOSED_HOLD_DURATION = 1f;
+    private const float CLOSED_HOLD_DURATION = 0.7f;
     private const float PIXEL_SIZE = 67.5f;
     private const int SORTING_ORDER = 1000;
     private const float CLOSED_PROGRESS = 1f;
