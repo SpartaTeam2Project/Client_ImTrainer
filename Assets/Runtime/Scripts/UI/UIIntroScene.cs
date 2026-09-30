@@ -31,7 +31,7 @@ public class UIIntroScene : MonoBehaviour
     private const string INTRO_MUSIC_NAME = "Intro";
     private const string TITLE_MUSIC_NAME = "TitleScene";
     private const string GENDER_PROMPT = "너는 남자니, 아니면 여자니?";
-    private const string STARTER_PROMPT = "같이 떠날 포켓몬을 한 마리 골라 줘.";
+    private const string STARTER_PROMPT = "밖은 위험하니 이 아이들중 하나를 데려가렴.";
     private const string DEFAULT_LINE = "안녕! [플레이어이름], 기다리가 해서 미안하구나";
     private const int STARTER_COUNT = 3;
     private const int GENDER_COUNT = 2;
