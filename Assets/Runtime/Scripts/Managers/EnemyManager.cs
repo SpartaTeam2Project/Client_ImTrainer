@@ -32,6 +32,15 @@ public class EnemyManager : BaseManager
     private const int SPAWN_PULL_STEPS = 10;
     private const float POSITION_ACCEPT_SQR = 0.0025f;
     private const float LOOK_SQR_EPSILON = 0.0001f;
+    private const float MIN_RING_RADIUS = 0.5f;
+    private const float RING_VIEW_MARGIN = 0.85f;
+    private const float MIN_APPROACH_SPEED = 0.05f;
+    private const float MIN_RUSH_SPEED = 0.05f;
+    private const float MIN_CLUSTER_RADIUS = 0.05f;
+    private const float RUSH_EDGE_PADDING = 0.6f;
+    private const float RUSH_HIDE_DELAY = 2f;
+    private const float DIRECTION_SQR_EPSILON = 0.0001f;
+    private const float GOLDEN_ANGLE = 2.3999631f;
 
     [Header("Enemy Settings")]
     [SerializeField] private Enemy _enemyPrefab;
@@ -147,6 +156,7 @@ public class EnemyManager : BaseManager
         }
 
         TickProjectiles(Time.deltaTime);
+        HideRushedOffscreen();
         TeleportOffscreen(playerPosition);
     }
 
@@ -179,6 +189,88 @@ public class EnemyManager : BaseManager
                 break;
             }
 
+            spawned++;
+        }
+
+        return spawned;
+    }
+
+    /// <summary>
+    /// 플레이어 주변 원 위에 균등하게 한 번 낸다. 이동 속도는 접근 속도를 쓴다.
+    /// </summary>
+    public int SpawnRing(int playerId, MonsterWaveProfile profile, int count, float radius, float approachSpeed)
+    {
+        if (!_stageActive || _bossFightActive || playerId != _playerId || profile == null || count <= 0)
+        {
+            return 0;
+        }
+
+        if (!TryGetPlayerPosition(out var playerPosition))
+        {
+            return 0;
+        }
+
+        profile.MoveSpeed = Mathf.Max(MIN_APPROACH_SPEED, approachSpeed);
+        profile.DisableOffscreenTeleport = true;
+        var resolvedRadius = ResolveRingRadius(radius);
+        var spawned = 0;
+        for (var i = 0; i < count; i++)
+        {
+            if (_alive.Count >= MAX_ALIVE)
+            {
+                break;
+            }
+
+            var angle = Mathf.PI * 2f * i / count;
+            var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * resolvedRadius;
+            var position = AcceptOrBorder(playerPosition + offset, playerPosition);
+            if (CreateEnemy(profile, position, null) == null)
+            {
+                break;
+            }
+
+            spawned++;
+        }
+
+        return spawned;
+    }
+
+    /// <summary>
+    /// 카메라 밖에 묶음을 두고, 그 순간 플레이어 방향으로 직진시킨다.
+    /// </summary>
+    public int SpawnRush(int playerId, MonsterWaveProfile profile, int count, float clusterRadius, float rushSpeed)
+    {
+        if (!_stageActive || _bossFightActive || playerId != _playerId || profile == null || count <= 0)
+        {
+            return 0;
+        }
+
+        if (!TryGetPlayerPosition(out var playerPosition))
+        {
+            return 0;
+        }
+
+        profile.MoveSpeed = Mathf.Max(MIN_RUSH_SPEED, rushSpeed);
+        profile.DisableOffscreenTeleport = true;
+        var center = ResolveRushCenter(playerPosition, out var direction);
+        var radius = Mathf.Max(MIN_CLUSTER_RADIUS, clusterRadius);
+        var spawned = 0;
+        for (var i = 0; i < count; i++)
+        {
+            if (_alive.Count >= MAX_ALIVE)
+            {
+                break;
+            }
+
+            var offset = ClusterOffset(i, count, radius);
+            var position = AcceptOrBorder(center + offset, playerPosition);
+            var enemy = CreateEnemy(profile, position, null);
+            if (enemy == null)
+            {
+                break;
+            }
+
+            enemy.BeginRush(direction);
             spawned++;
         }
 
@@ -399,6 +491,115 @@ public class EnemyManager : BaseManager
 
         var visual = profile.Monster;
         return visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE;
+    }
+
+    private float ResolveRingRadius(float radius)
+    {
+        var requested = Mathf.Max(MIN_RING_RADIUS, radius);
+        if (!TryGetCamera(out var camera))
+        {
+            return requested;
+        }
+
+        var limit = Mathf.Min(camera.HalfWidth, camera.HalfHeight) * RING_VIEW_MARGIN;
+        if (limit <= 0f)
+        {
+            return requested;
+        }
+
+        return Mathf.Min(requested, limit);
+    }
+
+    /// <summary>
+    /// 반지름 안을 고르게 채워 둘레만 있는 고리가 되지 않게 한다.
+    /// </summary>
+    private static Vector2 ClusterOffset(int index, int count, float radius)
+    {
+        if (count <= 1)
+        {
+            return Vector2.zero;
+        }
+
+        var distance = radius * Mathf.Sqrt((index + 0.5f) / count);
+        var angle = index * GOLDEN_ANGLE;
+        return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
+    }
+
+    private Vector2 ResolveRushCenter(Vector2 playerPosition, out Vector2 direction)
+    {
+        var outward = RandomDirection();
+        if (!TryGetCamera(out var camera) || camera.HalfWidth <= 0f || camera.HalfHeight <= 0f)
+        {
+            var centerFallback = playerPosition + outward * FALLBACK_SPAWN_RADIUS;
+            direction = playerPosition - centerFallback;
+            if (direction.sqrMagnitude <= DIRECTION_SQR_EPSILON)
+            {
+                direction = -outward;
+            }
+
+            return centerFallback;
+        }
+
+        var edge = DistanceToCameraEdge(outward, camera);
+        var center = camera.Position + outward * (edge + RUSH_EDGE_PADDING);
+        direction = playerPosition - center;
+        if (direction.sqrMagnitude <= DIRECTION_SQR_EPSILON)
+        {
+            direction = -outward;
+        }
+
+        return center;
+    }
+
+    private static float DistanceToCameraEdge(Vector2 direction, CameraManager camera)
+    {
+        var alongX = Mathf.Abs(direction.x) > DIRECTION_SQR_EPSILON
+            ? camera.HalfWidth / Mathf.Abs(direction.x)
+            : float.MaxValue;
+        var alongY = Mathf.Abs(direction.y) > DIRECTION_SQR_EPSILON
+            ? camera.HalfHeight / Mathf.Abs(direction.y)
+            : float.MaxValue;
+        return Mathf.Min(alongX, alongY);
+    }
+
+    private void HideRushedOffscreen()
+    {
+        if (_alive.Count == 0 || !TryGetCamera(out var camera))
+        {
+            return;
+        }
+
+        var now = Time.time;
+        for (var i = _alive.Count - 1; i >= 0; i--)
+        {
+            var enemy = _alive[i];
+            if (enemy == null)
+            {
+                _alive.RemoveAt(i);
+                continue;
+            }
+
+            if (!enemy.IsRushing || !enemy.IsAlive || now - enemy.SpawnedAt < RUSH_HIDE_DELAY)
+            {
+                continue;
+            }
+
+            if (!IsOutsideCamera(enemy.transform.position, camera))
+            {
+                continue;
+            }
+
+            _alive.RemoveAt(i);
+            ReturnEnemy(enemy);
+        }
+    }
+
+    private static bool IsOutsideCamera(Vector2 position, CameraManager camera)
+    {
+        return position.x < camera.LeftBound
+            || position.x > camera.RightBound
+            || position.y < camera.BottomBound
+            || position.y > camera.TopBound;
     }
 
     private Vector2 ResolveSpawnPosition(Vector2 playerPosition, int amount, bool circularSpawn)

@@ -1,5 +1,160 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8512946371274591254
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4809, type: 3}
+  m_Name: EncircleWave
+  m_EditorClassIdentifier: Assembly-CSharp::EncircleWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 10
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _enemiesCount: 20
+  _radius: 6
+  _approachSpeed: 0.2
+--- !u!114 &-7076273758845343974
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4801, type: 3}
+  m_Name: "0069 \uBAA8\uB2E4\uD53C \uD3EC\uC704"
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterWaveTrack
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 25.583333333333332
+    m_ClipIn: 0
+    m_Asset: {fileID: -8512946371274591254}
+    m_Duration: 5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7076273758845343974}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: EncircleWave
+  m_Markers:
+    m_Objects: []
+  _monster: {fileID: 11400000, guid: c0498d0832424f4b83fffc1ebfaae5a6, type: 2}
+  _id: 69
+  _maxHealth: 60
+  _contactDamage: 2
+  _moveSpeed: 1.5
+  _attackKind: 0
+  _attackRange: 4
+  _attackInterval: 1.4
+  _projectileSpeed: 6
+  _hitRadius: 0.75
+  _attackDistance: 0.45
+  _overrideScale: 0
+  _scale: 2.7
+--- !u!114 &-4899610397034578129
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4804, type: 3}
+  m_Name: ContinuousWave
+  m_EditorClassIdentifier: Assembly-CSharp::ContinuousWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 10
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _continuousSpawnPerSecond: 1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15,6 +170,8 @@ MonoBehaviour:
   m_Version: 0
   m_Tracks:
   - {fileID: 830000001}
+  - {fileID: -7076273758845343974}
+  - {fileID: 1992732452345642215}
   m_FixedDuration: 0
   m_EditorSettings:
     m_Framerate: 60
@@ -31,7 +188,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4801, type: 3}
-  m_Name: Monster 0019
+  m_Name: "0019 \uAF2C\uB81B"
   m_EditorClassIdentifier: 
   m_Version: 3
   m_AnimClip: {fileID: 0}
@@ -43,7 +200,7 @@ MonoBehaviour:
   m_Children: []
   m_Clips:
   - m_Version: 1
-    m_Start: 0
+    m_Start: 586.4833333333333
     m_ClipIn: 0
     m_Asset: {fileID: 830000002}
     m_Duration: 13.516666666666667
@@ -51,7 +208,7 @@ MonoBehaviour:
     m_ParentTrack: {fileID: 830000001}
     m_EaseInDuration: 0
     m_EaseOutDuration: 0
-    m_BlendInDuration: -1
+    m_BlendInDuration: 13.516666666666652
     m_BlendOutDuration: -1
     m_MixInCurve:
       serializedVersion: 2
@@ -75,6 +232,246 @@ MonoBehaviour:
     m_PostExtrapolationTime: 0
     m_PreExtrapolationTime: 0
     m_DisplayName: Continuous
+  - m_Version: 1
+    m_Start: 595
+    m_ClipIn: 0
+    m_Asset: {fileID: 5000876304176920853}
+    m_Duration: 5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 830000001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: ContinuousWave
+  - m_Version: 1
+    m_Start: 5973.65
+    m_ClipIn: 0
+    m_Asset: {fileID: -4899610397034578129}
+    m_Duration: 26.35
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 830000001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: 0.016666666666424135
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: ContinuousWave
+  - m_Version: 1
+    m_Start: 5999.983333333334
+    m_ClipIn: 0
+    m_Asset: {fileID: 2571658876354699469}
+    m_Duration: 6000
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 830000001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0.016666666666424135
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: ContinuousWave
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: 8966320195804780202}
+    m_Duration: 600
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 830000001}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: 13.516666666666652
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: ContinuousWave
   m_Markers:
     m_Objects: []
   _monster: {fileID: 11400000, guid: e4b8d2a16c5f49a0b7e3d1f8c6a09543, type: 2}
@@ -113,4 +510,208 @@ MonoBehaviour:
     _scaleOverride: 2.7
     _disableOffscreenTeleport: 0
   _circularSpawn: 1
-  _continuousSpawnPerSecond: 0.8333333
+  _continuousSpawnPerSecond: 0.7
+--- !u!114 &1992732452345642215
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4801, type: 3}
+  m_Name: "0041 \uC96C\uBCB3 \uB7EC\uC26C"
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterWaveTrack
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 4.25
+    m_ClipIn: 0
+    m_Asset: {fileID: 4496669950990712354}
+    m_Duration: 5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 1992732452345642215}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: RushWave
+  m_Markers:
+    m_Objects: []
+  _monster: {fileID: 11400000, guid: 5ad6aa5f9d9c4215b049fc63faf8e2e3, type: 2}
+  _id: 41
+  _maxHealth: 5
+  _contactDamage: 2
+  _moveSpeed: 1.5
+  _attackKind: 0
+  _attackRange: 4
+  _attackInterval: 1.4
+  _projectileSpeed: 6
+  _hitRadius: 0.75
+  _attackDistance: 0.45
+  _overrideScale: 0
+  _scale: 2.7
+--- !u!114 &2571658876354699469
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4804, type: 3}
+  m_Name: ContinuousWave
+  m_EditorClassIdentifier: Assembly-CSharp::ContinuousWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 10
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _continuousSpawnPerSecond: 1
+--- !u!114 &4496669950990712354
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4811, type: 3}
+  m_Name: RushWave
+  m_EditorClassIdentifier: Assembly-CSharp::RushWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 5
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _enemiesCount: 30
+  _burstCount: 1
+  _clusterRadius: 1.5
+  _rushSpeed: 5
+--- !u!114 &5000876304176920853
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4804, type: 3}
+  m_Name: ContinuousWave
+  m_EditorClassIdentifier: Assembly-CSharp::ContinuousWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 10
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _continuousSpawnPerSecond: 1
+--- !u!114 &8966320195804780202
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4804, type: 3}
+  m_Name: ContinuousWave
+  m_EditorClassIdentifier: Assembly-CSharp::ContinuousWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 10
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _continuousSpawnPerSecond: 1

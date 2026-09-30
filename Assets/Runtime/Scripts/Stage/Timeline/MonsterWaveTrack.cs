@@ -8,6 +8,8 @@ using UnityEngine.Timeline;
 [TrackClipType(typeof(BurstWave))]
 [TrackClipType(typeof(MaintainWave))]
 [TrackClipType(typeof(ContinuousWave))]
+[TrackClipType(typeof(EncircleWave))]
+[TrackClipType(typeof(RushWave))]
 [TrackColor(0.35f, 0.7f, 0.35f)]
 public class MonsterWaveTrack : TrackAsset
 {
