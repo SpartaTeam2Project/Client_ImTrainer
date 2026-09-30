@@ -16,6 +16,7 @@ public class UIStorageWindow : MonoBehaviour
 
     private const string MENU_MOVE_SOUND = "cursor";
     private const string FILTER_APPLY_SOUND = "select";
+    private const string ENTRY_LOCKED_SOUND = "error";
 
     [SerializeField] private Transform _trainerContent;
     [SerializeField] private StorageCharacterView _slotPrefab;
@@ -33,6 +34,7 @@ public class UIStorageWindow : MonoBehaviour
     [SerializeField] private StorageMonsterView _monsterSlotPrefab;
     [SerializeField] private GridLayoutGroup _monsterGrid;
     [SerializeField] private Image[] _entryMonsters = System.Array.Empty<Image>();
+    [SerializeField] private GameObject[] _entryLocks = System.Array.Empty<GameObject>();
 
     private readonly List<StorageCharacterView> _slots = new List<StorageCharacterView>();
     private readonly List<StorageMonsterView> _monsterSlots = new List<StorageMonsterView>();
@@ -41,6 +43,7 @@ public class UIStorageWindow : MonoBehaviour
     private MonsterVisualData _focusedMonster;
     private MonsterVisualData[] _entryVisuals = System.Array.Empty<MonsterVisualData>();
     private Sprite[] _entryDefaultSprites = System.Array.Empty<Sprite>();
+    private Color[] _entryDefaultColors = System.Array.Empty<Color>();
     private bool _showingMonsters;
     private int _focusIndex;
 
@@ -566,6 +569,16 @@ public class UIStorageWindow : MonoBehaviour
         audioManager.PlaySound(FILTER_APPLY_SOUND);
     }
 
+    private static void PlayEntryLocked()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(ENTRY_LOCKED_SOUND);
+    }
+
     private void ConfirmFocused()
     {
         if (_showingMonsters)
@@ -922,17 +935,49 @@ public class UIStorageWindow : MonoBehaviour
     private void EnsureEntryState()
     {
         var count = _entryMonsters != null ? _entryMonsters.Length : 0;
-        if (_entryVisuals.Length == count && _entryDefaultSprites.Length == count)
+        if (_entryVisuals.Length == count
+            && _entryDefaultSprites.Length == count
+            && _entryDefaultColors.Length == count)
         {
+            ShowEntryLocks();
             return;
         }
 
         _entryVisuals = new MonsterVisualData[count];
         _entryDefaultSprites = new Sprite[count];
+        _entryDefaultColors = new Color[count];
         for (var i = 0; i < count; i++)
         {
-            _entryDefaultSprites[i] = _entryMonsters[i] != null ? _entryMonsters[i].sprite : null;
+            var image = _entryMonsters[i];
+            _entryDefaultSprites[i] = image != null ? image.sprite : null;
+            _entryDefaultColors[i] = image != null ? image.color : Color.white;
         }
+
+        ShowEntryLocks();
+    }
+
+    private void ShowEntryLocks()
+    {
+        if (_entryLocks == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _entryLocks.Length; i++)
+        {
+            if (_entryLocks[i] != null)
+            {
+                _entryLocks[i].SetActive(true);
+            }
+        }
+    }
+
+    private bool IsEntryLocked(int index)
+    {
+        return _entryLocks != null
+            && index >= 0
+            && index < _entryLocks.Length
+            && _entryLocks[index] != null;
     }
 
     private void ClearMonsterEntries()
@@ -950,7 +995,7 @@ public class UIStorageWindow : MonoBehaviour
         EnsureEntryState();
         for (var i = _entryVisuals.Length - 1; i >= 0; i--)
         {
-            if (_entryVisuals[i] == null)
+            if (IsEntryLocked(i) || _entryVisuals[i] == null)
             {
                 continue;
             }
@@ -968,7 +1013,7 @@ public class UIStorageWindow : MonoBehaviour
         EnsureEntryState();
         for (var i = 0; i < _entryVisuals.Length; i++)
         {
-            if (_entryVisuals[i] != null)
+            if (IsEntryLocked(i) || _entryVisuals[i] != null)
             {
                 continue;
             }
@@ -977,11 +1022,13 @@ public class UIStorageWindow : MonoBehaviour
             ApplyEntrySprite(i, data != null ? data.Portrait : null);
             return;
         }
+
+        PlayEntryLocked();
     }
 
     private void ApplyEntrySprite(int index, Sprite portrait)
     {
-        if (_entryMonsters == null || index < 0 || index >= _entryMonsters.Length)
+        if (IsEntryLocked(index) || _entryMonsters == null || index < 0 || index >= _entryMonsters.Length)
         {
             return;
         }
@@ -995,6 +1042,7 @@ public class UIStorageWindow : MonoBehaviour
         var filled = portrait != null;
         image.sprite = filled ? portrait : _entryDefaultSprites[index];
         image.preserveAspect = filled;
+        image.color = filled ? Color.white : _entryDefaultColors[index];
     }
 
     private static bool TryGetInput(out InputManager inputManager)
