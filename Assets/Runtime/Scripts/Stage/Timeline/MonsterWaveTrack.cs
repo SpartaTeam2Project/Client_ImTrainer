@@ -28,6 +28,11 @@ public class MonsterWaveTrack : TrackAsset
     [SerializeField, Min(0.01f)] private float _scale = MonsterVisualData.DEFAULT_SCALE;
 
     /// <summary>
+    /// 이 트랙이 스폰하는 몬스터 그림.
+    /// </summary>
+    public MonsterVisualData Monster => _monster;
+
+    /// <summary>
     /// 클립 에셋에 트랙 프로필을 넣은 뒤 재생 그래프를 만든다.
     /// </summary>
     protected override Playable CreatePlayable(PlayableGraph graph, GameObject gameObject, TimelineClip clip)
