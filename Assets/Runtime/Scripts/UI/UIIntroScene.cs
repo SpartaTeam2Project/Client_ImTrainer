@@ -28,6 +28,7 @@ public class UIIntroScene : MonoBehaviour
     private const string PLAYER_NAME_TOKEN = "[플레이어이름]";
     private const string MENU_MOVE_SOUND = "cursor";
     private const string BUTTON_CLICK_SOUND = "select";
+    private const string MESSAGE_SOUND = "message";
     private const string INTRO_MUSIC_NAME = "Intro";
     private const string TITLE_MUSIC_NAME = "TitleScene";
     private const string GENDER_PROMPT = "너는 남자니, 아니면 여자니?";
@@ -517,6 +518,7 @@ public class UIIntroScene : MonoBehaviour
             return;
         }
 
+        PlaySound(MESSAGE_SOUND);
         KillTypeTween();
         _dialogueText.text = line ?? string.Empty;
         _dialogueText.maxVisibleCharacters = 0;
