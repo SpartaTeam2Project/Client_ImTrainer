@@ -12,15 +12,170 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4d8e1a27b6f4c0e9a3d5f81b2c70495, type: 3}
   m_Name: Monster0011
   m_EditorClassIdentifier: 
+  _scale: 2.7
+  _walk:
+    _down:
+    - {fileID: -7103104310118263859, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 649825793139890210, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -56822272666270775, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 4793296010808091849, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -1656380500338389540, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -7415800151809194821, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    _downRight:
+    - {fileID: -3538428297108321348, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 7767182747083149612, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 3696303161651818859, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 5703419739037135836, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 1251498478020457059, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 8083975409936764380, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    _right:
+    - {fileID: 8419932691057373974, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -6708193215597496895, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 6932080895490186700, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -2064260588856115185, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -2777780088701859136, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -529877660232686521, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    _upRight:
+    - {fileID: -2366419485707564570, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -666796463230282219, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 3790744844832288576, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -9221482214721314438, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -8673294166543667576, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -7962554478999039348, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    _up:
+    - {fileID: 5883436737468300278, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 4873183400936743095, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -766359498970995783, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 8328483740984623696, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 760810499754498979, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 4382961494280230439, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    _upLeft:
+    - {fileID: 8591069237669234220, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -1669958689512911230, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 7308481837952298863, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -6103819838067271648, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -133598376704474551, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -8009709038308982747, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    _left:
+    - {fileID: -5644263568021040138, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -7881998172686408011, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 5121134923957363711, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -5159701864402376386, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -4802186503293072305, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 1335689933508038059, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    _downLeft:
+    - {fileID: 4933287422291989995, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 8396070972969480384, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -4390773220009710516, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 3946987691019288468, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: -1208808577052095299, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+    - {fileID: 6701550857034085588, guid: 13984663a4fca4245a7eba4ede541cc8, type: 3}
+  _sleep:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _hurt:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _attack:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _charge:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _shoot:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _strike:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _swing:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _rotate:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _hop:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _faint:
+    _down: []
+    _downRight: []
+    _right: []
+    _upRight: []
+    _up: []
+    _upLeft: []
+    _left: []
+    _downLeft: []
+  _walkDown: []
+  _walkDownRight: []
   _walkRight: []
   _walkUpRight: []
   _walkUp: []
   _walkUpLeft: []
   _walkLeft: []
   _walkDownLeft: []
-  _walkDown: []
-  _walkDownRight: []
   _projectileSprite: {fileID: 0}
   _primaryType: 11
   _hasSecondaryType: 0
   _secondaryType: 0
+  _generation: 1
+  _monsterName: 
+  _dexNumber: 0
+  _unlockCondition: 
+  _portrait: {fileID: 0}
+  _portraitSize: {x: 0, y: 0}
+  _animationThumbnail: {fileID: 0}

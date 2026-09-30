@@ -36,6 +36,8 @@ public class Enemy : MonoBehaviour
     private int _waveIndex;
     private bool _disableOffscreenTeleport;
     private bool _isRushing;
+    private Vector2 _rushDirection;
+    private float _spawnedAt;
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
 
     public int Id => _id;
@@ -49,6 +51,8 @@ public class Enemy : MonoBehaviour
     public bool DisableOffscreenTeleport => _disableOffscreenTeleport;
 
     public bool IsRushing => _isRushing;
+
+    public float SpawnedAt => _spawnedAt;
 
     public ExperienceGem ExperienceGem => _experienceGem;
 
@@ -138,6 +142,8 @@ public class Enemy : MonoBehaviour
         _shootPoseUntil = 0f;
         _disableOffscreenTeleport = false;
         _isRushing = false;
+        _rushDirection = Vector2.zero;
+        _spawnedAt = Time.time;
 
         if (_view == null)
         {
@@ -151,12 +157,23 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 화면 밖 재배치를 끌지, 러시 중인지 표시한다. 러시는 나중에 트랙이 켠다.
+    /// 화면 밖 재배치를 끈다. 돌진은 BeginRush가 켠다.
     /// </summary>
     public void SetLaneFlags(bool disableOffscreenTeleport, bool isRushing)
     {
         _disableOffscreenTeleport = disableOffscreenTeleport;
         _isRushing = isRushing;
+    }
+
+    /// <summary>
+    /// 스폰 순간 플레이어 쪽으로 직진을 시작한다. 이후 방향은 바뀌지 않는다.
+    /// </summary>
+    public void BeginRush(Vector2 direction)
+    {
+        _isRushing = true;
+        _disableOffscreenTeleport = true;
+        _rushDirection = direction.sqrMagnitude > MOVE_SQR_EPSILON ? direction.normalized : Vector2.right;
+        _spawnedAt = Time.time;
     }
 
     /// <summary>
@@ -167,6 +184,11 @@ public class Enemy : MonoBehaviour
         if (!IsAlive)
         {
             return true;
+        }
+
+        if (_isRushing)
+        {
+            return TickRush(playerPosition);
         }
 
         if (_attackKind == EnemyAttackKind.Projectile)
@@ -210,9 +232,25 @@ public class Enemy : MonoBehaviour
 
     #region Private Methods
 
+    private bool TickRush(Vector2 playerPosition)
+    {
+        transform.position += (Vector3)(_rushDirection * _moveSpeed * Time.deltaTime);
+        if (_view != null)
+        {
+            _view.SetVisual(true, _rushDirection);
+        }
+
+        return TryContactDamage(playerPosition);
+    }
+
     private bool TickContact(Vector2 playerPosition)
     {
         MoveToward(playerPosition, Time.deltaTime);
+        return TryContactDamage(playerPosition);
+    }
+
+    private bool TryContactDamage(Vector2 playerPosition)
+    {
         if (Vector2.Distance(transform.position, playerPosition) > _hitRadius)
         {
             return true;
