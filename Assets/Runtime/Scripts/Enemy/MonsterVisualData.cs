@@ -8,6 +8,7 @@ using UnityEngine;
 public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceiver
 {
     public const float DEFAULT_SCALE = 2.7f;
+    private const int MIN_GENERATION = 1;
 
     [Header("Size")]
     [SerializeField, Min(0.01f)] private float _scale = DEFAULT_SCALE;
@@ -36,10 +37,22 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [Header("Projectile")]
     [SerializeField] private Sprite _projectileSprite;
 
+    [Header("Ability")]
+    [SerializeField] private AbilityData _ability;
+
     [Header("Type")]
     [SerializeField] private MonsterType _primaryType = MonsterType.Normal;
     [SerializeField] private bool _hasSecondaryType;
     [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
+
+    [Header("Storage")]
+    [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
+    [SerializeField] private string _monsterName = string.Empty;
+    [SerializeField, Min(0)] private int _dexNumber;
+    [SerializeField] private string _unlockCondition = string.Empty;
+    [SerializeField] private Sprite _portrait;
+    [SerializeField] private Vector2 _portraitSize;
+    [SerializeField] private Sprite _animationThumbnail;
 
     public float Scale => _scale > 0f ? _scale : DEFAULT_SCALE;
 
@@ -67,11 +80,27 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
 
     public Sprite ProjectileSprite => _projectileSprite;
 
+    public AbilityData Ability => _ability;
+
     public MonsterType PrimaryType => _primaryType;
 
     public bool HasSecondaryType => _hasSecondaryType && _secondaryType != _primaryType;
 
     public MonsterType SecondaryType => _secondaryType;
+
+    public int Generation => _generation < MIN_GENERATION ? MIN_GENERATION : _generation;
+
+    public string MonsterName => _monsterName ?? string.Empty;
+
+    public int DexNumber => _dexNumber < 0 ? 0 : _dexNumber;
+
+    public string UnlockCondition => _unlockCondition ?? string.Empty;
+
+    public Sprite Portrait => _portrait;
+
+    public Vector2 PortraitSize => _portraitSize;
+
+    public Sprite AnimationThumbnail => _animationThumbnail;
 
     /// <summary>
     /// 방어 타입 목록. 서브가 없거나 메인과 같으면 길이 1이다.

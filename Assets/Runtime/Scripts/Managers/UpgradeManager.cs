@@ -682,7 +682,12 @@ public sealed class UpgradeManager : BaseManager
         if (Managers.Instance != null &&
             Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
         {
+            Debug.Log($"[Upgrade] Ability 호출 - Lv.{level}");
             abilityManager.OfferLevelUp(playerId, level);
+        }
+        else
+        {
+            Debug.Log("[Upgrade] Abillity를 찾지 못했습니다.");
         }
     }
 }

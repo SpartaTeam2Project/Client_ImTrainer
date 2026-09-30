@@ -1,5 +1,5 @@
-using System;
 using Cysharp.Threading.Tasks;
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -38,7 +38,6 @@ public struct PlayerLeveledUp
 
 /// <summary>
 /// 로컬 플레이어의 식별자와 스폰된 플레이어 참조를 소유한다.
-/// flow: 플레이어 생성 => 증강 초기화 => 이동/피해/경험치 전달량에 증강 배율 적용 => Player의 기존 처리.
 /// </summary>
 public class PlayerManager : BaseManager
 {
@@ -53,14 +52,34 @@ public class PlayerManager : BaseManager
     private Player _player;
     private UpgradeManager _upgradeManager;
 
+
     public int LocalPlayerId => LOCAL_PLAYER_ID_VALUE;
 
     public Transform PlayerTransform => _player == null ? null : _player.transform;
 
+    /// <summary>
+    /// 식별자가 로컬 플레이어와 같으면 그 참조를 돌려준다.
+    /// </summary>
+    public bool TryGetPlayer(int playerId, out Player player)
+    {
+        if (playerId == LocalPlayerId && _player != null)
+        {
+            player = _player;
+            return true;
+        }
+
+        player = null;
+        return false;
+    }
+
     public Vector2 LookDirection => _player == null ? Vector2.right : _player.LookDirection;
 
-    // Player의 기준 Stat은 유지하고, 외부에는 실제 이동에 사용하는 속도를 돌려준다.
-    public float Speed => _player == null ? 0f : _player.moveSpeed * (_upgradeManager != null ? _upgradeManager.MoveSpeedMultiplier : 1f);
+
+    public float Speed =>
+    _player == null
+        ? 0f
+        : _player.moveSpeed *
+          (_upgradeManager != null ? _upgradeManager.MoveSpeedMultiplier : 1f);
 
     public float MagnetRadius => _player == null ? 0f : _player.magnetRadius;
 
@@ -79,11 +98,6 @@ public class PlayerManager : BaseManager
     public event Action<int> OnPlayerDied;
 
     public event Action<int, int> OnLevelUp;
-
-    //증강 적용을 위한 필드 추가 - 0930
-    private float _moveSpeedMultiplier = 1f;
-    private float _receivedDamageMultiplier = 1f;
-    private float _experienceMultiplier = 1f;
 
     #region Unity Methods
 
@@ -107,8 +121,8 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        // flow: 이동 입력 => 증강 배율 => Player의 기존 이동/경계 검사.
         var movementMultiplier = _upgradeManager != null ? _upgradeManager.MoveSpeedMultiplier : 1f;
+
         _player.Move(inputManager.MovementValue * movementMultiplier);
     }
 
@@ -126,19 +140,11 @@ public class PlayerManager : BaseManager
         _player = CreatePlayer();
         _player.Bind(this);
         _player.Initialize();
-
-        // 프로토타입은 PlayerManager가 소유한다. Prefab/Managers 등록 변경 없이 붙이고,
-        // 플레이어를 새로 생성할 때마다 보유 증강과 선택지를 함께 초기화한다.
-        if (_upgradeManager == null)
+        ApplySelectedPlayable();
+        if (Managers.Instance != null)
         {
-            _upgradeManager = GetComponent<UpgradeManager>();
-            if (_upgradeManager == null)
-            {
-                _upgradeManager = gameObject.AddComponent<UpgradeManager>();
-            }
+            Managers.Instance.TryGetManager<UpgradeManager>(out _upgradeManager);
         }
-
-        _upgradeManager.BeginStage(this);
         return LocalPlayerId;
     }
 
@@ -153,10 +159,13 @@ public class PlayerManager : BaseManager
         }
 
         var levelBefore = _player.Level;
-        // 원래 획득량에 증강 배율을 한 번만 적용한다. 레벨업 계산/알림은 기존 흐름을 쓴다.
-        var gainedXp = amount * (_upgradeManager != null ? _upgradeManager.ExperienceMultiplier : 1f);
-        _player.AddExperience(gainedXp);
+        var gainedXp =
+            amount *
+            (_upgradeManager != null
+                ? _upgradeManager.ExperienceMultiplier
+                : 1f);
 
+        _player.AddExperience(gainedXp);
         PublishExperience(playerId);
         for (var level = levelBefore + 1; level <= _player.Level; level++)
         {
@@ -174,9 +183,12 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        // Enemy/Projectile이 넘긴 피해량만 보정한다. Player의 체력/사망 처리는 그대로 사용한다.
-        var appliedDamage = amount * (_upgradeManager != null ? _upgradeManager.ReceivedDamageMultiplier : 1f);
-        var healthBefore = _player.CurrentHealth;
+        var appliedDamage =
+            amount *
+            (_upgradeManager != null
+                ? _upgradeManager.ReceivedDamageMultiplier
+                : 1f);
+
         _player.TakeDamage(appliedDamage);
     }
 
@@ -204,10 +216,6 @@ public class PlayerManager : BaseManager
         }
 
         _player = null;
-        if (_upgradeManager != null)
-        {
-            _upgradeManager.EndStage();
-        }
     }
 
     #endregion
@@ -216,13 +224,12 @@ public class PlayerManager : BaseManager
 
     private void NotifyLevelUp(int playerId, int level)
     {
-        // LevelUp 사실만 알린다.
-        // 어떤 Upgrade Sequence를 실행할지는 UpgradeManager가 결정한다.
         OnLevelUp?.Invoke(playerId, level);
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
         {
             eventManager.Publish(new PlayerLeveledUp(playerId, level));
         }
+
     }
 
     private void PublishExperience(int playerId)
@@ -233,6 +240,16 @@ public class PlayerManager : BaseManager
         }
 
         eventManager.Publish(new PlayerExperienceChanged(playerId, _player.Level, _player.CurrentXp, _player.RequiredXp));
+    }
+
+    private void ApplySelectedPlayable()
+    {
+        if (_player == null || Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var account))
+        {
+            return;
+        }
+
+        _player.ApplyPlayable(account.ResolveSelectedPlayable());
     }
 
     private Player CreatePlayer()
@@ -258,11 +275,6 @@ public class PlayerManager : BaseManager
 
     private void Despawn()
     {
-        if (_upgradeManager != null)
-        {
-            _upgradeManager.EndStage();
-        }
-
         if (_player == null)
         {
             return;

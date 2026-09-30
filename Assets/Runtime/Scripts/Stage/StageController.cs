@@ -1,16 +1,21 @@
 using UnityEngine;
+using UnityEngine.Playables;
 
 /// <summary>
-/// 게임 씬에서 한 판의 시작, 일시정지, 시간 승리, 사망 패배를 맡는다.
+/// 게임 씬에서 한 판의 시작, 일시정지, 타임라인 클리어, 사망 패배를 맡는다.
 /// </summary>
 public class StageController : MonoBehaviour
 {
     [SerializeField] private StageData _stageData;
+    [SerializeField] private PlayableDirector _director;
 
     private GameController _gameController;
     private bool _stageActive;
     private bool _deathSubscribed;
     private bool _missingStageLogged;
+    private bool _missingTimelineLogged;
+    private bool _directorHooked;
+    private bool _acceptDirectorStop;
 
     public StageResult LastResult { get; private set; }
 
@@ -49,6 +54,8 @@ public class StageController : MonoBehaviour
         }
 
         Time.timeScale = 1f;
+        _acceptDirectorStop = false;
+        UnsubscribeDirector();
         _stageActive = false;
         UnsubscribeDeath();
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
@@ -144,6 +151,7 @@ public class StageController : MonoBehaviour
         }
 
         _stageActive = true;
+        PlayDirector();
     }
 
     private void TickStage()
@@ -156,14 +164,65 @@ public class StageController : MonoBehaviour
             return;
         }
 
-        var elapsed = _gameController.ElapsedSeconds;
-        enemyManager.Tick(playerManager.LocalPlayerId, elapsed);
-        if (!_stageActive || !_stageData.EndsOnTime || elapsed < _stageData.ClearTimeSeconds)
+        var playerId = playerManager.LocalPlayerId;
+        enemyManager.Tick(playerId);
+    }
+
+    private void PlayDirector()
+    {
+        if (_director == null || _stageData == null || _stageData.Timeline == null)
+        {
+            if (!_missingTimelineLogged)
+            {
+                _missingTimelineLogged = true;
+                Debug.LogError("StageData에 타임라인이 없어 적을 스폰하지 않습니다.");
+            }
+
+            return;
+        }
+
+        SubscribeDirector();
+        _acceptDirectorStop = false;
+        _director.Stop();
+        _director.playableAsset = _stageData.Timeline;
+        _director.extrapolationMode = DirectorWrapMode.None;
+        _director.timeUpdateMode = DirectorUpdateMode.GameTime;
+        _director.time = 0d;
+        _acceptDirectorStop = true;
+        _director.Play();
+    }
+
+    private void HandleDirectorStopped(PlayableDirector director)
+    {
+        if (!_acceptDirectorStop || !_stageActive || director != _director)
         {
             return;
         }
 
         EndStage(GameState.Victory);
+    }
+
+    private void SubscribeDirector()
+    {
+        if (_director == null || _directorHooked)
+        {
+            return;
+        }
+
+        _director.stopped += HandleDirectorStopped;
+        _directorHooked = true;
+    }
+
+    private void UnsubscribeDirector()
+    {
+        if (_director == null || !_directorHooked)
+        {
+            _directorHooked = false;
+            return;
+        }
+
+        _director.stopped -= HandleDirectorStopped;
+        _directorHooked = false;
     }
 
     private void TogglePause(GameState state)
@@ -241,6 +300,7 @@ public class StageController : MonoBehaviour
             return;
         }
 
+        _acceptDirectorStop = false;
         _stageActive = false;
         UnsubscribeDeath();
 
@@ -291,6 +351,8 @@ public class StageController : MonoBehaviour
             return;
         }
 
+        _acceptDirectorStop = false;
+        UnsubscribeDirector();
         Time.timeScale = 1f;
         _stageActive = false;
         UnsubscribeDeath();

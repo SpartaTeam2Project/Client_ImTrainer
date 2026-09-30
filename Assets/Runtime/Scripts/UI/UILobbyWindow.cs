@@ -23,13 +23,16 @@ public class UILobbyWindow : MonoBehaviour
     [SerializeField] private Sprite _idleSprite;
     [SerializeField] private Sprite _selectedSprite;
     [SerializeField] private GameObject _settingsSelect;
+    [SerializeField] private UIIntroScene _introScene;
+    [SerializeField] private UIStorageWindow _storageWindow;
+    [SerializeField] private UIRegisterWindow _registerWindow;
 
     private LobbyButton _selectedButton = LobbyButton.None;
     private LobbyButton _accountButtonBeforeSettings = LobbyButton.Login;
 
     private void OnEnable()
     {
-        if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null)
+        if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null || _registerWindow == null)
         {
             Debug.LogError("로비 버튼 선택에 필요한 참조가 없습니다.");
         }
@@ -47,6 +50,21 @@ public class UILobbyWindow : MonoBehaviour
     {
         var settingsWindow = GetSettingsWindow();
         if (settingsWindow != null && settingsWindow.IsOpen)
+        {
+            return;
+        }
+
+        if (_introScene != null && _introScene.IsOpen)
+        {
+            return;
+        }
+
+        if (_storageWindow != null && _storageWindow.IsOpen)
+        {
+            return;
+        }
+
+        if (_registerWindow != null && _registerWindow.IsOpen)
         {
             return;
         }
@@ -192,11 +210,13 @@ public class UILobbyWindow : MonoBehaviour
         if (_loginButton != null)
         {
             _loginButton.onClick.AddListener(PlayButtonClick);
+            _loginButton.onClick.AddListener(EnterAccount);
         }
 
         if (_registerButton != null)
         {
             _registerButton.onClick.AddListener(PlayButtonClick);
+            _registerButton.onClick.AddListener(OpenRegister);
         }
 
         if (_settingsButton != null)
@@ -211,11 +231,13 @@ public class UILobbyWindow : MonoBehaviour
         if (_loginButton != null)
         {
             _loginButton.onClick.RemoveListener(PlayButtonClick);
+            _loginButton.onClick.RemoveListener(EnterAccount);
         }
 
         if (_registerButton != null)
         {
             _registerButton.onClick.RemoveListener(PlayButtonClick);
+            _registerButton.onClick.RemoveListener(OpenRegister);
         }
 
         if (_settingsButton != null)
@@ -223,6 +245,53 @@ public class UILobbyWindow : MonoBehaviour
             _settingsButton.onClick.RemoveListener(PlayButtonClick);
             _settingsButton.onClick.RemoveListener(OpenSettings);
         }
+    }
+
+    private void EnterAccount()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var accountManager))
+        {
+            Debug.LogError("AccountManager를 찾을 수 없습니다.");
+            return;
+        }
+
+        if (!accountManager.AlwaysShowIntro)
+        {
+            ShowStorage();
+            return;
+        }
+
+        if (_introScene == null)
+        {
+            Debug.LogError("인트로 화면이 없습니다.");
+            return;
+        }
+
+        accountManager.ResetOwnedProfile();
+        _introScene.Open(ShowStorage);
+    }
+
+    private void ShowStorage()
+    {
+        if (_storageWindow == null)
+        {
+            Debug.LogError("스토리지 창이 없습니다.");
+            return;
+        }
+
+        gameObject.SetActive(false);
+        _storageWindow.Open();
+    }
+
+    private void OpenRegister()
+    {
+        if (_registerWindow == null)
+        {
+            Debug.LogError("회원가입 창이 없습니다.");
+            return;
+        }
+
+        _registerWindow.Open();
     }
 
     private void OpenSettings()
