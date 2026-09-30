@@ -216,16 +216,13 @@ public class PlayerManager : BaseManager
 
     private void NotifyLevelUp(int playerId, int level)
     {
+        // LevelUp 사실만 알린다.
+        // 어떤 Upgrade Sequence를 실행할지는 UpgradeManager가 결정한다.
         OnLevelUp?.Invoke(playerId, level);
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
         {
             eventManager.Publish(new PlayerLeveledUp(playerId, level));
         }
-        /*
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
-        {
-            abilityManager.OfferLevelUp(playerId, level);
-        }*/
     }
 
     private void PublishExperience(int playerId)

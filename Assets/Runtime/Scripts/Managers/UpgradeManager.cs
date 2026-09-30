@@ -5,29 +5,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 
-public enum UpgradeTarget
-{
-    Player,
-    Weapon,
-    Companion
-}
-
-public enum UpgradeEffectType
-{
-    MoveSpeed,
-    ReceivedDamage,
-    Experience,
-
-    // 이후 추가
-    Damage,
-    Health,
-    ProjectileCount,
-    ProjectileSpeed,
-    ProjectileSize
-}
 
 
-#region data classes
 /// <summary>
 /// 한 판의 증강 Level, 선택 weight, 효과 배율을 보관하는 프로토타입 Manager.
 /// input: Numpad 1/2/3 => 현재 선택지 선택 => Level 증가 => 배율 재계산 => 다음 선택지 출력.
@@ -36,8 +15,34 @@ public enum UpgradeEffectType
 [DisallowMultipleComponent]
 public sealed class UpgradeManager : BaseManager
 {
-    private const int CHOICE_COUNT = 3;
+    
+    public enum UpgradeEffectType
+    {
+        MoveSpeed,
+        ReceivedDamage,
+        Experience,
 
+        // 이후 추가
+        Damage,
+        Health,
+        ProjectileCount,
+        ProjectileSpeed,
+        ProjectileSize
+    }
+    private enum LevelUpSequenceType
+    {
+        None,
+        Augment,
+        Ability
+    }
+    public enum UpgradeTarget
+    {
+        Player,
+        Weapon,
+        Companion
+    }
+    private const int CHOICE_COUNT = 3;
+    #region data classes
     /// <summary>
     /// 증강 하나의 정의. 효과는 비율이며 0.2는 +20%, -0.2는 -20%를 의미한다.
     /// 세 효과를 한 정의에 함께 넣을 수 있고, 보유 Level은 정의와 분리해 Manager가 보관한다.
@@ -219,6 +224,7 @@ public sealed class UpgradeManager : BaseManager
     }
     #endregion
 
+
     [Header("프로토타입")]
     [SerializeField] private bool _logAppliedValues = true;
 
@@ -341,9 +347,19 @@ public sealed class UpgradeManager : BaseManager
         ExperienceMultiplier = 1f;
     }
 
-    public void UpgradeSequence()
+    private void OpenAugmentChoice()
     {
         _active = true;
+
+        RefreshChoices();
+
+        if (_choices.Count == 0)
+        {
+            _active = false;
+            return;
+        }
+
+        Time.timeScale = 0f;
         PrintChoices();
     }
 
@@ -626,6 +642,10 @@ public sealed class UpgradeManager : BaseManager
         //현재는 test용으로 매 레벨업시마다 증강을 획득한다.
         return true;
     }
+    /// <summary>
+    /// Player LevelUp을 받아 이번 Level에서 실행할 Upgrade Sequence 하나를 결정한다.
+    /// PlayerManager는 LevelUp 사실만 알리고 실제 강화 분기는 UpgradeManager가 담당한다.
+    /// </summary>
     private void HandlePlayerLevelUp(int playerId, int level)
     {
         if (_playerManager == null ||
@@ -634,11 +654,35 @@ public sealed class UpgradeManager : BaseManager
             return;
         }
 
-        if (!ShouldOfferAugment(level))
+        if (level <= 1)
         {
             return;
         }
 
-        UpgradeSequence();
+        // 10레벨 단위는 포켓몬 구매
+        if (level % 10 == 0)
+        {
+            Debug.Log("[Upgrade] 포켓몬 구매 레벨");
+
+            // TODO:
+            // 나중에 포켓몬 구매 Sequence 연결
+            // 현재는 아무것도 하지 않고 종료
+
+            return;
+        }
+
+        // 그 외 짝수는 증강
+        if (level % 2 == 0)
+        {
+            OpenAugmentChoice();
+            return;
+        }
+
+        // 그 외 홀수는 포켓몬 강화
+        if (Managers.Instance != null &&
+            Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        {
+            abilityManager.OfferLevelUp(playerId, level);
+        }
     }
 }
