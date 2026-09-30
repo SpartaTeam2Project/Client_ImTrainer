@@ -25,13 +25,14 @@ public class UILobbyWindow : MonoBehaviour
     [SerializeField] private GameObject _settingsSelect;
     [SerializeField] private UIIntroScene _introScene;
     [SerializeField] private UIStorageWindow _storageWindow;
+    [SerializeField] private UIRegisterWindow _registerWindow;
 
     private LobbyButton _selectedButton = LobbyButton.None;
     private LobbyButton _accountButtonBeforeSettings = LobbyButton.Login;
 
     private void OnEnable()
     {
-        if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null)
+        if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null || _registerWindow == null)
         {
             Debug.LogError("로비 버튼 선택에 필요한 참조가 없습니다.");
         }
@@ -59,6 +60,11 @@ public class UILobbyWindow : MonoBehaviour
         }
 
         if (_storageWindow != null && _storageWindow.IsOpen)
+        {
+            return;
+        }
+
+        if (_registerWindow != null && _registerWindow.IsOpen)
         {
             return;
         }
@@ -210,7 +216,7 @@ public class UILobbyWindow : MonoBehaviour
         if (_registerButton != null)
         {
             _registerButton.onClick.AddListener(PlayButtonClick);
-            _registerButton.onClick.AddListener(EnterAccount);
+            _registerButton.onClick.AddListener(OpenRegister);
         }
 
         if (_settingsButton != null)
@@ -231,7 +237,7 @@ public class UILobbyWindow : MonoBehaviour
         if (_registerButton != null)
         {
             _registerButton.onClick.RemoveListener(PlayButtonClick);
-            _registerButton.onClick.RemoveListener(EnterAccount);
+            _registerButton.onClick.RemoveListener(OpenRegister);
         }
 
         if (_settingsButton != null)
@@ -275,6 +281,17 @@ public class UILobbyWindow : MonoBehaviour
 
         gameObject.SetActive(false);
         _storageWindow.Open();
+    }
+
+    private void OpenRegister()
+    {
+        if (_registerWindow == null)
+        {
+            Debug.LogError("회원가입 창이 없습니다.");
+            return;
+        }
+
+        _registerWindow.Open();
     }
 
     private void OpenSettings()
