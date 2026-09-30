@@ -121,6 +121,13 @@ public class StageController : MonoBehaviour
         }
 
         enemyManager.BeginStage(playerId, _stageData, transform);
+
+        if (Managers.Instance.TryGetManager<UpgradeManager>(out var upgradeManager))
+        {
+            upgradeManager.BeginStage(playerManager);
+        }
+
+
         if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
         {
             abilityManager.BeginStage(playerId);
@@ -236,6 +243,12 @@ public class StageController : MonoBehaviour
 
         _stageActive = false;
         UnsubscribeDeath();
+
+        if (Managers.Instance.TryGetManager<UpgradeManager>(out var upgradeManager))
+        {
+            upgradeManager.EndStage();
+        }
+
         if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
         {
             abilityManager.EndStage();
@@ -294,6 +307,10 @@ public class StageController : MonoBehaviour
         if (Managers.Instance != null && Managers.Instance.TryGetManager<ExperienceManager>(out var experienceManager))
         {
             experienceManager.EndStage();
+        }
+        if (Managers.Instance != null &&Managers.Instance.TryGetManager<UpgradeManager>(out var upgradeManager))
+        {
+            upgradeManager.EndStage();
         }
 
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))

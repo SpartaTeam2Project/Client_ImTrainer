@@ -1,0 +1,61 @@
+{
+  "upgrades": [
+    {
+      "id": "move_speed",
+      "name": "이동속도 증가",
+      "maxLevel": 1,
+      "weight": 1.0,
+      "effects": [
+        {
+          "target": "Player",
+          "type": "MoveSpeed",
+          "value": 0.2
+        }
+      ]
+    },
+    {
+      "id": "damage_reduction",
+      "name": "받는 피해 감소",
+      "maxLevel": 2,
+      "weight": 1.0,
+      "effects": [
+        {
+          "target": "Player",
+          "type": "ReceivedDamage",
+          "value": -0.2
+        }
+      ]
+    },
+    {
+      "id": "experience",
+      "name": "획득 경험치 증가",
+      "maxLevel": 3,
+      "weight": 1.0,
+      "effects": [
+        {
+          "target": "Player",
+          "type": "Experience",
+          "value": 0.2
+        }
+      ]
+    },
+    {
+      "id": "risky_growth",
+      "name": "받는 피해 증가 + 경험치 증가",
+      "maxLevel": 1,
+      "weight": 0.01,
+      "effects": [
+        {
+          "target": "Player",
+          "type": "ReceivedDamage",
+          "value": 0.1
+        },
+        {
+          "target": "Player",
+          "type": "Experience",
+          "value": 0.2
+        }
+      ]
+    }
+  ]
+}

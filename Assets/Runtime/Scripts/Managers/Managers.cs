@@ -21,6 +21,7 @@ public class Managers : MonoBehaviour
     [SerializeField] private EnemyManager _enemyManager;
     [SerializeField] private ExperienceManager _experienceManager;
     [SerializeField] private CurrenciesManager _currenciesManager;
+    [SerializeField] private UpgradeManager _upgradeManager;
     [SerializeField] private AbilityManager _abilityManager;
     [SerializeField] private SceneLoadManager _sceneLoadManager;
     [SerializeField] private UISettingsWindow _settingsWindow;
@@ -58,6 +59,7 @@ public class Managers : MonoBehaviour
         RegisterManager(_enemyManager);
         RegisterManager(_experienceManager);
         RegisterManager(_currenciesManager);
+        RegisterManager(_upgradeManager);
         RegisterManager(_abilityManager);
         RegisterManager(_sceneLoadManager);
     }
@@ -212,6 +214,11 @@ public class Managers : MonoBehaviour
         if (TryGetManager<SceneLoadManager>(out var sceneLoadManager))
         {
             await sceneLoadManager.InitializeAsync();
+        }
+
+        if (TryGetManager<UpgradeManager>(out var upgradeManager))
+        {
+            await upgradeManager.InitializeAsync();
         }
 
         ChangeState(GameState.Menu);
