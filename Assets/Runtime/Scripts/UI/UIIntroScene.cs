@@ -105,6 +105,11 @@ public class UIIntroScene : MonoBehaviour
 
     private void Update()
     {
+        if (ScreenTransition.Instance.IsCovering)
+        {
+            return;
+        }
+
         if (_phase == IntroPhase.Dialogue)
         {
             AdvanceDialogueFromInput();
@@ -399,10 +404,18 @@ public class UIIntroScene : MonoBehaviour
             return;
         }
 
+        var transition = ScreenTransition.Instance;
+        if (transition.IsCovering)
+        {
+            return;
+        }
+
         _choiceIndex = index;
         PlaySound(BUTTON_CLICK_SOUND);
         accountManager.CompleteIntro(_selectedGender, visual);
-        Close();
+
+        // 인트로를 띄운 채로 화면을 덮고, 다 덮이면 닫는다.
+        transition.Close().OnComplete(Close);
     }
 
     private void ShowOak()

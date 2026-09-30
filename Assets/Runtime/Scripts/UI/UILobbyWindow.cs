@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -65,6 +66,11 @@ public class UILobbyWindow : MonoBehaviour
         }
 
         if (_registerWindow != null && _registerWindow.IsOpen)
+        {
+            return;
+        }
+
+        if (ScreenTransition.Instance.IsCovering)
         {
             return;
         }
@@ -271,6 +277,10 @@ public class UILobbyWindow : MonoBehaviour
         _introScene.Open(ShowStorage);
     }
 
+    /// <summary>
+    /// 화면 전환으로 화면을 덮은 뒤 스토리지 창을 열고 다시 걷어낸다.
+    /// 인트로에서 이미 덮고 넘어왔으면 바로 창을 바꾼다.
+    /// </summary>
     private void ShowStorage()
     {
         if (_storageWindow == null)
@@ -279,8 +289,26 @@ public class UILobbyWindow : MonoBehaviour
             return;
         }
 
+        var transition = ScreenTransition.Instance;
+        if (transition.IsClosed)
+        {
+            SwapToStorage(transition);
+            return;
+        }
+
+        if (transition.IsCovering)
+        {
+            return;
+        }
+
+        transition.Close().OnComplete(() => SwapToStorage(transition));
+    }
+
+    private void SwapToStorage(ScreenTransition transition)
+    {
         gameObject.SetActive(false);
         _storageWindow.Open();
+        transition.Open();
     }
 
     private void OpenRegister()
