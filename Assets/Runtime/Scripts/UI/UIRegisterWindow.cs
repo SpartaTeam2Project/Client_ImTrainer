@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,14 +8,18 @@ using UnityEngine.UI;
 /// </summary>
 public class UIRegisterWindow : MonoBehaviour
 {
-    private const string OPEN_SOUND = "open";
-    private const string CLOSE_SOUND = "close";
+    private const string OPEN_SOUND = "register_open";
+    private const string CLOSE_SOUND = "register_close";
+    private const float OPEN_DURATION = 0.25f;
 
+    [SerializeField] private RectTransform _panel;
     [SerializeField] private TMP_InputField _nicknameInput;
     [SerializeField] private TMP_InputField _passwordInput;
     [SerializeField] private TMP_InputField _passwordConfirmInput;
     [SerializeField] private Button _confirmButton;
     [SerializeField] private Button _cancelButton;
+
+    private Tween _openTween;
 
     public bool IsOpen => gameObject.activeSelf;
 
@@ -47,6 +52,9 @@ public class UIRegisterWindow : MonoBehaviour
         {
             _cancelButton.onClick.RemoveListener(Close);
         }
+
+        KillOpenTween();
+        ResetPanelScale();
     }
 
     private void Update()
@@ -79,6 +87,7 @@ public class UIRegisterWindow : MonoBehaviour
 
         PlaySound(OPEN_SOUND);
         gameObject.SetActive(true);
+        PlayOpen();
     }
 
     /// <summary>
@@ -105,11 +114,48 @@ public class UIRegisterWindow : MonoBehaviour
 
     private bool HasRequiredReferences()
     {
-        return _nicknameInput != null
+        return _panel != null
+            && _nicknameInput != null
             && _passwordInput != null
             && _passwordConfirmInput != null
             && _confirmButton != null
             && _cancelButton != null;
+    }
+
+    /// <summary>
+    /// 상태창처럼 패널을 가운데에서 세로로 펼친다.
+    /// </summary>
+    private void PlayOpen()
+    {
+        if (_panel == null)
+        {
+            return;
+        }
+
+        KillOpenTween();
+        _panel.localScale = new Vector3(1f, 0f, 1f);
+        _openTween = _panel.DOScale(Vector3.one, OPEN_DURATION).SetEase(Ease.OutBack).SetUpdate(true);
+    }
+
+    private void KillOpenTween()
+    {
+        if (_openTween == null)
+        {
+            return;
+        }
+
+        _openTween.Kill();
+        _openTween = null;
+    }
+
+    private void ResetPanelScale()
+    {
+        if (_panel == null)
+        {
+            return;
+        }
+
+        _panel.localScale = Vector3.one;
     }
 
     /// <summary>
