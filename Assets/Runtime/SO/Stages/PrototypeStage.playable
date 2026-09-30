@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-8512946371274591254
+--- !u!114 &-8756895222423561992
 MonoBehaviour:
   m_ObjectHideFlags: 1
   m_CorrespondingSourceObject: {fileID: 0}
@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EncircleWave
   _waveOverride:
     _useHealthOverride: 0
-    _healthOverride: 10
+    _healthOverride: 1
     _useDamageOverride: 0
     _damageOverride: 2
     _useSpeedOverride: 0
@@ -23,8 +23,8 @@ MonoBehaviour:
     _scaleOverride: 2.7
     _disableOffscreenTeleport: 0
   _circularSpawn: 0
-  _enemiesCount: 20
-  _radius: 6
+  _enemiesCount: 25
+  _radius: 7
   _approachSpeed: 0.2
 --- !u!114 &-7076273758845343974
 MonoBehaviour:
@@ -48,9 +48,9 @@ MonoBehaviour:
   m_Children: []
   m_Clips:
   - m_Version: 1
-    m_Start: 20
+    m_Start: 12
     m_ClipIn: 0
-    m_Asset: {fileID: -8512946371274591254}
+    m_Asset: {fileID: -8756895222423561992}
     m_Duration: 5
     m_TimeScale: 1
     m_ParentTrack: {fileID: -7076273758845343974}
@@ -117,9 +117,9 @@ MonoBehaviour:
     m_PreExtrapolationTime: 0
     m_DisplayName: EncircleWave
   - m_Version: 1
-    m_Start: 43.25
+    m_Start: 20
     m_ClipIn: 0
-    m_Asset: {fileID: 1499390686529007003}
+    m_Asset: {fileID: -5538231342858084904}
     m_Duration: 5
     m_TimeScale: 1
     m_ParentTrack: {fileID: -7076273758845343974}
@@ -189,7 +189,7 @@ MonoBehaviour:
     m_Objects: []
   _monster: {fileID: 11400000, guid: c0498d0832424f4b83fffc1ebfaae5a6, type: 2}
   _id: 69
-  _maxHealth: 60
+  _maxHealth: 1
   _contactDamage: 2
   _moveSpeed: 1.5
   _attackKind: 0
@@ -200,6 +200,32 @@ MonoBehaviour:
   _attackDistance: 0.45
   _overrideScale: 0
   _scale: 2.7
+--- !u!114 &-5538231342858084904
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4809, type: 3}
+  m_Name: EncircleWave
+  m_EditorClassIdentifier: Assembly-CSharp::EncircleWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 1
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _enemiesCount: 30
+  _radius: 8
+  _approachSpeed: 0.1
 --- !u!114 &-4899610397034578129
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -579,32 +605,6 @@ MonoBehaviour:
   _attackDistance: 0.45
   _overrideScale: 0
   _scale: 2.7
---- !u!114 &1499390686529007003
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4809, type: 3}
-  m_Name: EncircleWave(Clone)
-  m_EditorClassIdentifier: Assembly-CSharp::EncircleWave
-  _waveOverride:
-    _useHealthOverride: 0
-    _healthOverride: 11
-    _useDamageOverride: 0
-    _damageOverride: 2
-    _useSpeedOverride: 0
-    _speedOverride: 1.5
-    _useScaleOverride: 0
-    _scaleOverride: 2.7
-    _disableOffscreenTeleport: 0
-  _circularSpawn: 0
-  _enemiesCount: 20
-  _radius: 6
-  _approachSpeed: 0.2
 --- !u!114 &1622896086405781825
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -710,6 +710,33 @@ MonoBehaviour:
   _attackDistance: 0.45
   _overrideScale: 0
   _scale: 2.7
+--- !u!114 &1738919021213118026
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4811, type: 3}
+  m_Name: RushWave
+  m_EditorClassIdentifier: Assembly-CSharp::RushWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 3
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _enemiesCount: 20
+  _burstCount: 1
+  _clusterRadius: 2
+  _rushSpeed: 6
 --- !u!114 &1798795371173154110
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -942,10 +969,10 @@ MonoBehaviour:
   m_Children: []
   m_Clips:
   - m_Version: 1
-    m_Start: 5
+    m_Start: 10
     m_ClipIn: 0
-    m_Asset: {fileID: 4496669950990712354}
-    m_Duration: 5
+    m_Asset: {fileID: 1738919021213118026}
+    m_Duration: 2
     m_TimeScale: 1
     m_ParentTrack: {fileID: 1992732452345642215}
     m_EaseInDuration: 0
@@ -1011,79 +1038,10 @@ MonoBehaviour:
     m_PreExtrapolationTime: 0
     m_DisplayName: RushWave
   - m_Version: 1
-    m_Start: 15
+    m_Start: 20
     m_ClipIn: 0
-    m_Asset: {fileID: 4496669950990712354}
-    m_Duration: 5
-    m_TimeScale: 1
-    m_ParentTrack: {fileID: 1992732452345642215}
-    m_EaseInDuration: 0
-    m_EaseOutDuration: 0
-    m_BlendInDuration: -1
-    m_BlendOutDuration: -1
-    m_MixInCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    m_MixOutCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    m_BlendInCurveMode: 0
-    m_BlendOutCurveMode: 0
-    m_ExposedParameterNames: []
-    m_AnimationCurves: {fileID: 0}
-    m_Recordable: 0
-    m_PostExtrapolationMode: 0
-    m_PreExtrapolationMode: 0
-    m_PostExtrapolationTime: 0
-    m_PreExtrapolationTime: 0
-    m_DisplayName: RushWave
-  - m_Version: 1
-    m_Start: 30
-    m_ClipIn: 0
-    m_Asset: {fileID: 4496669950990712354}
-    m_Duration: 5
+    m_Asset: {fileID: 6916719834107056129}
+    m_Duration: 2
     m_TimeScale: 1
     m_ParentTrack: {fileID: 1992732452345642215}
     m_EaseInDuration: 0
@@ -1397,6 +1355,33 @@ MonoBehaviour:
   _attackDistance: 0.45
   _overrideScale: 0
   _scale: 2.7
+--- !u!114 &6916719834107056129
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4811, type: 3}
+  m_Name: RushWave
+  m_EditorClassIdentifier: Assembly-CSharp::RushWave
+  _waveOverride:
+    _useHealthOverride: 0
+    _healthOverride: 3
+    _useDamageOverride: 0
+    _damageOverride: 2
+    _useSpeedOverride: 0
+    _speedOverride: 1.5
+    _useScaleOverride: 0
+    _scaleOverride: 2.7
+    _disableOffscreenTeleport: 0
+  _circularSpawn: 0
+  _enemiesCount: 15
+  _burstCount: 1
+  _clusterRadius: 2
+  _rushSpeed: 6
 --- !u!114 &8451467175314029903
 MonoBehaviour:
   m_ObjectHideFlags: 1
