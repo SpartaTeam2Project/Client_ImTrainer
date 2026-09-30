@@ -116,6 +116,7 @@ public class PlayerManager : BaseManager
         _player = CreatePlayer();
         _player.Bind(this);
         _player.Initialize();
+        ApplySelectedPlayable();
         return LocalPlayerId;
     }
 
@@ -203,6 +204,16 @@ public class PlayerManager : BaseManager
         }
 
         eventManager.Publish(new PlayerExperienceChanged(playerId, _player.Level, _player.CurrentXp, _player.RequiredXp));
+    }
+
+    private void ApplySelectedPlayable()
+    {
+        if (_player == null || Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var account))
+        {
+            return;
+        }
+
+        _player.ApplyPlayable(account.ResolveSelectedPlayable());
     }
 
     private Player CreatePlayer()

@@ -11,6 +11,8 @@ public class InputManager : BaseManager
     private bool _pausePressed;
     private Vector2Int _menuMove;
     private bool _menuSubmit;
+    private bool _menuCancel;
+    private bool _storageFilter;
 
     public Vector2 MovementValue => _movementValue;
 
@@ -66,6 +68,34 @@ public class InputManager : BaseManager
     }
 
     /// <summary>
+    /// 이번 프레임에 메뉴 취소가 눌렸으면 true를 반환하고 소비한다. 백스페이스와 Esc다.
+    /// </summary>
+    public bool ConsumeMenuCancel()
+    {
+        if (!_menuCancel)
+        {
+            return false;
+        }
+
+        _menuCancel = false;
+        return true;
+    }
+
+    /// <summary>
+    /// 이번 프레임에 스토리지 필터 바로가기가 눌렸으면 true를 반환하고 소비한다. C키다.
+    /// </summary>
+    public bool ConsumeStorageFilter()
+    {
+        if (!_storageFilter)
+        {
+            return false;
+        }
+
+        _storageFilter = false;
+        return true;
+    }
+
+    /// <summary>
     /// 자리표시. 입력 담당이 장치 바인딩으로 이 읽기만 교체한다.
     /// </summary>
     private void ReadKeyboardPlaceholder()
@@ -73,6 +103,8 @@ public class InputManager : BaseManager
         _pausePressed = false;
         _menuMove = Vector2Int.zero;
         _menuSubmit = false;
+        _menuCancel = false;
+        _storageFilter = false;
         var keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -147,6 +179,16 @@ public class InputManager : BaseManager
         if (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame)
         {
             _menuSubmit = true;
+        }
+
+        if (keyboard.backspaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame)
+        {
+            _menuCancel = true;
+        }
+
+        if (keyboard.cKey.wasPressedThisFrame)
+        {
+            _storageFilter = true;
         }
     }
 }

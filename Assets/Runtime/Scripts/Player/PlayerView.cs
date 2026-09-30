@@ -81,6 +81,28 @@ public class PlayerView : MonoBehaviour
     #region Public Methods
 
     /// <summary>
+    /// 플레이어블 데이터의 Idle / Walk 스프라이트로 이 뷰의 애니메이션을 바꾼다.
+    /// </summary>
+    public void ApplyPlayable(PlayableCharacterData data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        _idleDown = data.IdleDown;
+        _idleUp = data.IdleUp;
+        _idleLeft = data.IdleLeft;
+        _idleRight = data.IdleRight;
+        _walkDown = data.WalkDown;
+        _walkUp = data.WalkUp;
+        _walkLeft = data.WalkLeft;
+        _walkRight = data.WalkRight;
+        _hasVisual = false;
+        SetVisual(_isMoving, FacingToVector(_facing));
+    }
+
+    /// <summary>
     /// 이동 여부와 시선으로 Idle / Walk 클립을 고른다. 멈출 때는 마지막 방향을 유지한다.
     /// </summary>
     public void SetVisual(bool isMoving, Vector2 lookDirection)
@@ -277,6 +299,21 @@ public class PlayerView : MonoBehaviour
         }
 
         return false;
+    }
+
+    private static Vector2 FacingToVector(PlayerFacing facing)
+    {
+        switch (facing)
+        {
+            case PlayerFacing.Down:
+                return Vector2.down;
+            case PlayerFacing.Up:
+                return Vector2.up;
+            case PlayerFacing.Left:
+                return Vector2.left;
+            default:
+                return Vector2.right;
+        }
     }
 
     /// <summary>
