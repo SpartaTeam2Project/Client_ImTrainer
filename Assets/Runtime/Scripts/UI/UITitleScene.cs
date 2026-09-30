@@ -9,7 +9,7 @@ public class UITitleScene : MonoBehaviour
 {
     [SerializeField] private Toggle _alwaysShowIntroToggle;
 
-    private void Awake()
+    private void Start()
     {
         ApplyAlwaysShowIntro();
     }
