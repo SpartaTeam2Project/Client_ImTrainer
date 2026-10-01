@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 인게임 화면. 생존 시간, 킬, 레벨, 경험치 게이지를 보여 준다.
+/// 인게임 화면. 생존 시간, 킬, 레벨, 체력, 경험치 게이지를 보여 준다.
 /// </summary>
 public class UIGameScene : MonoBehaviour
 {
@@ -17,12 +17,26 @@ public class UIGameScene : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _timerText;
     [SerializeField] private TextMeshProUGUI _levelText;
     [SerializeField] private RectMask2D _experienceMask;
+    [SerializeField] private TextMeshProUGUI _hpText;
+    [SerializeField] private Image _hpFill;
+    [SerializeField] private Sprite _hpHigh;
+    [SerializeField] private Sprite _hpMedium;
+    [SerializeField] private Sprite _hpLow;
+
+    private const float HP_MEDIUM_THRESHOLD = 0.5f;
+    private const float HP_LOW_THRESHOLD = 0.25f;
+    private const int HP_BAR_PIXELS = 48;
 
     private GameController _gameController;
+    private int _shownHp = -1;
+    private int _shownMaxHp = -1;
 
     private void Awake()
     {
-        _pauseButton.onClick.AddListener(OnPauseButtonClicked);
+        if (_pauseButton != null)
+        {
+            _pauseButton.onClick.AddListener(OnPauseButtonClicked);
+        }
     }
 
     private void OnEnable()
@@ -32,6 +46,7 @@ public class UIGameScene : MonoBehaviour
         var state = Managers.Instance.CurrentState;
         ApplyPauseWindow(state, state != GameState.Paused);
         ApplyResultScreens(state);
+        RefreshHealth();
         RefreshExperience();
     }
 
@@ -172,14 +187,6 @@ public class UIGameScene : MonoBehaviour
             kills = enemyManager.KillCount;
         }
 
-        var current = 0f;
-        var max = 0f;
-        if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
-        {
-            current = playerManager.CurrentHealth;
-            max = playerManager.MaxHealth;
-        }
-
         if (_timerText != null)
         {
             _timerText.text = FormatTime(elapsed);
@@ -190,7 +197,43 @@ public class UIGameScene : MonoBehaviour
             _killText.text = $"처치 {kills}";
         }
 
+        RefreshHealth();
         RefreshExperience();
+    }
+
+    private void RefreshHealth()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return;
+        }
+
+        var current = playerManager.CurrentHealth;
+        var max = playerManager.MaxHealth;
+
+        var hp = Mathf.CeilToInt(current);
+        var maxHp = Mathf.CeilToInt(max);
+        if (_hpText != null && (hp != _shownHp || maxHp != _shownMaxHp))
+        {
+            _shownHp = hp;
+            _shownMaxHp = maxHp;
+            _hpText.text = $"{hp}/{maxHp}";
+        }
+
+        if (_hpFill == null)
+        {
+            return;
+        }
+
+        var ratio = max <= 0f ? 0f : Mathf.Clamp01(current / max);
+        // 스프라이트 픽셀 단위로 끊어 바 끝이 픽셀 중간에서 잘리지 않게 한다.
+        _hpFill.fillAmount = Mathf.Ceil(ratio * HP_BAR_PIXELS) / HP_BAR_PIXELS;
+
+        var sprite = ratio > HP_MEDIUM_THRESHOLD ? _hpHigh : ratio > HP_LOW_THRESHOLD ? _hpMedium : _hpLow;
+        if (sprite != null && _hpFill.sprite != sprite)
+        {
+            _hpFill.sprite = sprite;
+        }
     }
 
     private void RefreshExperience()
@@ -202,7 +245,7 @@ public class UIGameScene : MonoBehaviour
 
         if (_levelText != null)
         {
-            _levelText.text = $"LVL {playerManager.Level}";
+            _levelText.text = $"{playerManager.Level}";
         }
 
         if (_experienceMask == null)
