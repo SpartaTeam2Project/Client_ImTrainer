@@ -1,5 +1,6 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -31,6 +32,13 @@ public class UILobbyWindow : MonoBehaviour
     private LobbyButton _selectedButton = LobbyButton.None;
     private LobbyButton _accountButtonBeforeSettings = LobbyButton.Login;
 
+    private void Awake()
+    {
+        AddPointerEnter(_loginButton, LobbyButton.Login);
+        AddPointerEnter(_registerButton, LobbyButton.Register);
+        AddPointerEnter(_settingsButton, LobbyButton.Settings);
+    }
+
     private void OnEnable()
     {
         if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null || _registerWindow == null)
@@ -49,28 +57,7 @@ public class UILobbyWindow : MonoBehaviour
 
     private void Update()
     {
-        var settingsWindow = GetSettingsWindow();
-        if (settingsWindow != null && settingsWindow.IsOpen)
-        {
-            return;
-        }
-
-        if (_introScene != null && _introScene.IsOpen)
-        {
-            return;
-        }
-
-        if (_storageWindow != null && _storageWindow.IsOpen)
-        {
-            return;
-        }
-
-        if (_registerWindow != null && _registerWindow.IsOpen)
-        {
-            return;
-        }
-
-        if (ScreenTransition.Instance.IsCovering)
+        if (IsBlocked())
         {
             return;
         }
@@ -113,10 +100,85 @@ public class UILobbyWindow : MonoBehaviour
         }
 
         ApplySelection();
-        if (_selectedButton != previous && Managers.Instance != null && Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        if (_selectedButton != previous)
         {
-            audioManager.PlaySound(MENU_MOVE_SOUND);
+            PlayMenuMove();
         }
+    }
+
+    // 다른 창이 위에 떠 있거나 화면 전환 중이면 로비 선택을 막는다.
+    private bool IsBlocked()
+    {
+        var settingsWindow = GetSettingsWindow();
+        if (settingsWindow != null && settingsWindow.IsOpen)
+        {
+            return true;
+        }
+
+        if (_introScene != null && _introScene.IsOpen)
+        {
+            return true;
+        }
+
+        if (_storageWindow != null && _storageWindow.IsOpen)
+        {
+            return true;
+        }
+
+        if (_registerWindow != null && _registerWindow.IsOpen)
+        {
+            return true;
+        }
+
+        return ScreenTransition.Instance.IsCovering;
+    }
+
+    private void AddPointerEnter(Button button, LobbyButton target)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        var trigger = button.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = button.gameObject.AddComponent<EventTrigger>();
+        }
+
+        var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        entry.callback.AddListener(_ => FocusButton(target));
+        trigger.triggers.Add(entry);
+    }
+
+    /// <summary>
+    /// 마우스가 올라온 버튼으로 선택을 옮긴다.
+    /// </summary>
+    private void FocusButton(LobbyButton target)
+    {
+        if (target == _selectedButton || IsBlocked())
+        {
+            return;
+        }
+
+        if (target == LobbyButton.Settings && (_selectedButton == LobbyButton.Login || _selectedButton == LobbyButton.Register))
+        {
+            _accountButtonBeforeSettings = _selectedButton;
+        }
+
+        _selectedButton = target;
+        ApplySelection();
+        PlayMenuMove();
+    }
+
+    private static void PlayMenuMove()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(MENU_MOVE_SOUND);
     }
 
     private void MoveRight()
