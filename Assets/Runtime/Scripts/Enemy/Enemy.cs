@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -145,6 +146,40 @@ public class Enemy : MonoBehaviour
         {
             _view.ApplyVisual(visual);
         }
+    }
+
+    /// <summary>
+    /// hurt 칸에 죽는 그림이 있으면 true.
+    /// </summary>
+    public bool HasHurtSprite
+    {
+        get
+        {
+            if (_view == null)
+            {
+                _view = GetComponent<EnemyView>();
+            }
+
+            return _view != null && _view.HasHurtSprite;
+        }
+    }
+
+    /// <summary>
+    /// 지금 보는 방향의 hurt 그림을 한 번 재생한다. 칸이 비어 있으면 바로 끝난다.
+    /// </summary>
+    public UniTask PlayHurtAsync()
+    {
+        if (_view == null)
+        {
+            _view = GetComponent<EnemyView>();
+        }
+
+        if (_view == null)
+        {
+            return UniTask.CompletedTask;
+        }
+
+        return _view.PlayHurtAsync();
     }
 
     /// <summary>

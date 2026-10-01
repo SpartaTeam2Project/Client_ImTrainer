@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -7,6 +8,9 @@ using UnityEngine;
 public class EnemyView : MonoBehaviour
 {
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
+    private const float HURT_HOLD_SECONDS = 0.45f;
+    private const float HURT_SHORT_LIMIT_SECONDS = 1f;
+    private const float HURT_MIN_SECONDS = 1.4f;
     private const float FLIP_X_EPSILON = 0.0001f;
     private const float SECTOR_DEGREES = 45f;
     private const float SECTOR_HALF_DEGREES = 22.5f;
@@ -52,6 +56,8 @@ public class EnemyView : MonoBehaviour
     private EightWay _eightWay = EightWay.Right;
     private int _frameIndex;
     private float _frameTimer;
+    private int _hurtPlayId;
+    private bool _hurtPlaying;
 
     #region Unity Methods
 
@@ -72,6 +78,7 @@ public class EnemyView : MonoBehaviour
     /// </summary>
     public void ApplyVisual(MonsterVisualData visual)
     {
+        CancelHurt();
         _visual = visual;
         _frameIndex = 0;
         _frameTimer = 0f;
@@ -79,10 +86,65 @@ public class EnemyView : MonoBehaviour
     }
 
     /// <summary>
+    /// hurt 칸에 스프라이트가 있으면 true.
+    /// </summary>
+    public bool HasHurtSprite => _visual != null && _visual.Hurt != null && _visual.Hurt.HasFrames();
+
+    /// <summary>
+    /// 지금 방향의 hurt 프레임을 한 번 재생하고 마지막 장을 잠시 유지한다.
+    /// </summary>
+    public async UniTask PlayHurtAsync()
+    {
+        var frames = GetDirectionFrames(_visual != null ? _visual.Hurt : null, _eightWay);
+        if (!HasFrames(frames))
+        {
+            return;
+        }
+
+        var playId = ++_hurtPlayId;
+        _hurtPlaying = true;
+        var frameDuration = 1f / Mathf.Max(1f, _framesPerSecond);
+        var frameSeconds = frames.Length * frameDuration;
+        var totalSeconds = frameSeconds + HURT_HOLD_SECONDS;
+        if (totalSeconds <= HURT_SHORT_LIMIT_SECONDS)
+        {
+            totalSeconds = HURT_MIN_SECONDS;
+        }
+
+        var holdSeconds = Mathf.Max(0f, totalSeconds - frameSeconds);
+        for (var i = 0; i < frames.Length; i++)
+        {
+            if (playId != _hurtPlayId)
+            {
+                return;
+            }
+
+            ShowSprite(frames[i]);
+            await UniTask.Delay(System.TimeSpan.FromSeconds(frameDuration));
+        }
+
+        if (playId != _hurtPlayId)
+        {
+            return;
+        }
+
+        await UniTask.Delay(System.TimeSpan.FromSeconds(holdSeconds));
+        if (playId == _hurtPlayId)
+        {
+            _hurtPlaying = false;
+        }
+    }
+
+    /// <summary>
     /// 이동 중이면 걷기 프레임을 돌린다. 8방향 모드는 추적 방향 그림을 고른다.
     /// </summary>
     public void SetVisual(bool isMoving, Vector2 lookDirection, bool shooting = false, bool attacking = false)
     {
+        if (_hurtPlaying)
+        {
+            return;
+        }
+
         var directionChanged = ApplyDirection(lookDirection);
         var motionChanged = !_hasVisual || isMoving != _isMoving || shooting != _isShooting || attacking != _isAttacking;
         _hasVisual = true;
@@ -173,6 +235,24 @@ public class EnemyView : MonoBehaviour
             _frameTimer -= frameDuration;
             _frameIndex = (_frameIndex + 1) % frames.Length;
         }
+    }
+
+    private void CancelHurt()
+    {
+        _hurtPlayId++;
+        _hurtPlaying = false;
+    }
+
+    private void ShowSprite(Sprite sprite)
+    {
+        if (_spriteRenderer == null || sprite == null)
+        {
+            return;
+        }
+
+        _spriteRenderer.sprite = sprite;
+        _spriteRenderer.color = Color.white;
+        _spriteRenderer.flipX = false;
     }
 
     private void ApplyCurrentSprite()

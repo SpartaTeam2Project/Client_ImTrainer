@@ -48,6 +48,8 @@ public class EnemyManager : BaseManager
     private readonly List<Enemy> _alive = new List<Enemy>();
     private readonly List<EnemyProjectile> _projectiles = new List<EnemyProjectile>();
     private readonly Dictionary<Enemy, Action<Enemy>> _deathCallbacks = new Dictionary<Enemy, Action<Enemy>>();
+    private readonly List<Enemy> _hurting = new List<Enemy>();
+    private int _hurtEpoch;
     private CombatObjectPool _pool;
     private Transform _projectileRoot;
     private GameObject _fallbackPrefab;
@@ -291,6 +293,7 @@ public class EnemyManager : BaseManager
     public void DismissAlive()
     {
         DeactivateProjectiles();
+        CancelHurtDeaths();
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
             var enemy = _alive[i];
@@ -357,6 +360,12 @@ public class EnemyManager : BaseManager
         var index = _alive.IndexOf(enemy);
         if (index < 0)
         {
+            return;
+        }
+
+        if (_deathCallbacks.ContainsKey(enemy) && enemy.HasHurtSprite)
+        {
+            BeginHurtDeath(index, enemy);
             return;
         }
 
@@ -480,6 +489,12 @@ public class EnemyManager : BaseManager
     /// </summary>
     public void NotifyActorDestroyed(Enemy enemy)
     {
+        if (_hurting.Remove(enemy))
+        {
+            InvokeDeathCallback(enemy);
+            return;
+        }
+
         var index = _alive.IndexOf(enemy);
         if (index < 0)
         {
@@ -896,6 +911,43 @@ public class EnemyManager : BaseManager
         ReturnEnemy(enemy);
     }
 
+    /// <summary>
+    /// 보스 사망 그림을 재생한 뒤에 풀로 돌리고 다음 보스 콜백을 연다.
+    /// </summary>
+    private void BeginHurtDeath(int index, Enemy enemy)
+    {
+        var dropPosition = (Vector2)enemy.transform.position;
+        KillCount++;
+        _alive.RemoveAt(index);
+        DropExperience(dropPosition, enemy.ExperienceGem);
+        DropCurrencies(dropPosition, enemy);
+        _hurting.Add(enemy);
+        FinishHurtDeathAsync(enemy, _hurtEpoch).Forget();
+    }
+
+    private async UniTaskVoid FinishHurtDeathAsync(Enemy enemy, int epoch)
+    {
+        await enemy.PlayHurtAsync();
+        if (epoch != _hurtEpoch || enemy == null || !_hurting.Remove(enemy))
+        {
+            return;
+        }
+
+        InvokeDeathCallback(enemy);
+        ReturnEnemy(enemy);
+    }
+
+    private void CancelHurtDeaths()
+    {
+        _hurtEpoch++;
+        for (var i = _hurting.Count - 1; i >= 0; i--)
+        {
+            var enemy = _hurting[i];
+            _hurting.RemoveAt(i);
+            ReturnEnemy(enemy);
+        }
+    }
+
     private void DropCurrencies(Vector2 position, Enemy enemy)
     {
         if (enemy == null || Managers.Instance == null || !Managers.Instance.TryGetManager<DropManager>(out var dropManager))
@@ -1012,6 +1064,7 @@ public class EnemyManager : BaseManager
     {
         _stageActive = false;
         DeactivateProjectiles();
+        CancelHurtDeaths();
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
             var enemy = _alive[i];
