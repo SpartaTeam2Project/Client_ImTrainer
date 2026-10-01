@@ -48,11 +48,34 @@ public class UILobbyWindow : MonoBehaviour
 
         SubscribeButtonClicks();
         ApplySelection();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Subscribe<ReturnedToTitle>(HandleReturnedToTitle);
+        }
     }
 
     private void OnDisable()
     {
         UnsubscribeButtonClicks();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Unsubscribe<ReturnedToTitle>(HandleReturnedToTitle);
+        }
+    }
+
+    /// <summary>
+    /// 게임에서 돌아오면 로비를 건너뛰고 스토리지 창을 바로 연다.
+    /// </summary>
+    private void HandleReturnedToTitle(ReturnedToTitle returned)
+    {
+        if (_storageWindow == null)
+        {
+            Debug.LogError("스토리지 창이 없습니다.");
+            return;
+        }
+
+        gameObject.SetActive(false);
+        _storageWindow.Open();
     }
 
     private void Update()

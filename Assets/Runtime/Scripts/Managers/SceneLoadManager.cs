@@ -4,6 +4,13 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
+/// 게임 씬에서 타이틀 씬으로 돌아와 메뉴 상태가 된 직후 발행된다.
+/// </summary>
+public struct ReturnedToTitle
+{
+}
+
+/// <summary>
 /// 타이틀, 로딩, 게임 씬 전환을 담당한다.
 /// </summary>
 public class SceneLoadManager : BaseManager
@@ -67,10 +74,23 @@ public class SceneLoadManager : BaseManager
             {
                 Managers.Instance.ChangeState(GameState.Menu);
             }
+
+            // 메뉴 음악이 바뀐 뒤에 알려야 스토리지 음악이 덮이지 않는다.
+            if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+            {
+                eventManager.Publish(new ReturnedToTitle());
+            }
         }
         finally
         {
             _isLoading = false;
+
+            // 결과 화면에서 덮고 넘어왔으면 타이틀이 보이도록 페이드인한다. 예외가 나도 덮인 채로 남지 않는다.
+            var transition = ScreenTransition.Instance;
+            if (transition.IsClosed)
+            {
+                transition.FadeOut();
+            }
         }
     }
 
