@@ -6,10 +6,6 @@ public class DamageAbilityBehavior : AbilityBehavior<DamageAbilityData, DamageAb
     protected override void SetAbilityLevel(int levelId)
     {
         base.SetAbilityLevel(levelId);
-        if (AbilityLevel != null && TryGetPlayer(out var player))
-        {
-            player.RecalculateDamage(AbilityLevel.DamageMultiplier);
-        }
     }
 
     /// <summary>
@@ -17,11 +13,6 @@ public class DamageAbilityBehavior : AbilityBehavior<DamageAbilityData, DamageAb
     /// </summary>
     public override void Clear()
     {
-        if (TryGetPlayer(out var player))
-        {
-            player.RecalculateDamage(1f);
-        }
-
         base.Clear();
     }
 }

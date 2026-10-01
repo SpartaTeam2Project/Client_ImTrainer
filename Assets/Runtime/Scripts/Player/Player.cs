@@ -243,8 +243,8 @@ public class Player : MonoBehaviour
         {
             return;
         }
-
         var multipliedDamage = amount * Mathf.Max(0f, receivedDamageMultiplier);
+        Debug.Log("받은피해/원래피해:"+multipliedDamage+"/"+amount);
 
 
         CurrentHealth = Mathf.Max(0f, CurrentHealth - multipliedDamage);
@@ -282,6 +282,7 @@ public class Player : MonoBehaviour
         }
 
         var xp = CurrentXp + amount * Mathf.Max(0f, xpMultiplier);
+        Debug.Log("원래 경험치/증가후 경험치:" +amount+"/"+(xp-CurrentXp));
         var level = Level;
         var required = Mathf.Max(MIN_REQUIRED_XP, RequiredXp);
         var gained = 0;
@@ -314,13 +315,6 @@ public class Player : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 공격력 배율을 기본값에 곱한다.
-    /// </summary>
-    public void RecalculateDamage(float multiplier)
-    {
-        damageMultiplier = Mathf.Max(0f, _damageMultiplier) + Mathf.Max(0f, multiplier);
-    }
 
     /// <summary>
     /// 이동 속도 배율을 기본값에 곱한다.

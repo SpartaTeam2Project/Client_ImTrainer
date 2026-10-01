@@ -255,11 +255,24 @@ public abstract class Weapon : MonoBehaviour
 
     protected float GetFinalDamage()
     {
-        if(Managers.Instance==null||!Managers.Instance.TryGetComponent<PlayerManager>(out var playermanager))
+        Debug.Log("GetFinalDamage 호출됨");
+
+        if (Managers.Instance == null)
         {
+            Debug.LogError("Managers.Instance가 null");
             return Stats.Damage;
         }
 
+        if (!Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            Debug.LogError("PlayerManager를 찾지 못함");
+            return Stats.Damage;
+        }
+        if (Managers.Instance==null||!Managers.Instance.TryGetManager<PlayerManager>(out var playermanager))
+        {
+            return Stats.Damage;
+        }
+        Debug.Log("원래 데미지: " +Stats.Damage+"\n최종 데미지: "+Stats.Damage * playermanager.GetDamageMultiplier(PlayerId));
         return Stats.Damage * playermanager.GetDamageMultiplier(PlayerId);
     }
 
