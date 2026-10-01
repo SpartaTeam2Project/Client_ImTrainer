@@ -828,7 +828,34 @@ public class EnemyManager : BaseManager
         KillCount++;
         _alive.RemoveAt(index);
         DropExperience(dropPosition, enemy != null ? enemy.ExperienceGem : null);
+        DropCurrencies(dropPosition, enemy);
         ReturnEnemy(enemy);
+    }
+
+    private void DropCurrencies(Vector2 position, Enemy enemy)
+    {
+        if (enemy == null || Managers.Instance == null || !Managers.Instance.TryGetManager<DropManager>(out var dropManager))
+        {
+            return;
+        }
+
+        TryDropCurrency(dropManager, position, enemy.PocketDollarDrop, enemy.PocketDollarChance);
+        TryDropCurrency(dropManager, position, enemy.MonsterBallDrop, enemy.MonsterBallChance);
+    }
+
+    private void TryDropCurrency(DropManager dropManager, Vector2 position, CoinDropBehavior prefab, float chance)
+    {
+        if (prefab == null || chance <= 0f)
+        {
+            return;
+        }
+
+        if (UnityEngine.Random.value * 100f > chance)
+        {
+            return;
+        }
+
+        dropManager.Drop(_playerId, position, prefab);
     }
 
     private void DropExperience(Vector2 position, ExperienceGem gem)

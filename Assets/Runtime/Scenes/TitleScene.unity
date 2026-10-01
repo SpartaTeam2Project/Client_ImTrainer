@@ -376,6 +376,7 @@ GameObject:
   - component: {fileID: 700000027}
   - component: {fileID: 700000028}
   - component: {fileID: 700000029}
+  - component: {fileID: 700000033}
   - component: {fileID: 700000030}
   - component: {fileID: 700000031}
   - component: {fileID: 700000032}
@@ -422,6 +423,7 @@ MonoBehaviour:
   _stageFieldManager: {fileID: 700000027}
   _enemyManager: {fileID: 700000007}
   _experienceManager: {fileID: 700000029}
+  _dropManager: {fileID: 700000033}
   _currenciesManager: {fileID: 700000030}
   _abilityManager: {fileID: 700000028}
   _accountManager: {fileID: 700000031}
@@ -611,6 +613,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrainingManager
   _database: {fileID: 11400000, guid: 7a1c0e66b2d34f56a7b8c9d0e1f20314, type: 2}
+--- !u!114 &700000033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2c3d4e5f6a74890b1c2d3e4f5061728, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DropManager
+  _pickupRadius: 0.35
+  _attractSpeed: 12
 --- !u!1 &700000050
 GameObject:
   m_ObjectHideFlags: 0
