@@ -25,6 +25,7 @@ public class Managers : MonoBehaviour
     [SerializeField] private AbilityManager _abilityManager;
     [SerializeField] private AccountManager _accountManager;
     [SerializeField] private SceneLoadManager _sceneLoadManager;
+    [SerializeField] private TrainingManager _trainingManager;
     [SerializeField] private UISettingsWindow _settingsWindow;
 
     private readonly Dictionary<System.Type, BaseManager> _managers = new Dictionary<System.Type, BaseManager>();
@@ -64,6 +65,7 @@ public class Managers : MonoBehaviour
         RegisterManager(_abilityManager);
         RegisterManager(_accountManager);
         RegisterManager(_sceneLoadManager);
+        RegisterManager(_trainingManager);
     }
 
     private void Start()
@@ -159,7 +161,7 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 필드, 적, 경험치, 재화, 무기, 계정, 씬 순서로 초기화한다.
+    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 필드, 적, 경험치, 재화, 무기, 계정, 씬, 트레이닝 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
@@ -221,6 +223,11 @@ public class Managers : MonoBehaviour
         if (TryGetManager<SceneLoadManager>(out var sceneLoadManager))
         {
             await sceneLoadManager.InitializeAsync();
+        }
+
+        if (TryGetManager<TrainingManager>(out var trainingManager))
+        {
+            await trainingManager.InitializeAsync();
         }
 
         if (TryGetManager<UpgradeManager>(out var upgradeManager))

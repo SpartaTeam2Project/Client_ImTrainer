@@ -147,7 +147,14 @@ public class StageFailedScreen : MonoBehaviour
             return;
         }
 
-        sceneLoadManager.LoadTitleSceneAsync().Forget();
+        var transition = ScreenTransition.Instance;
+        if (transition.IsCovering)
+        {
+            return;
+        }
+
+        // 화면을 덮고 기다린 뒤 타이틀로 간다. 페이드인은 SceneLoadManager가 한다.
+        transition.Close().OnComplete(() => sceneLoadManager.LoadTitleSceneAsync().Forget());
     }
 
     private void Deactivate()

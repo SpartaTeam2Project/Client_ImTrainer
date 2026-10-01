@@ -423,10 +423,10 @@ MonoBehaviour:
   _enemyManager: {fileID: 700000007}
   _experienceManager: {fileID: 700000029}
   _currenciesManager: {fileID: 700000030}
-  _upgradeManager: {fileID: 700000032}
   _abilityManager: {fileID: 700000028}
   _accountManager: {fileID: 700000031}
   _sceneLoadManager: {fileID: 700000008}
+  _trainingManager: {fileID: 700000032}
   _settingsWindow: {fileID: 710000102}
 --- !u!114 &700000004
 MonoBehaviour:
@@ -553,7 +553,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _startingWeaponPrefab: {fileID: 250004, guid: 7b1d4f9a2e5c4d0b1f3a4c5d6e7f8091, type: 3}
   _startingWeaponVisual: {fileID: 11400000, guid: a7c3e91f4b2d48e6a1f0c8d5e9b34721, type: 2}
-  _abilitiesDatabase: {fileID: 0}
+  _abilitiesDatabase: {fileID: 11400000, guid: 2de34a7e310b4804c92a0c17e90284ae, type: 2}
   _abilitiesWindow: {fileID: 0}
   _levelUpFanfare: {fileID: 8300000, guid: 408c37f972fdab44f9e35b0d993c650c, type: 3}
 --- !u!114 &700000029
@@ -607,11 +607,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 700000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5849fe65cefa421684d9acb306802577, type: 3}
+  m_Script: {fileID: 11500000, guid: d44e55f66789012345abcdef01020304, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UpgradeManager
-  _upgradeJson: {fileID: 4900000, guid: 91b25854f856fb540aa6e99e420ff54b, type: 3}
-  _logAppliedValues: 1
+  m_EditorClassIdentifier: Assembly-CSharp::TrainingManager
+  _database: {fileID: 11400000, guid: 7a1c0e66b2d34f56a7b8c9d0e1f20314, type: 2}
 --- !u!1 &700000050
 GameObject:
   m_ObjectHideFlags: 0

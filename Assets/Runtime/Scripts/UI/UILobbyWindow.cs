@@ -1,4 +1,6 @@
+using DG.Tweening;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -30,6 +32,13 @@ public class UILobbyWindow : MonoBehaviour
     private LobbyButton _selectedButton = LobbyButton.None;
     private LobbyButton _accountButtonBeforeSettings = LobbyButton.Login;
 
+    private void Awake()
+    {
+        AddPointerEnter(_loginButton, LobbyButton.Login);
+        AddPointerEnter(_registerButton, LobbyButton.Register);
+        AddPointerEnter(_settingsButton, LobbyButton.Settings);
+    }
+
     private void OnEnable()
     {
         if (_loginButton == null || _registerButton == null || _settingsButton == null || _settingsSelect == null || _registerWindow == null)
@@ -39,32 +48,39 @@ public class UILobbyWindow : MonoBehaviour
 
         SubscribeButtonClicks();
         ApplySelection();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Subscribe<ReturnedToTitle>(HandleReturnedToTitle);
+        }
     }
 
     private void OnDisable()
     {
         UnsubscribeButtonClicks();
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Unsubscribe<ReturnedToTitle>(HandleReturnedToTitle);
+        }
+    }
+
+    /// <summary>
+    /// 게임에서 돌아오면 로비를 건너뛰고 스토리지 창을 바로 연다.
+    /// </summary>
+    private void HandleReturnedToTitle(ReturnedToTitle returned)
+    {
+        if (_storageWindow == null)
+        {
+            Debug.LogError("스토리지 창이 없습니다.");
+            return;
+        }
+
+        gameObject.SetActive(false);
+        _storageWindow.Open();
     }
 
     private void Update()
     {
-        var settingsWindow = GetSettingsWindow();
-        if (settingsWindow != null && settingsWindow.IsOpen)
-        {
-            return;
-        }
-
-        if (_introScene != null && _introScene.IsOpen)
-        {
-            return;
-        }
-
-        if (_storageWindow != null && _storageWindow.IsOpen)
-        {
-            return;
-        }
-
-        if (_registerWindow != null && _registerWindow.IsOpen)
+        if (IsBlocked())
         {
             return;
         }
@@ -107,10 +123,85 @@ public class UILobbyWindow : MonoBehaviour
         }
 
         ApplySelection();
-        if (_selectedButton != previous && Managers.Instance != null && Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        if (_selectedButton != previous)
         {
-            audioManager.PlaySound(MENU_MOVE_SOUND);
+            PlayMenuMove();
         }
+    }
+
+    // 다른 창이 위에 떠 있거나 화면 전환 중이면 로비 선택을 막는다.
+    private bool IsBlocked()
+    {
+        var settingsWindow = GetSettingsWindow();
+        if (settingsWindow != null && settingsWindow.IsOpen)
+        {
+            return true;
+        }
+
+        if (_introScene != null && _introScene.IsOpen)
+        {
+            return true;
+        }
+
+        if (_storageWindow != null && _storageWindow.IsOpen)
+        {
+            return true;
+        }
+
+        if (_registerWindow != null && _registerWindow.IsOpen)
+        {
+            return true;
+        }
+
+        return ScreenTransition.Instance.IsCovering;
+    }
+
+    private void AddPointerEnter(Button button, LobbyButton target)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        var trigger = button.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = button.gameObject.AddComponent<EventTrigger>();
+        }
+
+        var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        entry.callback.AddListener(_ => FocusButton(target));
+        trigger.triggers.Add(entry);
+    }
+
+    /// <summary>
+    /// 마우스가 올라온 버튼으로 선택을 옮긴다.
+    /// </summary>
+    private void FocusButton(LobbyButton target)
+    {
+        if (target == _selectedButton || IsBlocked())
+        {
+            return;
+        }
+
+        if (target == LobbyButton.Settings && (_selectedButton == LobbyButton.Login || _selectedButton == LobbyButton.Register))
+        {
+            _accountButtonBeforeSettings = _selectedButton;
+        }
+
+        _selectedButton = target;
+        ApplySelection();
+        PlayMenuMove();
+    }
+
+    private static void PlayMenuMove()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(MENU_MOVE_SOUND);
     }
 
     private void MoveRight()
@@ -271,6 +362,10 @@ public class UILobbyWindow : MonoBehaviour
         _introScene.Open(ShowStorage);
     }
 
+    /// <summary>
+    /// 화면 전환으로 화면을 덮은 뒤 스토리지 창을 열고 다시 걷어낸다.
+    /// 인트로에서 이미 덮고 넘어왔으면 바로 창을 바꾼다.
+    /// </summary>
     private void ShowStorage()
     {
         if (_storageWindow == null)
@@ -279,8 +374,26 @@ public class UILobbyWindow : MonoBehaviour
             return;
         }
 
+        var transition = ScreenTransition.Instance;
+        if (transition.IsClosed)
+        {
+            SwapToStorage(transition);
+            return;
+        }
+
+        if (transition.IsCovering)
+        {
+            return;
+        }
+
+        transition.Close().OnComplete(() => SwapToStorage(transition));
+    }
+
+    private void SwapToStorage(ScreenTransition transition)
+    {
         gameObject.SetActive(false);
         _storageWindow.Open();
+        transition.FadeOut();
     }
 
     private void OpenRegister()
