@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 인게임 화면. 생존 시간, 킬, 레벨, 체력, 경험치 게이지를 보여 준다.
+/// 인게임 화면. 생존 시간, 킬, 레벨, 체력, 경험치, 이번 판 몬스터볼과 포켓달러를 보여 준다.
 /// </summary>
 public class UIGameScene : MonoBehaviour
 {
@@ -15,6 +15,8 @@ public class UIGameScene : MonoBehaviour
     [SerializeField] private StageCompleteScreen _stageCompleteScreen;
     [SerializeField] private StageFailedScreen _stageFailedScreen;
     [SerializeField] private TextMeshProUGUI _killText;
+    [SerializeField] private TextMeshProUGUI _monsterBallText;
+    [SerializeField] private TextMeshProUGUI _pocketDollarText;
     [SerializeField] private TextMeshProUGUI _timerText;
     [SerializeField] private TextMeshProUGUI _levelText;
     [SerializeField] private RectMask2D _experienceMask;
@@ -56,12 +58,15 @@ public class UIGameScene : MonoBehaviour
     private void OnEnable()
     {
         CacheGameController();
-        Managers.Instance.GetManager<EventManager>().Subscribe<GameStateChanged>(HandleGameStateChanged);
+        var eventManager = Managers.Instance.GetManager<EventManager>();
+        eventManager.Subscribe<GameStateChanged>(HandleGameStateChanged);
+        eventManager.Subscribe<CurrencyAmountChanged>(HandleCurrencyChanged);
         var state = Managers.Instance.CurrentState;
         ApplyPauseWindow(state, state != GameState.Paused);
         ApplyResultScreens(state);
         RefreshHealth(true);
         RefreshExperience(true);
+        RefreshCurrencies();
     }
 
     private void Start()
@@ -74,6 +79,7 @@ public class UIGameScene : MonoBehaviour
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
         {
             eventManager.Unsubscribe<GameStateChanged>(HandleGameStateChanged);
+            eventManager.Unsubscribe<CurrencyAmountChanged>(HandleCurrencyChanged);
         }
 
         KillTween(ref _hpTween);
@@ -217,6 +223,62 @@ public class UIGameScene : MonoBehaviour
 
         RefreshHealth();
         RefreshExperience();
+    }
+
+    private void HandleCurrencyChanged(CurrencyAmountChanged changed)
+    {
+        if (changed.IsMetaBalance || !IsLocalPlayer(changed.PlayerId))
+        {
+            return;
+        }
+
+        if (changed.CurrencyId == CurrenciesManager.MONSTER_BALL_ID)
+        {
+            SetCurrencyText(_monsterBallText, changed.Amount);
+            return;
+        }
+
+        if (changed.CurrencyId == CurrenciesManager.POCKET_DOLLAR_ID)
+        {
+            SetCurrencyText(_pocketDollarText, changed.Amount);
+        }
+    }
+
+    private void RefreshCurrencies()
+    {
+        var monsterBalls = 0;
+        var pocketDollars = 0;
+        if (Managers.Instance != null
+            && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager)
+            && Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
+        {
+            monsterBalls = ReadStageAmount(currencies, playerManager.LocalPlayerId, CurrenciesManager.MONSTER_BALL_ID);
+            pocketDollars = ReadStageAmount(currencies, playerManager.LocalPlayerId, CurrenciesManager.POCKET_DOLLAR_ID);
+        }
+
+        SetCurrencyText(_monsterBallText, monsterBalls);
+        SetCurrencyText(_pocketDollarText, pocketDollars);
+    }
+
+    private static int ReadStageAmount(CurrenciesManager currencies, int playerId, string currencyId)
+    {
+        var save = currencies.GetCurrency(playerId, currencyId, false);
+        return save == null ? 0 : save.Amount;
+    }
+
+    private static bool IsLocalPlayer(int playerId)
+    {
+        return Managers.Instance != null
+            && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager)
+            && playerId == playerManager.LocalPlayerId;
+    }
+
+    private static void SetCurrencyText(TextMeshProUGUI label, int amount)
+    {
+        if (label != null)
+        {
+            label.text = amount.ToString();
+        }
     }
 
     private void RefreshHealth(bool instant = false)

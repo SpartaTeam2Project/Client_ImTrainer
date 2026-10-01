@@ -21,6 +21,7 @@ GameObject:
   - component: {fileID: 985665467020739691}
   - component: {fileID: 2432922711950103828}
   - component: {fileID: 1785125332412289575}
+  - component: {fileID: 881733445566778899}
   - component: {fileID: 2294510560909223785}
   - component: {fileID: 7844887539309918577}
   - component: {fileID: 714012956789361275}
@@ -79,6 +80,7 @@ MonoBehaviour:
   _stageFieldManager: {fileID: 985665467020739691}
   _enemyManager: {fileID: 8046149582071034551}
   _experienceManager: {fileID: 1785125332412289575}
+  _dropManager: {fileID: 881733445566778899}
   _currenciesManager: {fileID: 2294510560909223785}
   _abilityManager: {fileID: 2432922711950103828}
   _accountManager: {fileID: 7844887539309918577}
@@ -213,6 +215,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7a1c9b24d8f4e6a9c0b1d2e3f4a5b70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExperienceManager
+  _pickupRadius: 0.35
+  _attractSpeed: 12
+--- !u!114 &881733445566778899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7201008992313420990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2c3d4e5f6a74890b1c2d3e4f5061728, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DropManager
   _pickupRadius: 0.35
   _attractSpeed: 12
 --- !u!114 &2294510560909223785

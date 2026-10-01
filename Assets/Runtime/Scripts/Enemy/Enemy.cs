@@ -25,6 +25,10 @@ public class Enemy : MonoBehaviour
 
     [Header("Drop")]
     [SerializeField] private ExperienceGem _experienceGem;
+    [SerializeField] private CoinDropBehavior _pocketDollarDrop;
+    [SerializeField, Range(0f, 100f)] private float _pocketDollarChance;
+    [SerializeField] private CoinDropBehavior _monsterBallDrop;
+    [SerializeField, Range(0f, 100f)] private float _monsterBallChance;
 
     private EnemyManager _owner;
     private EnemyView _view;
@@ -83,6 +87,14 @@ public class Enemy : MonoBehaviour
     public float SpawnedAt => _spawnedAt;
 
     public ExperienceGem ExperienceGem => _experienceGem;
+
+    public CoinDropBehavior PocketDollarDrop => _pocketDollarDrop;
+
+    public float PocketDollarChance => _pocketDollarChance;
+
+    public CoinDropBehavior MonsterBallDrop => _monsterBallDrop;
+
+    public float MonsterBallChance => _monsterBallChance;
 
     #region Unity Methods
 

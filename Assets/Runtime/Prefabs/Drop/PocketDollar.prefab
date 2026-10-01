@@ -10,10 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 100002}
   - component: {fileID: 100003}
-  - component: {fileID: 100004}
-  - component: {fileID: 100005}
+  - component: {fileID: -5403574402161283592}
   m_Layer: 0
-  m_Name: testEnemy 1
+  m_Name: PocketDollar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -29,8 +28,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 2, y: 2, z: 0.5}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -81,20 +80,20 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 5
+  m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0.07831335, a: 1}
+  m_Sprite: {fileID: -6865344981023876, guid: 5d3e78c25054b10468545e8e8b39ebdf, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
---- !u!114 &100004
+--- !u!114 &-5403574402161283592
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -103,38 +102,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 100001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e5a7c9d142536e7f8091a2b3c4d5e6f7, type: 3}
+  m_Script: {fileID: 11500000, guid: 2e68488ff3c229a47ba029357cf26b23, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
-  _experienceGem: {fileID: 0}
-  _pocketDollarDrop: {fileID: 0}
-  _pocketDollarChance: 0
-  _monsterBallDrop: {fileID: 0}
-  _monsterBallChance: 0
---- !u!114 &100005
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 100001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b3c4d5e6f708192a3b4c5d6e7f8091a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::CoinDropBehavior
   _spriteRenderer: {fileID: 100003}
-  _spriteFacesRight: 0
-  _framesPerSecond: 8
-  _facingMode: 0
-  _walkSprites:
-  - {fileID: -6995194538571180055, guid: cb63ee486d4b63d40ad978dfffcf6ec3, type: 3}
-  - {fileID: -6995194538571180055, guid: cb63ee486d4b63d40ad978dfffcf6ec3, type: 3}
-  _walkRight: []
-  _walkUpRight: []
-  _walkUp: []
-  _walkUpLeft: []
-  _walkLeft: []
-  _walkDownLeft: []
-  _walkDown: []
-  _walkDownRight: []
+  _amount: 1
+  _currencyId: pocket_dollar

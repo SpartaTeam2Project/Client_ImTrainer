@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -49,6 +50,7 @@ public class UIStorageWindow : MonoBehaviour
     [SerializeField] private UITrainingWindow _trainingWindow;
     [SerializeField] private GameObject _entryCharacter;
     [SerializeField] private Button _gameStartButton;
+    [SerializeField] private TMP_Text _goldText;
 
     private readonly List<StorageCharacterView> _slots = new List<StorageCharacterView>();
     private readonly List<StorageMonsterView> _monsterSlots = new List<StorageMonsterView>();
@@ -63,6 +65,7 @@ public class UIStorageWindow : MonoBehaviour
     private bool _showingMonsters;
     private int _focusIndex;
     private int _sideIndex = -1;
+    private bool _goldSubscribed;
 
     public bool IsOpen => isActiveAndEnabled;
 
@@ -80,6 +83,7 @@ public class UIStorageWindow : MonoBehaviour
 
         PrepareFilters();
         Rebuild(false);
+        RefreshGold();
     }
 
     /// <summary>
@@ -111,6 +115,9 @@ public class UIStorageWindow : MonoBehaviour
         {
             _trainingButton.onClick.AddListener(OpenTraining);
         }
+
+        SubscribeGold();
+        RefreshGold();
     }
 
     private void OnDisable()
@@ -119,6 +126,8 @@ public class UIStorageWindow : MonoBehaviour
         {
             _trainingButton.onClick.RemoveListener(OpenTraining);
         }
+
+        UnsubscribeGold();
     }
 
     private void Update()
@@ -1477,6 +1486,72 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         return inputManager != null;
+    }
+
+    private void SubscribeGold()
+    {
+        if (_goldSubscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            return;
+        }
+
+        eventManager.Subscribe<CurrencyAmountChanged>(HandleGoldChanged);
+        _goldSubscribed = true;
+    }
+
+    private void UnsubscribeGold()
+    {
+        if (!_goldSubscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            _goldSubscribed = false;
+            return;
+        }
+
+        eventManager.Unsubscribe<CurrencyAmountChanged>(HandleGoldChanged);
+        _goldSubscribed = false;
+    }
+
+    private void HandleGoldChanged(CurrencyAmountChanged changed)
+    {
+        if (!changed.IsMetaBalance || changed.CurrencyId != CurrenciesManager.POCKET_DOLLAR_ID || changed.PlayerId != ResolvePlayerId())
+        {
+            return;
+        }
+
+        SetGoldText(changed.Amount);
+    }
+
+    private void RefreshGold()
+    {
+        var amount = 0;
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
+        {
+            var save = currencies.GetCurrency(ResolvePlayerId(), CurrenciesManager.POCKET_DOLLAR_ID, true);
+            if (save != null)
+            {
+                amount = save.Amount;
+            }
+        }
+
+        SetGoldText(amount);
+    }
+
+    private static int ResolvePlayerId()
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return playerManager.LocalPlayerId;
+        }
+
+        return 1;
+    }
+
+    private void SetGoldText(int amount)
+    {
+        if (_goldText != null)
+        {
+            _goldText.text = amount.ToString();
+        }
     }
 
     private static AccountManager GetAccount()

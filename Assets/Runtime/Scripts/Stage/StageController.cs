@@ -147,6 +147,11 @@ public class StageController : MonoBehaviour
         {
             experienceManager.BeginStage(playerId);
         }
+
+        if (Managers.Instance.TryGetManager<DropManager>(out var dropManager))
+        {
+            dropManager.BeginStage(playerId);
+        }
         if (!_deathSubscribed)
         {
             playerManager.OnPlayerDied += HandlePlayerDied;
@@ -419,6 +424,11 @@ public class StageController : MonoBehaviour
             experienceManager.EndStage();
         }
 
+        if (Managers.Instance.TryGetManager<DropManager>(out var dropManager))
+        {
+            dropManager.EndStage();
+        }
+
         var killCount = 0;
         if (Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
         {
@@ -472,6 +482,11 @@ public class StageController : MonoBehaviour
         if (Managers.Instance != null && Managers.Instance.TryGetManager<ExperienceManager>(out var experienceManager))
         {
             experienceManager.EndStage();
+        }
+
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<DropManager>(out var dropManager))
+        {
+            dropManager.EndStage();
         }
 
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
