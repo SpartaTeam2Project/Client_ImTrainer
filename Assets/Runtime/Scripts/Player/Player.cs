@@ -260,11 +260,26 @@ public class Player : MonoBehaviour
         {
             return;
         }
-        var multipliedDamage = amount * Mathf.Max(0f, receivedDamageMultiplier);
-        Debug.Log("받은피해/원래피해:"+multipliedDamage+"/"+amount);
 
+        // 기존 Player/Ability 계열의 피해 감소 효과
+        var reducedDamage =
+            amount *
+            (100f - Mathf.Clamp(damageReductionPercent, 0f, 100f))
+            / 100f;
 
-        CurrentHealth = Mathf.Max(0f, CurrentHealth - multipliedDamage);
+        // Upgrade에서 추가된 받는 피해 배율
+        var finalDamage =
+            reducedDamage *
+            Mathf.Max(0f, receivedDamageMultiplier);
+
+        Debug.Log(
+            $"원래 피해: {amount} / " +
+            $"기존 피해감소 적용: {reducedDamage} / " +
+            $"최종 피해: {finalDamage}"
+        );
+
+        CurrentHealth = Mathf.Max(0f, CurrentHealth - finalDamage);
+
         if (_healthbar != null)
         {
             _healthbar.Apply(CurrentHealth, maxHealth);
@@ -276,6 +291,7 @@ public class Player : MonoBehaviour
         }
 
         IsAlive = false;
+
         if (_view != null)
         {
             _view.SetVisual(false, _lookDirection);
