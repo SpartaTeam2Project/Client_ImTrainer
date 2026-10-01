@@ -103,6 +103,21 @@ public class CameraManager : BaseManager
     }
 
     /// <summary>
+    /// 월드 좌표를 화면 뷰포트(0~1)로 바꾼다. 카메라가 없으면 false.
+    /// </summary>
+    public bool TryWorldToViewport(Vector2 worldPosition, out Vector2 viewport)
+    {
+        if (_camera == null)
+        {
+            viewport = default;
+            return false;
+        }
+
+        viewport = _camera.WorldToViewportPoint(worldPosition);
+        return true;
+    }
+
+    /// <summary>
     /// 시야 사각형 밖의 임의 점. padding은 경계에서 더 떨어진 거리.
     /// </summary>
     public Vector2 GetRandomPointOutside(float padding)

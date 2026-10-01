@@ -18,6 +18,9 @@ public class Enemy : MonoBehaviour
     private const float VOLLEY_RISE_SECONDS = 0.95f;
     private const float VOLLEY_SHOT_GAP = 0.28f;
     private const float VOLLEY_RANGE = 30f;
+    private const float DAMAGE_TEXT_INTERVAL = 0.2f;
+    private const float DAMAGE_TEXT_MIN_VALUE = 1f;
+    private const float DAMAGE_TEXT_OFFSET = 0.1f;
     private static readonly MonsterType[] DEFAULT_DEFENDER_TYPES = { MonsterType.Normal };
 
     [Header("Drop")]
@@ -53,6 +56,10 @@ public class Enemy : MonoBehaviour
     private int _volleyReleased;
     private float _nextVolleyShotTime;
     private readonly EnemyProjectile[] _volley = new EnemyProjectile[VOLLEY_COUNT];
+    private float _damageTextValue;
+    private float _lastTimeDamageText;
+    private DamageTextKind _damageTextKind;
+    private string _monsterName = string.Empty;
 
     private enum VolleyPhase
     {
@@ -118,6 +125,7 @@ public class Enemy : MonoBehaviour
         }
 
         _defenderTypes = visual != null ? visual.Types : DEFAULT_DEFENDER_TYPES;
+        _monsterName = visual != null ? visual.MonsterName : string.Empty;
         var resolvedScale = scale ?? (visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE);
         transform.localScale = new Vector3(resolvedScale, resolvedScale, 1f);
 
@@ -175,6 +183,9 @@ public class Enemy : MonoBehaviour
         _rushDirection = Vector2.zero;
         _spawnedAt = Time.time;
         _approachAt = Time.time;
+        _damageTextValue = 0f;
+        _lastTimeDamageText = 0f;
+        _damageTextKind = DamageTextKind.Neutral;
 
         if (_view == null)
         {
@@ -254,13 +265,22 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        var dealt = amount * TypeChart.GetMultiplier(attackType, _defenderTypes);
+        var multiplier = TypeChart.GetMultiplier(attackType, _defenderTypes);
+        if (multiplier <= 0f)
+        {
+            PublishImmuneText();
+            return;
+        }
+
+        var dealt = amount * multiplier;
         if (dealt <= 0f)
         {
             return;
         }
 
         _health = Mathf.Max(0f, _health - dealt);
+        _damageTextKind = DamageTextRequested.FromMultiplier(multiplier);
+        PublishDamageText(dealt);
         if (_health > 0f)
         {
             return;
@@ -275,6 +295,47 @@ public class Enemy : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    private void PublishImmuneText()
+    {
+        if (Time.unscaledTime - _lastTimeDamageText <= DAMAGE_TEXT_INTERVAL)
+        {
+            return;
+        }
+
+        _lastTimeDamageText = Time.unscaledTime;
+        var message = string.IsNullOrEmpty(_monsterName)
+            ? "효과가 없는 것 같다..."
+            : _monsterName + "에게는 효과가 없는 것 같다...";
+        PublishDamageTextEvent(message, DamageTextKind.Immune);
+    }
+
+    private void PublishDamageText(float dealt)
+    {
+        _damageTextValue += dealt;
+        if (Time.unscaledTime - _lastTimeDamageText <= DAMAGE_TEXT_INTERVAL || _damageTextValue < DAMAGE_TEXT_MIN_VALUE)
+        {
+            return;
+        }
+
+        var damageText = Mathf.RoundToInt(_damageTextValue).ToString();
+        _damageTextValue = 0f;
+        _lastTimeDamageText = Time.unscaledTime;
+        PublishDamageTextEvent(damageText, _damageTextKind);
+    }
+
+    private void PublishDamageTextEvent(string text, DamageTextKind kind)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            return;
+        }
+
+        var position = (Vector2)transform.position + new Vector2(
+            Random.Range(-DAMAGE_TEXT_OFFSET, DAMAGE_TEXT_OFFSET),
+            Random.value * DAMAGE_TEXT_OFFSET);
+        eventManager.Publish(new DamageTextRequested(position, text, kind));
+    }
 
     private bool TickRush(Vector2 playerPosition)
     {

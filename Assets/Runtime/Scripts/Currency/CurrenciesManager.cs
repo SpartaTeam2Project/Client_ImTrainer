@@ -83,6 +83,15 @@ public class CurrenciesManager : BaseManager
     }
 
     /// <summary>
+    /// 재화 아이콘. 없으면 null.
+    /// </summary>
+    public Sprite GetIcon(string currencyId)
+    {
+        var data = FindCurrency(currencyId);
+        return data == null ? null : data.Icon;
+    }
+
+    /// <summary>
     /// 수량이 충분하면 뺀다. meta가 true면 포켓달러 메타 잔액에서 뺀다.
     /// </summary>
     public bool TryWithdraw(int playerId, string currencyId, int amount, bool meta)
