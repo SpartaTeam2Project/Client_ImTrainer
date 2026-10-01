@@ -359,7 +359,7 @@ public sealed class UpgradeManager : BaseManager
         window.Open(
             _playerManager.LocalPlayerId,
             _playerManager.Level,
-            null
+            () => { Time.timeScale = 1f; }
         );
     }
 
@@ -615,6 +615,11 @@ public sealed class UpgradeManager : BaseManager
             return;
         }
 
+        OpenAugmentChoice();
+        return;
+
+        //시연때만 잠구기
+        /*
         // 10레벨 단위는 포켓몬 구매
         if (level % 10 == 0)
         {
@@ -633,7 +638,6 @@ public sealed class UpgradeManager : BaseManager
             OpenAugmentChoice();
             return;
         }
-
         // 그 외 홀수는 포켓몬 강화
         if (Managers.Instance != null &&
             Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
@@ -645,6 +649,7 @@ public sealed class UpgradeManager : BaseManager
         {
             Debug.Log("[Upgrade] Abillity를 찾지 못했습니다.");
         }
+        */
     }
     private AugmentWindowBehavior EnsureAugmentWindow()
     {
