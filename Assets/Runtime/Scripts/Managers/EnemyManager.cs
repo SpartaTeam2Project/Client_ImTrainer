@@ -517,7 +517,7 @@ public class EnemyManager : BaseManager
             profile.AttackRange,
             profile.AttackInterval,
             profile.ProjectileSpeed,
-            visual != null ? visual.ProjectileSprite : null,
+            ResolveProjectileSprite(profile, visual),
             profile.Id,
             profile.HitRadius,
             profile.AttackDistance,
@@ -542,6 +542,19 @@ public class EnemyManager : BaseManager
 
         var visual = profile.Monster;
         return visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE;
+    }
+
+    /// <summary>
+    /// 보스 클립에 탄 그림이 있으면 그 그림을 쓰고, 없으면 몬스터 그림의 탄을 쓴다.
+    /// </summary>
+    private static Sprite ResolveProjectileSprite(MonsterWaveProfile profile, MonsterVisualData visual)
+    {
+        if (profile.ProjectileSprite != null)
+        {
+            return profile.ProjectileSprite;
+        }
+
+        return visual != null ? visual.ProjectileSprite : null;
     }
 
     private float ResolveRingRadius(float radius)

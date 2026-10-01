@@ -33,6 +33,20 @@ public class FireballProjectileBehavior : MonoBehaviour
 
     private void Update()
     {
+        if (AbilityManager.IsCombatPaused())
+        {
+            if (_flying)
+            {
+                Clear();
+                if (_owner != null)
+                {
+                    _owner.NotifyFireballFinished(this);
+                }
+            }
+
+            return;
+        }
+
         if (!_flying)
         {
             return;

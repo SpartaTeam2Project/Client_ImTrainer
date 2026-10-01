@@ -16,12 +16,15 @@ public class GrassAttackAbilityBehavior : AbilityBehavior<GrassAttackAbilityData
     private readonly Dictionary<Enemy, float> _enemies = new Dictionary<Enemy, float>();
     private readonly List<Enemy> _scratch = new List<Enemy>();
     private float _lastSoundTime = -100f;
+    private bool _combatHeld;
 
     #region Unity Methods
 
     private void LateUpdate()
     {
-        if (AbilityLevel == null || !TryGetPlayer(out var player))
+        var paused = AbilityManager.IsCombatPaused();
+        HoldCombat(paused);
+        if (paused || AbilityLevel == null || !TryGetPlayer(out var player))
         {
             return;
         }
@@ -41,7 +44,7 @@ public class GrassAttackAbilityBehavior : AbilityBehavior<GrassAttackAbilityData
 
     private void Update()
     {
-        if (AbilityLevel == null || !TryGetPlayer(out var player))
+        if (AbilityManager.IsCombatPaused() || AbilityLevel == null || !TryGetPlayer(out var player))
         {
             return;
         }
@@ -52,7 +55,7 @@ public class GrassAttackAbilityBehavior : AbilityBehavior<GrassAttackAbilityData
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (AbilityLevel == null || !TryGetPlayer(out var player))
+        if (AbilityManager.IsCombatPaused() || AbilityLevel == null || !TryGetPlayer(out var player))
         {
             return;
         }
@@ -92,6 +95,25 @@ public class GrassAttackAbilityBehavior : AbilityBehavior<GrassAttackAbilityData
     #endregion
 
     #region Private Methods
+
+    private void HoldCombat(bool held)
+    {
+        if (_combatHeld == held)
+        {
+            return;
+        }
+
+        _combatHeld = held;
+        if (visuals != null)
+        {
+            visuals.gameObject.SetActive(!held);
+        }
+
+        if (abilityCollider != null)
+        {
+            abilityCollider.enabled = !held;
+        }
+    }
 
     private void TickDamage(Player player)
     {

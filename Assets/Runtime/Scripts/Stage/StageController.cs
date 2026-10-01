@@ -17,6 +17,8 @@ public class StageController : MonoBehaviour
     private bool _directorHooked;
     private bool _acceptDirectorStop;
     private bool _bossTimelinePaused;
+    private bool _manualDirector;
+    private double _bossPausedTime;
 
     public StageResult LastResult { get; private set; }
 
@@ -80,6 +82,11 @@ public class StageController : MonoBehaviour
         if (state == GameState.Playing && !_stageActive)
         {
             StartStage();
+        }
+
+        if (_manualDirector && _stageActive && !_bossTimelinePaused && state == GameState.Playing)
+        {
+            TickManualDirector();
         }
 
         if (state == GameState.Playing && _stageActive)
@@ -180,6 +187,7 @@ public class StageController : MonoBehaviour
         SubscribeDirector();
         _acceptDirectorStop = false;
         _bossTimelinePaused = false;
+        _manualDirector = false;
         _director.Stop();
         _director.playableAsset = _stageData.Timeline;
         _director.extrapolationMode = DirectorWrapMode.None;
@@ -209,8 +217,12 @@ public class StageController : MonoBehaviour
             return;
         }
 
+        _bossPausedTime = _director.time;
         _bossTimelinePaused = true;
+        _manualDirector = true;
+        _director.timeUpdateMode = DirectorUpdateMode.Manual;
         _director.Pause();
+        HoldDirectorTime(0d);
     }
 
     /// <summary>
@@ -230,7 +242,9 @@ public class StageController : MonoBehaviour
             return;
         }
 
+        HoldDirectorTime(1d);
         _director.Play();
+        HoldDirectorTime(1d);
     }
 
     /// <summary>
@@ -240,17 +254,57 @@ public class StageController : MonoBehaviour
     {
         var wasPaused = _bossTimelinePaused;
         _bossTimelinePaused = false;
+        _manualDirector = false;
         if (!wasPaused || _director == null)
         {
             return;
         }
 
-        _director.Play();
+        HoldDirectorTime(0d);
     }
 
     private void AbandonBossTimeline()
     {
         _bossTimelinePaused = false;
+        _manualDirector = false;
+    }
+
+    /// <summary>
+    /// 보스전 뒤에는 디렉터 시각을 직접 쌓는다. GameTime으로 되돌리면 멈춘 시간이 한 번에 따라붙는다.
+    /// </summary>
+    private void TickManualDirector()
+    {
+        if (_director == null)
+        {
+            return;
+        }
+
+        _director.time += Time.deltaTime;
+        _director.Evaluate();
+    }
+
+    private void HoldDirectorTime(double speed)
+    {
+        if (_director == null)
+        {
+            return;
+        }
+
+        _director.time = _bossPausedTime;
+        var graph = _director.playableGraph;
+        if (!graph.IsValid())
+        {
+            return;
+        }
+
+        var root = graph.GetRootPlayable(0);
+        if (!root.IsValid())
+        {
+            return;
+        }
+
+        root.SetTime(_bossPausedTime);
+        root.SetSpeed(speed);
     }
 
     private void SubscribeDirector()

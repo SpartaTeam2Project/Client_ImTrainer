@@ -3,44 +3,75 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 보스 클립이 울타리를 세우고, 고른 수만큼 보스를 낸 뒤 전부 죽으면 타임라인을 이어 간다.
+/// 보스 클립이 울타리를 세우고, 고정 보스 다음 후보 한 마리를 이어서 낸다.
 /// </summary>
 public static class BossArenaPlayback
 {
-    private const int MIN_SPAWN_COUNT = 1;
-    private const int MAX_SPAWN_COUNT = 6;
     private const int MAX_CANDIDATES = 5;
-    private const float SPAWN_RADIUS = 1.6f;
+    private const float RIGHT_SPAWN_INSET = 1.5f;
+    private const float APPROACH_DELAY_SECONDS = 1f;
 
     private static int _generation;
     private static int _fightToken;
     private static int _bossesLeft;
     private static RectBossFence _fence;
+    private static BossSpawnEntry _fixedBoss;
+    private static BossSpawnEntry[] _candidates;
+    private static BossFenceSpec _fenceSpec;
+    private static MonsterWaveProfile _nextBoss;
 
     /// <summary>
-    /// 일반 스폰을 막고 타임라인을 멈춘 뒤, 다음 프레임에 보스전을 연다.
+    /// 지금 연출이나 보스전이 이 토큰이면 true.
+    /// </summary>
+    public static bool IsCurrent(int token)
+    {
+        return token == _generation;
+    }
+
+    /// <summary>
+    /// 일반 스폰을 막고 타임라인을 멈춘 뒤, 트레이너 등장만 연다.
     /// </summary>
     public static void Begin(
         BossSpawnEntry fixedBoss,
         BossSpawnEntry[] candidates,
         int spawnCount,
-        BossFenceSpec fence)
+        BossFenceSpec fence,
+        BossTrainerEntranceCast entrance)
     {
         var token = ++_generation;
         _fightToken = token;
         _bossesLeft = 0;
+        _fixedBoss = fixedBoss;
+        _candidates = candidates;
+        _nextBoss = null;
+        _fenceSpec = fence;
         if (!TryGetEnemyManager(out var enemyManager))
         {
             return;
         }
 
         enemyManager.SetBossFightActive(true);
+        enemyManager.DismissAlive();
         if (TryGetStage(out var stage))
         {
             stage.PauseTimelineForBoss();
         }
 
-        OpenArenaAsync(token, fixedBoss, candidates, spawnCount, fence).Forget();
+        SetClockPaused(true);
+        BossTrainerEntrance.PlayAsync(token, entrance).Forget();
+    }
+
+    /// <summary>
+    /// 연출이 끝난 뒤 울타리를 세우고 클립에 넣은 보스를 낸다.
+    /// </summary>
+    public static void StartFight(int token)
+    {
+        if (!IsCurrent(token))
+        {
+            return;
+        }
+
+        OpenArenaAsync(token, _fixedBoss, _candidates, _fenceSpec).Forget();
     }
 
     /// <summary>
@@ -50,6 +81,9 @@ public static class BossArenaPlayback
     {
         _generation++;
         _bossesLeft = 0;
+        _nextBoss = null;
+        BossTrainerEntrance.Stop();
+        SetClockPaused(false);
         ClearFence();
         if (TryGetEnemyManager(out var enemyManager))
         {
@@ -61,7 +95,6 @@ public static class BossArenaPlayback
         int token,
         BossSpawnEntry fixedBoss,
         BossSpawnEntry[] candidates,
-        int spawnCount,
         BossFenceSpec fence)
     {
         await UniTask.NextFrame();
@@ -71,8 +104,7 @@ public static class BossArenaPlayback
         }
 
         enemyManager.DismissAlive();
-        var roster = BuildRoster(fixedBoss, candidates, spawnCount);
-        if (roster.Count == 0)
+        if (fixedBoss == null || fixedBoss.Monster == null)
         {
             Debug.LogError("보스 클립에 고정 몬스터가 없어 보스전을 건너뜁니다.");
             Finish(token);
@@ -102,18 +134,9 @@ public static class BossArenaPlayback
             return;
         }
 
+        _nextBoss = PickNextBoss(candidates);
         _bossesLeft = 0;
-        for (var i = 0; i < roster.Count; i++)
-        {
-            var position = ResolveSpawnPosition(center, i, roster.Count);
-            var enemy = enemyManager.SpawnBoss(playerId, roster[i], position, OnBossDied);
-            if (enemy != null)
-            {
-                _bossesLeft++;
-            }
-        }
-
-        if (_bossesLeft == 0)
+        if (!TrySpawnBoss(enemyManager, playerId, fixedBoss.CreateProfile(), true))
         {
             Debug.LogError("보스를 스폰하지 못해 보스전을 건너뜁니다.");
             Finish(token);
@@ -133,6 +156,16 @@ public static class BossArenaPlayback
             return;
         }
 
+        if (_nextBoss != null
+            && TryGetEnemyManager(out var enemyManager)
+            && TryGetPlayerId(out var playerId)
+            && TrySpawnBoss(enemyManager, playerId, _nextBoss))
+        {
+            _nextBoss = null;
+            return;
+        }
+
+        _nextBoss = null;
         Finish(_fightToken);
     }
 
@@ -144,7 +177,10 @@ public static class BossArenaPlayback
         }
 
         _bossesLeft = 0;
+        _nextBoss = null;
         ClearFence();
+        SetClockPaused(false);
+        PlayStageMusic();
         if (TryGetEnemyManager(out var enemyManager))
         {
             enemyManager.SetBossFightActive(false);
@@ -170,20 +206,11 @@ public static class BossArenaPlayback
         }
     }
 
-    private static List<MonsterWaveProfile> BuildRoster(BossSpawnEntry fixedBoss, BossSpawnEntry[] candidates, int spawnCount)
+    private static MonsterWaveProfile PickNextBoss(BossSpawnEntry[] candidates)
     {
-        var roster = new List<MonsterWaveProfile>();
-        if (fixedBoss == null || fixedBoss.Monster == null)
+        if (candidates == null)
         {
-            return roster;
-        }
-
-        var count = Mathf.Clamp(spawnCount, MIN_SPAWN_COUNT, MAX_SPAWN_COUNT);
-        roster.Add(fixedBoss.CreateProfile());
-        var extra = count - 1;
-        if (extra <= 0 || candidates == null)
-        {
-            return roster;
+            return null;
         }
 
         var pool = new List<BossSpawnEntry>();
@@ -197,29 +224,39 @@ public static class BossArenaPlayback
             }
         }
 
-        for (var i = pool.Count - 1; i > 0; i--)
+        if (pool.Count == 0)
         {
-            var swap = Random.Range(0, i + 1);
-            var current = pool[i];
-            pool[i] = pool[swap];
-            pool[swap] = current;
+            return null;
         }
 
-        var take = Mathf.Min(extra, pool.Count);
-        for (var i = 0; i < take; i++)
-        {
-            roster.Add(pool[i].CreateProfile());
-        }
-
-        return roster;
+        return pool[Random.Range(0, pool.Count)].CreateProfile();
     }
 
-    private static Vector2 ResolveSpawnPosition(Vector2 center, int index, int count)
+    private static bool TrySpawnBoss(EnemyManager enemyManager, int playerId, MonsterWaveProfile profile, bool holdApproach = false)
     {
-        var angle = Mathf.PI * 0.5f + Mathf.PI * 2f * index / Mathf.Max(1, count);
-        var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * SPAWN_RADIUS;
-        var position = center + offset;
-        return _fence != null ? _fence.ClampPosition(position) : position;
+        var enemy = enemyManager.SpawnBoss(playerId, profile, ResolveSpawnPosition(), OnBossDied);
+        if (enemy == null)
+        {
+            return false;
+        }
+
+        if (holdApproach)
+        {
+            enemy.HoldApproach(APPROACH_DELAY_SECONDS);
+        }
+
+        _bossesLeft++;
+        return true;
+    }
+
+    private static Vector2 ResolveSpawnPosition()
+    {
+        if (_fence == null)
+        {
+            return Vector2.zero;
+        }
+
+        return _fence.RightInnerPosition(RIGHT_SPAWN_INSET);
     }
 
     private static bool TryGetPlayerId(out int playerId)
@@ -262,6 +299,34 @@ public static class BossArenaPlayback
     {
         fieldManager = null;
         return Managers.Instance != null && Managers.Instance.TryGetManager(out fieldManager);
+    }
+
+    private static void SetClockPaused(bool paused)
+    {
+        if (Managers.Instance == null)
+        {
+            return;
+        }
+
+        var gameController = Managers.Instance.GetComponent<GameController>();
+        if (gameController != null)
+        {
+            gameController.SetClockPaused(paused);
+        }
+    }
+
+    private static void PlayStageMusic()
+    {
+        if (Managers.Instance == null)
+        {
+            return;
+        }
+
+        var gameController = Managers.Instance.GetComponent<GameController>();
+        if (gameController != null)
+        {
+            gameController.PlayStageMusic();
+        }
     }
 
     private static bool TryGetStage(out StageController stage)

@@ -46,6 +46,7 @@ public class Enemy : MonoBehaviour
     private bool _isRushing;
     private Vector2 _rushDirection;
     private float _spawnedAt;
+    private float _approachAt;
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
     private BossSkillKind _skill;
     private VolleyPhase _volleyPhase;
@@ -173,6 +174,7 @@ public class Enemy : MonoBehaviour
         _isRushing = false;
         _rushDirection = Vector2.zero;
         _spawnedAt = Time.time;
+        _approachAt = Time.time;
 
         if (_view == null)
         {
@@ -192,6 +194,14 @@ public class Enemy : MonoBehaviour
     {
         _disableOffscreenTeleport = disableOffscreenTeleport;
         _isRushing = isRushing;
+    }
+
+    /// <summary>
+    /// 이 시간 동안은 플레이어 쪽으로 걸어가지 않는다.
+    /// </summary>
+    public void HoldApproach(float seconds)
+    {
+        _approachAt = Time.time + Mathf.Max(0f, seconds);
     }
 
     /// <summary>
@@ -517,6 +527,11 @@ public class Enemy : MonoBehaviour
 
     private void MoveToward(Vector2 target, float deltaTime)
     {
+        if (Time.time < _approachAt)
+        {
+            return;
+        }
+
         var current = (Vector2)transform.position;
         var next = Vector2.MoveTowards(current, target, _moveSpeed * deltaTime);
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))

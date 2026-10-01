@@ -188,6 +188,14 @@ public abstract class Weapon : MonoBehaviour
     }
 
     /// <summary>
+    /// 이미 나간 탄을 끄고 다시 쓸 수 있게 둔다.
+    /// </summary>
+    public void DismissShots()
+    {
+        DismissActiveShots();
+    }
+
+    /// <summary>
     /// 발사 방향의 걷기 8방향을 한 바퀴 재생한다. 사격·공격으로 바꿀 때는 ShotFrames만 고친다.
     /// </summary>
     public void FaceShot(Vector2 direction)
@@ -236,6 +244,13 @@ public abstract class Weapon : MonoBehaviour
     /// 이미 나간 발사체를 진행한다.
     /// </summary>
     protected virtual void TickShots(float deltaTime)
+    {
+    }
+
+    /// <summary>
+    /// 켜져 있는 탄만 끈다. 발사체 뿌리는 남긴다.
+    /// </summary>
+    protected virtual void DismissActiveShots()
     {
     }
 

@@ -27,6 +27,8 @@ public class BossSpawnEntry
     [SerializeField] private BossSkillKind _skill = BossSkillKind.None;
     [Tooltip("상승 연사 쿨타임. 나타난 뒤 이 시간이 지나야 첫 스킬을 쓰고, 시전이 끝난 뒤에도 이 시간을 기다린다.")]
     [SerializeField, Min(0.05f)] private float _skillCooldown = 4f;
+    [Tooltip("보스 스킬 탄 그림. 플레이어 무기 탄과는 따로다.")]
+    [SerializeField] private Sprite _projectileSprite;
     [SerializeField, Min(0.5f)] private float _attackRange = 4f;
     [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
     [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
@@ -52,6 +54,7 @@ public class BossSpawnEntry
             AttackKind = _attackKind,
             Skill = _skill,
             SkillCooldown = _skillCooldown,
+            ProjectileSprite = _projectileSprite,
             AttackRange = _attackRange,
             AttackInterval = _attackInterval,
             ProjectileSpeed = _projectileSpeed,

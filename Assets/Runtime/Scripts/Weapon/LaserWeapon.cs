@@ -42,6 +42,21 @@ public class LaserWeapon : Weapon
     }
 
     /// <summary>
+    /// 켜져 있던 빔을 끈다.
+    /// </summary>
+    protected override void DismissActiveShots()
+    {
+        for (var i = 0; i < _beams.Count; i++)
+        {
+            var beam = _beams[i];
+            if (beam != null && beam.IsActive)
+            {
+                beam.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
     /// 빔 뿌리를 지운다.
     /// </summary>
     protected override void ClearShots()

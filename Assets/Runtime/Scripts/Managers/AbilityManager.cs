@@ -34,6 +34,7 @@ public class AbilityManager : BaseManager
 
     private int _playerId;
     private bool _waitingForChoice;
+    private bool _weaponsPaused;
 
     public int PendingLevelUpLevel { get; private set; }
 
@@ -282,9 +283,44 @@ public class AbilityManager : BaseManager
         }
     }
 
+    /// <summary>
+    /// 연출 동안 무기와 공격 능력이 탄을 내지 않으면 true.
+    /// </summary>
+    public bool WeaponsPaused => _weaponsPaused;
+
+    /// <summary>
+    /// 연출 중이면 공격 능력과 날아가던 탄을 멈춘다.
+    /// </summary>
+    public static bool IsCombatPaused()
+    {
+        return Managers.Instance != null
+            && Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager)
+            && abilityManager.WeaponsPaused;
+    }
+
+    /// <summary>
+    /// 연출 동안 무기 발사를 멈추고, 이미 나간 탄은 끈다.
+    /// </summary>
+    public void SetWeaponsPaused(bool paused)
+    {
+        _weaponsPaused = paused;
+        if (!paused)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] != null)
+            {
+                _weapons[i].DismissShots();
+            }
+        }
+    }
+
     private void TickWeapons()
     {
-        if (Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
+        if (_weaponsPaused || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
         {
             return;
         }

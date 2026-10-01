@@ -107,7 +107,7 @@ public class PlayerView : MonoBehaviour
     /// </summary>
     public void SetVisual(bool isMoving, Vector2 lookDirection)
     {
-        if (isMoving)
+        if (lookDirection.sqrMagnitude > 0.0001f)
         {
             _facing = CalculateFacing(lookDirection);
         }

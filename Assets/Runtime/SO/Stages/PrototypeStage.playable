@@ -1272,6 +1272,7 @@ MonoBehaviour:
     _attackKind: 0
     _skill: 1
     _skillCooldown: 3
+    _projectileSprite: {fileID: 1195778422731569831, guid: 1f9b459377338ec41af1e5f38e79b6fd, type: 3}
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1288,6 +1289,7 @@ MonoBehaviour:
     _attackKind: 0
     _skill: 0
     _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1303,6 +1305,7 @@ MonoBehaviour:
     _attackKind: 0
     _skill: 0
     _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1318,6 +1321,7 @@ MonoBehaviour:
     _attackKind: 0
     _skill: 0
     _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1333,6 +1337,7 @@ MonoBehaviour:
     _attackKind: 0
     _skill: 0
     _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1348,6 +1353,7 @@ MonoBehaviour:
     _attackKind: 0
     _skill: 0
     _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1356,8 +1362,8 @@ MonoBehaviour:
     _overrideScale: 0
     _scale: 2.7
   _spawnCount: 1
-  _fenceWidth: 17
-  _fenceHeight: 10
+  _fenceWidth: 19
+  _fenceHeight: 11
   _fenceLeft: {fileID: 4288094497685832703, guid: 28d7bd304495ffd43aa2446a694a06ea, type: 3}
   _fenceLeftScale: 3
   _fenceRight: {fileID: 4288094497685832703, guid: 28d7bd304495ffd43aa2446a694a06ea, type: 3}
@@ -1366,6 +1372,33 @@ MonoBehaviour:
   _fenceBottomScale: 4
   _fenceTopScale: 4
   _fenceGap: 0
+  _trainerDownFrames:
+  - {fileID: 1634908984768152548, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: -8826552770063398049, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: 4404668214400523724, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: -8287052514163658820, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _trainerSideFrame: {fileID: -5016787823095836124, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _exclamation: {fileID: 852928365244996250, guid: ac1a63b0677189b488503eabf5a51a37, type: 3}
+  _versusView: {fileID: 100005, guid: c4a81e7b2d9f4a6e8b0c1d3f5a7e9b24, type: 3}
+  _versusBar: {fileID: 3325770947599347893, guid: add66a62d55f0414e821ea3017afbd53, type: 3}
+  _playerBack: {fileID: 2082519854218924424, guid: b89eaa9fdac06f2468c31034dea5cd0e, type: 3}
+  _rivalFrames:
+  - {fileID: 3026923590674865393, guid: b449ed1478235b548891e29c1c3e5761, type: 3}
+  - {fileID: 2319174660098978352, guid: 923078108c6c61247bc4e0ba2c50b8ba, type: 3}
+  - {fileID: -254727304920312836, guid: 2432f0b9f5c82734c91344e5118658a6, type: 3}
+  - {fileID: -4139057910741786342, guid: 28b4d18b466690a4290a08f9a663a92e, type: 3}
+  - {fileID: -1419231400471532243, guid: d1c6f96d9b4b8b34e967795f7e16b955, type: 3}
+  - {fileID: 2897448453242058859, guid: a88746d4525d8884e9d6de7c2a50a20b, type: 3}
+  - {fileID: -5044054765975100142, guid: 7f9b409dc5143c4408723b540b44b3db, type: 3}
+  - {fileID: -6185743766938853429, guid: 1037a80edcdba274c8ff874563c53131, type: 3}
+  - {fileID: 3556605386957187059, guid: 7233ac410a9c55642a6ad7e25bfb0c26, type: 3}
+  - {fileID: 1624768951071397882, guid: 0925e370bcb20b5448361790b18509cb, type: 3}
+  _slashFrames:
+  - {fileID: -3540493305216186781, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+  - {fileID: 7295544397716448799, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+  - {fileID: -4359212648857293278, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+  - {fileID: 8368116867219356975, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+  _versusMark: {fileID: 4311642777761890676, guid: 77ee166f82008884fa7ebee5ac4cc92f, type: 3}
 --- !u!114 &3383902437049378550
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1388,7 +1421,7 @@ MonoBehaviour:
   m_Children: []
   m_Clips:
   - m_Version: 1
-    m_Start: 5.000000000000001
+    m_Start: 15
     m_ClipIn: 0
     m_Asset: {fileID: 3185281340309028865}
     m_Duration: 5

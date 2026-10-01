@@ -10,6 +10,8 @@ public class EnemyProjectile : MonoBehaviour
     private const float MIN_RISE_SECONDS = 0.05f;
     private const float FLUTTER_AMPLITUDE = 0.48f;
     private const float FLUTTER_TILT = 28f;
+    private const float FLY_SPIN_DEGREES = 420f;
+    private const float FLY_SPIN_VARIANCE = 90f;
     private const int PROJECTILE_SORTING_ORDER = 8;
     private static readonly Color PROJECTILE_COLOR = new Color(0.95f, 0.85f, 0.2f, 1f);
 
@@ -34,6 +36,7 @@ public class EnemyProjectile : MonoBehaviour
     private float _riseElapsed;
     private float _swayPhase;
     private float _swayFrequency = 6f;
+    private float _spinDegreesPerSecond;
     private Phase _phase = Phase.Holding;
 
     public bool IsRising => IsActive && _phase == Phase.Rising;
@@ -112,11 +115,12 @@ public class EnemyProjectile : MonoBehaviour
         _riseElapsed = 0f;
         _swayPhase = swayPhase;
         _swayFrequency = 5.5f + Mathf.Repeat(swayPhase, 1f) * 3.5f;
+        _spinDegreesPerSecond = 0f;
         _attackDistance = Mathf.Max(0.01f, attackDistance);
         _phase = Phase.Rising;
         transform.position = origin;
         transform.rotation = Quaternion.identity;
-        transform.localScale = new Vector3(_attackDistance, _attackDistance, 1f);
+        ApplyWorldSize(_attackDistance);
         gameObject.SetActive(true);
     }
 
@@ -130,7 +134,10 @@ public class EnemyProjectile : MonoBehaviour
             return;
         }
 
-        Launch(_playerId, transform.position, direction, speed, range, damage, hitRadius, _attackDistance);
+        // 잎마다 도는 방향과 속도를 조금씩 달리한다.
+        var spinDirection = Mathf.Repeat(_swayPhase, 2f) < 1f ? 1f : -1f;
+        var spin = spinDirection * (FLY_SPIN_DEGREES + Mathf.Repeat(_swayPhase, 1f) * FLY_SPIN_VARIANCE);
+        Launch(_playerId, transform.position, direction, speed, range, damage, hitRadius, _attackDistance, spin);
     }
 
     /// <summary>
@@ -150,20 +157,25 @@ public class EnemyProjectile : MonoBehaviour
     /// <summary>
     /// 발사 위치와 수치를 넣고 켠다. 사거리는 맞는 판정 두께만큼 더 간다.
     /// </summary>
-    public void Launch(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage, float hitRadius, float attackDistance)
+    public void Launch(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage, float hitRadius, float attackDistance, float spinDegreesPerSecond = 0f)
     {
         _playerId = playerId;
         transform.position = position;
         var size = Mathf.Max(0.01f, attackDistance);
-        transform.localScale = new Vector3(size, size, 1f);
+        ApplyWorldSize(size);
         _direction = direction.sqrMagnitude > MOVE_SQR_EPSILON ? direction.normalized : Vector2.right;
         _speed = Mathf.Max(0f, speed);
         _hitRadius = Mathf.Max(0f, hitRadius);
         _remainingRange = Mathf.Max(0f, range) + _hitRadius;
         _damage = Mathf.Max(0f, damage);
         _phase = Phase.Flying;
-        var angle = Mathf.Atan2(_direction.y, _direction.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        _spinDegreesPerSecond = spinDegreesPerSecond;
+        if (Mathf.Abs(spinDegreesPerSecond) <= MOVE_SQR_EPSILON)
+        {
+            var angle = Mathf.Atan2(_direction.y, _direction.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        }
+
         gameObject.SetActive(true);
     }
 
@@ -203,6 +215,11 @@ public class EnemyProjectile : MonoBehaviour
 
         transform.position += (Vector3)(_direction * step);
         _remainingRange -= step;
+        if (Mathf.Abs(_spinDegreesPerSecond) > MOVE_SQR_EPSILON)
+        {
+            var angle = transform.eulerAngles.z + _spinDegreesPerSecond * deltaTime;
+            transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        }
 
         if (TryHit() || _remainingRange <= 0f)
         {
@@ -213,6 +230,27 @@ public class EnemyProjectile : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// 스프라이트 픽셀 크기와 상관없이, 긴 변이 탄환 크기와 같게 맞춘다.
+    /// </summary>
+    private void ApplyWorldSize(float worldSize)
+    {
+        var spriteSize = 1f;
+        if (_renderer != null && _renderer.sprite != null)
+        {
+            var bounds = _renderer.sprite.bounds.size;
+            spriteSize = Mathf.Max(bounds.x, bounds.y);
+        }
+
+        if (spriteSize <= MOVE_SQR_EPSILON)
+        {
+            spriteSize = 1f;
+        }
+
+        var scale = worldSize / spriteSize;
+        transform.localScale = new Vector3(scale, scale, 1f);
+    }
 
     private void TickRise(float deltaTime)
     {

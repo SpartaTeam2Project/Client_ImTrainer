@@ -40,6 +40,21 @@ public class StraightWeapon : Weapon
     }
 
     /// <summary>
+    /// 날아가던 투사체를 끈다.
+    /// </summary>
+    protected override void DismissActiveShots()
+    {
+        for (var i = 0; i < _projectiles.Count; i++)
+        {
+            var projectile = _projectiles[i];
+            if (projectile != null && projectile.IsActive)
+            {
+                projectile.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
     /// 투사체 뿌리를 지운다.
     /// </summary>
     protected override void ClearShots()

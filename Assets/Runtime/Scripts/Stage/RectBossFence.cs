@@ -45,6 +45,14 @@ public sealed class RectBossFence : IStageFence
     }
 
     /// <summary>
+    /// 오른쪽 울타리에서 안쪽으로 띄운 위치. 세로는 울타리 중심이다.
+    /// </summary>
+    public Vector2 RightInnerPosition(float inset)
+    {
+        return new Vector2(_maxX - Mathf.Max(0f, inset), Center.y);
+    }
+
+    /// <summary>
     /// 좌표를 울타리 안쪽으로 되돌린다.
     /// </summary>
     public Vector2 ClampPosition(Vector2 position)

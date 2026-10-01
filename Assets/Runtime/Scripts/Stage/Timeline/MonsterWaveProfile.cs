@@ -21,6 +21,8 @@ public sealed class MonsterWaveProfile
 
     public float SkillCooldown { get; set; }
 
+    public Sprite ProjectileSprite { get; set; }
+
     public float AttackRange { get; set; }
 
     public float AttackInterval { get; set; }

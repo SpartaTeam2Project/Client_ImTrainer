@@ -89,6 +89,21 @@ public class OrbitWeapon : Weapon
     }
 
     /// <summary>
+    /// 돌고 있던 총알을 끈다.
+    /// </summary>
+    protected override void DismissActiveShots()
+    {
+        for (var i = 0; i < _projectiles.Count; i++)
+        {
+            var projectile = _projectiles[i];
+            if (projectile != null && projectile.IsActive)
+            {
+                projectile.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
     /// 궤도 총알 뿌리를 지운다.
     /// </summary>
     protected override void ClearShots()
