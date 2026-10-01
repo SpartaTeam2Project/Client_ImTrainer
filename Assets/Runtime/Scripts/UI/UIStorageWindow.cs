@@ -46,6 +46,7 @@ public class UIStorageWindow : MonoBehaviour
     [SerializeField] private Image[] _entryMonsters = System.Array.Empty<Image>();
     [SerializeField] private GameObject[] _entryLocks = System.Array.Empty<GameObject>();
     [SerializeField] private Button _trainingButton;
+    [SerializeField] private UITrainingWindow _trainingWindow;
     [SerializeField] private GameObject _entryCharacter;
     [SerializeField] private Button _gameStartButton;
 
@@ -106,11 +107,28 @@ public class UIStorageWindow : MonoBehaviour
     {
         PrepareFilters();
         Rebuild(false);
+        if (_trainingButton != null)
+        {
+            _trainingButton.onClick.AddListener(OpenTraining);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (_trainingButton != null)
+        {
+            _trainingButton.onClick.RemoveListener(OpenTraining);
+        }
     }
 
     private void Update()
     {
         if (_introScene != null && _introScene.IsOpen)
+        {
+            return;
+        }
+
+        if (_trainingWindow != null && _trainingWindow.IsOpen)
         {
             return;
         }
@@ -140,6 +158,25 @@ public class UIStorageWindow : MonoBehaviour
         {
             HandleCancel();
         }
+    }
+
+    /// <summary>
+    /// 트레이닝 창을 연다. 스토리지 목록은 그대로 둔다.
+    /// </summary>
+    private void OpenTraining()
+    {
+        if (_introScene != null && _introScene.IsOpen)
+        {
+            return;
+        }
+
+        if (_trainingWindow == null)
+        {
+            Debug.LogError("트레이닝 창이 없습니다.");
+            return;
+        }
+
+        _trainingWindow.Open();
     }
 
     private void PrepareFilters()
