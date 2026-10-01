@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 290e74631b3ca5805472c1d6a4381579, type: 3}
+  m_Name: Water Type Attack Evolution Data
+  m_EditorClassIdentifier: Assembly-CSharp::WaterTypeAttackEvolutionData
+  type: 210
+  title: "\uBB3C \uACF5\uACA9 \uC9C4\uD654"
+  description: "\uB354 \uAE38\uACE0 \uAC15\uD55C \uAD00\uD1B5 \uBE54"
+  icon: {fileID: 0}
+  prefab: {fileID: 7200000000000000001, guid: 7e53d9b86081fad5a9c7162bf98d6a24, type: 3}
+  isActiveAbility: 1
+  isWeaponAbility: 0
+  isEndgameAbility: 0
+  isEvolution: 1
+  evolutionRequirements:
+  - abilityType: 10
+    requiredWeaponAbilityLevel: 4
+    shouldRemoveAfterEvolution: 1
+  - abilityType: 110
+    requiredWeaponAbilityLevel: 0
+    shouldRemoveAfterEvolution: 0
+  levels:
+  - damage: 24
+    abilityCooldown: 1.6
+    beamLength: 9
+    beamWidth: 0.7
+    beamDuration: 0.7
+    damageInterval: 0.08

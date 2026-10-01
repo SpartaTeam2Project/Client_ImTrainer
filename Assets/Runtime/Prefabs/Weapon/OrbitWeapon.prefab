@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 250003}
   - component: {fileID: 250004}
   m_Layer: 0
-  m_Name: OrbitWeapon
+  m_Name: Weapon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -102,7 +102,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 250001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f9b2d7e0c3a4b8f9d1e2a3b4c5d6e7f, type: 3}
+  m_Script: {fileID: 11500000, guid: a8b9c0d1e2f34765a4b3c2d1e0f9a8b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _facingMode: 1
@@ -110,22 +110,3 @@ MonoBehaviour:
   _framesPerSecond: 4
   _stats:
     _followDistance: 0.45
-    _cooldown: 1
-    _damage: 8
-    _projectileCount: 2
-    _attackRange: 7
-    _projectileSpeed: 180
-    _hitRadius: 0.45
-  _statUpgrades:
-  - _stat: 0
-    _amount: 1.5
-  - _stat: 1
-    _amount: 0.15
-  - _stat: 2
-    _amount: 0.15
-  - _stat: 3
-    _amount: 2
-  _projectilePrefab: {fileID: 240004, guid: 6a0c3e8f1d4b4c9a0e2f3b4c5d6e7f80, type: 3}
-  _orbitRadius: 1.8
-  _orbitDuration: 3
-  _hitInterval: 0.5

@@ -99,6 +99,45 @@ public class PlayerManager : BaseManager
 
     public Vector2 LookDirection => _player == null ? Vector2.right : _player.LookDirection;
 
+    /// <summary>
+    /// 스폰된 플레이어의 시작 칸에 포켓몬을 붙인다.
+    /// </summary>
+    public void EquipStarting(int playerId)
+    {
+        if (!TryGetPlayer(playerId, out var player))
+        {
+            return;
+        }
+
+        player.EquipStarting(playerId);
+    }
+
+    /// <summary>
+    /// 장착한 포켓몬을 치운다.
+    /// </summary>
+    public void ClearEquipped()
+    {
+        if (_player == null)
+        {
+            return;
+        }
+
+        _player.ClearWeapons();
+    }
+
+    /// <summary>
+    /// 그 플레이어의 장착 포켓몬이 발사 방향 걷기를 재생하게 한다.
+    /// </summary>
+    public void FaceShot(int playerId, Vector2 direction)
+    {
+        if (!TryGetPlayer(playerId, out var player))
+        {
+            return;
+        }
+
+        player.FaceShot(direction);
+    }
+
 
     public float Speed => _player == null ? 0f : _player.moveSpeed * _player.moveSpeedMultiplier;
 
