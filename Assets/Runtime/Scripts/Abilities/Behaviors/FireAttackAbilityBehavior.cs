@@ -94,6 +94,17 @@ public class FireAttackAbilityBehavior : AbilityBehavior<FireAttackAbilityData, 
                 continue;
             }
 
+            if (AbilityManager.IsCombatPaused())
+            {
+                var pausedCanceled = await UniTask.Yield(token).SuppressCancellationThrow();
+                if (pausedCanceled)
+                {
+                    return;
+                }
+
+                continue;
+            }
+
             var count = Mathf.Max(0, AbilityLevel.ProjectilesCount);
             for (var i = 0; i < count; i++)
             {
@@ -102,13 +113,18 @@ public class FireAttackAbilityBehavior : AbilityBehavior<FireAttackAbilityData, 
                     return;
                 }
 
+                if (AbilityManager.IsCombatPaused())
+                {
+                    break;
+                }
+
                 LaunchOne(player);
                 if (AbilityLevel.TimeBetweenFireballs <= 0f)
                 {
                     continue;
                 }
 
-                var betweenCanceled = await UniTask.Delay(TimeSpan.FromSeconds(AbilityLevel.TimeBetweenFireballs), cancellationToken: token).SuppressCancellationThrow();
+                var betweenCanceled = await WaitSecondsAsync(AbilityLevel.TimeBetweenFireballs, token);
                 if (betweenCanceled)
                 {
                     return;
@@ -117,23 +133,37 @@ public class FireAttackAbilityBehavior : AbilityBehavior<FireAttackAbilityData, 
 
             var cooldown = AbilityLevel.AbilityCooldown * Mathf.Max(MIN_MULTIPLIER, player.cooldownMultiplier);
             cooldown -= AbilityLevel.TimeBetweenFireballs * count;
-            if (cooldown > 0f)
+            var cooldownCanceled = await WaitSecondsAsync(Mathf.Max(0f, cooldown), token);
+            if (cooldownCanceled)
             {
-                var cooldownCanceled = await UniTask.Delay(TimeSpan.FromSeconds(cooldown), cancellationToken: token).SuppressCancellationThrow();
-                if (cooldownCanceled)
-                {
-                    return;
-                }
-            }
-            else
-            {
-                var frameCanceled = await UniTask.Yield(token).SuppressCancellationThrow();
-                if (frameCanceled)
-                {
-                    return;
-                }
+                return;
             }
         }
+    }
+
+    private async UniTask<bool> WaitSecondsAsync(float seconds, CancellationToken token)
+    {
+        var elapsed = 0f;
+        while (elapsed < seconds)
+        {
+            if (token.IsCancellationRequested)
+            {
+                return true;
+            }
+
+            if (!AbilityManager.IsCombatPaused())
+            {
+                elapsed += Time.deltaTime;
+            }
+
+            var frameCanceled = await UniTask.Yield(token).SuppressCancellationThrow();
+            if (frameCanceled)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void LaunchOne(Player player)

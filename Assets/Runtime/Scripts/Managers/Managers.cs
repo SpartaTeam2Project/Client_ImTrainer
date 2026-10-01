@@ -20,6 +20,7 @@ public class Managers : MonoBehaviour
     [SerializeField] private StageFieldManager _stageFieldManager;
     [SerializeField] private EnemyManager _enemyManager;
     [SerializeField] private ExperienceManager _experienceManager;
+    [SerializeField] private DropManager _dropManager;
     [SerializeField] private CurrenciesManager _currenciesManager;
     [SerializeField] private UpgradeManager _upgradeManager;
     [SerializeField] private AbilityManager _abilityManager;
@@ -60,6 +61,7 @@ public class Managers : MonoBehaviour
         RegisterManager(_stageFieldManager);
         RegisterManager(_enemyManager);
         RegisterManager(_experienceManager);
+        RegisterManager(_dropManager);
         RegisterManager(_currenciesManager);
         RegisterManager(_upgradeManager);
         RegisterManager(_abilityManager);
@@ -161,7 +163,7 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 필드, 적, 경험치, 재화, 무기, 계정, 씬, 트레이닝 순서로 초기화한다.
+    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 필드, 적, 경험치, 드롭, 재화, 무기, 계정, 씬, 트레이닝 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
@@ -203,6 +205,11 @@ public class Managers : MonoBehaviour
         if (TryGetManager<ExperienceManager>(out var experienceManager))
         {
             await experienceManager.InitializeAsync();
+        }
+
+        if (TryGetManager<DropManager>(out var dropManager))
+        {
+            await dropManager.InitializeAsync();
         }
 
         if (TryGetManager<CurrenciesManager>(out var currenciesManager))

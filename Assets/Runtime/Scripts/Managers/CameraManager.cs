@@ -7,6 +7,8 @@ public class CameraManager : BaseManager
 {
     private Camera _camera;
     private Transform _cameraTransform;
+    private bool _hasLookPoint;
+    private Vector2 _lookPoint;
 
     public bool HasView => _camera != null && _camera.orthographic;
 
@@ -47,7 +49,7 @@ public class CameraManager : BaseManager
         }
 
         var position = _cameraTransform.position;
-        var targetPosition = target.position;
+        var targetPosition = _hasLookPoint ? (Vector3)_lookPoint : target.position;
         _cameraTransform.position = new Vector3(targetPosition.x, targetPosition.y, position.z);
     }
 
@@ -81,6 +83,38 @@ public class CameraManager : BaseManager
 
         _camera = null;
         _cameraTransform = null;
+    }
+
+    /// <summary>
+    /// 연출 동안 플레이어 대신 이 지점을 본다.
+    /// </summary>
+    public void SetLookPoint(Vector2 point)
+    {
+        _hasLookPoint = true;
+        _lookPoint = point;
+    }
+
+    /// <summary>
+    /// 연출이 끝나면 다시 플레이어를 따른다.
+    /// </summary>
+    public void ClearLookPoint()
+    {
+        _hasLookPoint = false;
+    }
+
+    /// <summary>
+    /// 월드 좌표를 화면 뷰포트(0~1)로 바꾼다. 카메라가 없으면 false.
+    /// </summary>
+    public bool TryWorldToViewport(Vector2 worldPosition, out Vector2 viewport)
+    {
+        if (_camera == null)
+        {
+            viewport = default;
+            return false;
+        }
+
+        viewport = _camera.WorldToViewportPoint(worldPosition);
+        return true;
     }
 
     /// <summary>

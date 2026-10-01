@@ -40,6 +40,12 @@ public abstract class AbilityBehavior<T, K> : MonoBehaviour, IAbilityBehavior wh
     /// </summary>
     public virtual void Clear()
     {
+        // 플레이 종료 때는 매니저 정리보다 먼저 파괴돼 있을 수 있다.
+        if (this == null)
+        {
+            return;
+        }
+
         Destroy(gameObject);
     }
 

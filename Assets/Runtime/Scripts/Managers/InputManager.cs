@@ -13,6 +13,7 @@ public class InputManager : BaseManager
     private bool _menuSubmit;
     private bool _menuCancel;
     private bool _storageFilter;
+    private bool _actionPressed;
 
     public Vector2 MovementValue => _movementValue;
 
@@ -82,6 +83,20 @@ public class InputManager : BaseManager
     }
 
     /// <summary>
+    /// 이번 프레임에 이동이나 확인을 눌렀으면 true를 반환하고 소비한다.
+    /// </summary>
+    public bool ConsumeActionPressed()
+    {
+        if (!_actionPressed)
+        {
+            return false;
+        }
+
+        _actionPressed = false;
+        return true;
+    }
+
+    /// <summary>
     /// 이번 프레임에 스토리지 필터 바로가기가 눌렸으면 true를 반환하고 소비한다. C키다.
     /// </summary>
     public bool ConsumeStorageFilter()
@@ -105,6 +120,7 @@ public class InputManager : BaseManager
         _menuSubmit = false;
         _menuCancel = false;
         _storageFilter = false;
+        _actionPressed = false;
         var keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -135,12 +151,28 @@ public class InputManager : BaseManager
         }
 
         _movementValue = Vector2.ClampMagnitude(new Vector2(horizontal, vertical), 1f);
+        if (WasMovePressed(keyboard) || keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame)
+        {
+            _actionPressed = true;
+        }
         if (keyboard.escapeKey.wasPressedThisFrame)
         {
             _pausePressed = true;
         }
 
         ReadMenuKeys(keyboard);
+    }
+
+    private static bool WasMovePressed(Keyboard keyboard)
+    {
+        return keyboard.aKey.wasPressedThisFrame
+            || keyboard.dKey.wasPressedThisFrame
+            || keyboard.wKey.wasPressedThisFrame
+            || keyboard.sKey.wasPressedThisFrame
+            || keyboard.leftArrowKey.wasPressedThisFrame
+            || keyboard.rightArrowKey.wasPressedThisFrame
+            || keyboard.upArrowKey.wasPressedThisFrame
+            || keyboard.downArrowKey.wasPressedThisFrame;
     }
 
     /// <summary>

@@ -17,6 +17,12 @@ public sealed class MonsterWaveProfile
 
     public EnemyAttackKind AttackKind { get; set; }
 
+    public BossSkillKind Skill { get; set; }
+
+    public float SkillCooldown { get; set; }
+
+    public Sprite ProjectileSprite { get; set; }
+
     public float AttackRange { get; set; }
 
     public float AttackInterval { get; set; }

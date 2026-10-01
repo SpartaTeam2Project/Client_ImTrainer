@@ -46,6 +46,7 @@ public class EnemyView : MonoBehaviour
     private MonsterVisualData _visual;
     private bool _isMoving;
     private bool _isShooting;
+    private bool _isAttacking;
     private bool _hasVisual;
     private bool _facesLeft;
     private EightWay _eightWay = EightWay.Right;
@@ -80,13 +81,14 @@ public class EnemyView : MonoBehaviour
     /// <summary>
     /// 이동 중이면 걷기 프레임을 돌린다. 8방향 모드는 추적 방향 그림을 고른다.
     /// </summary>
-    public void SetVisual(bool isMoving, Vector2 lookDirection, bool shooting = false)
+    public void SetVisual(bool isMoving, Vector2 lookDirection, bool shooting = false, bool attacking = false)
     {
         var directionChanged = ApplyDirection(lookDirection);
-        var motionChanged = !_hasVisual || isMoving != _isMoving || shooting != _isShooting;
+        var motionChanged = !_hasVisual || isMoving != _isMoving || shooting != _isShooting || attacking != _isAttacking;
         _hasVisual = true;
         _isMoving = isMoving;
         _isShooting = shooting;
+        _isAttacking = attacking;
 
         if (motionChanged)
         {
@@ -158,7 +160,8 @@ public class EnemyView : MonoBehaviour
     private void AdvanceFrames()
     {
         var frames = CurrentFrames();
-        if (!_isMoving || !HasFrames(frames) || frames.Length <= 1 || _framesPerSecond <= 0f)
+        var playing = _isMoving || _isAttacking;
+        if (!playing || !HasFrames(frames) || frames.Length <= 1 || _framesPerSecond <= 0f)
         {
             return;
         }
@@ -216,7 +219,8 @@ public class EnemyView : MonoBehaviour
             return null;
         }
 
-        if (!_isMoving || _frameIndex < 0 || _frameIndex >= frames.Length)
+        var playing = _isMoving || _isAttacking;
+        if (!playing || _frameIndex < 0 || _frameIndex >= frames.Length)
         {
             return frames[0];
         }
@@ -226,6 +230,15 @@ public class EnemyView : MonoBehaviour
 
     private Sprite[] CurrentFrames()
     {
+        if (_isAttacking)
+        {
+            var attack = GetDirectionFrames(_visual != null ? _visual.Attack : null, _eightWay);
+            if (HasFrames(attack))
+            {
+                return attack;
+            }
+        }
+
         if (_isShooting)
         {
             var shoot = GetDirectionFrames(_visual != null ? _visual.Shoot : null, _eightWay);

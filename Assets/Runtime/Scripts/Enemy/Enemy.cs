@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>
 /// 스폰된 적 한 마리의 추적, 공격, 체력을 담당한다.
 /// 웨이브가 고른 공격만 쓴다. 근거리는 접촉하고, 원거리는 사거리에서 투사체를 던진다.
+/// 상승 연사 보스는 쫓으면서 몸통 피해도 주고, 쿨타임마다 제자리에서 머리 위 총알을 쏜다.
 /// </summary>
 public class Enemy : MonoBehaviour
 {
@@ -11,10 +12,23 @@ public class Enemy : MonoBehaviour
     private const float MIN_ATTACK_RANGE = 0.5f;
     private const float MIN_SHOT_INTERVAL = 0.05f;
     private const float SHOOT_POSE_SECONDS = 0.25f;
+    private const int VOLLEY_COUNT = 5;
+    private const float VOLLEY_RISE_HEIGHT = 2.2f;
+    private const float VOLLEY_SPREAD = 0.45f;
+    private const float VOLLEY_RISE_SECONDS = 0.95f;
+    private const float VOLLEY_SHOT_GAP = 0.28f;
+    private const float VOLLEY_RANGE = 30f;
+    private const float DAMAGE_TEXT_INTERVAL = 0.2f;
+    private const float DAMAGE_TEXT_MIN_VALUE = 1f;
+    private const float DAMAGE_TEXT_OFFSET = 0.1f;
     private static readonly MonsterType[] DEFAULT_DEFENDER_TYPES = { MonsterType.Normal };
 
     [Header("Drop")]
     [SerializeField] private ExperienceGem _experienceGem;
+    [SerializeField] private CoinDropBehavior _pocketDollarDrop;
+    [SerializeField, Range(0f, 100f)] private float _pocketDollarChance;
+    [SerializeField] private CoinDropBehavior _monsterBallDrop;
+    [SerializeField, Range(0f, 100f)] private float _monsterBallChance;
 
     private EnemyManager _owner;
     private EnemyView _view;
@@ -26,6 +40,7 @@ public class Enemy : MonoBehaviour
     private EnemyAttackKind _attackKind;
     private float _attackRange;
     private float _attackInterval;
+    private float _skillCooldown;
     private int _id;
     private float _hitRadius;
     private float _attackDistance;
@@ -38,7 +53,24 @@ public class Enemy : MonoBehaviour
     private bool _isRushing;
     private Vector2 _rushDirection;
     private float _spawnedAt;
+    private float _approachAt;
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
+    private BossSkillKind _skill;
+    private VolleyPhase _volleyPhase;
+    private int _volleyReleased;
+    private float _nextVolleyShotTime;
+    private readonly EnemyProjectile[] _volley = new EnemyProjectile[VOLLEY_COUNT];
+    private float _damageTextValue;
+    private float _lastTimeDamageText;
+    private DamageTextKind _damageTextKind;
+    private string _monsterName = string.Empty;
+
+    private enum VolleyPhase
+    {
+        None = 0,
+        Rising = 1,
+        Firing = 2
+    }
 
     public int Id => _id;
 
@@ -55,6 +87,14 @@ public class Enemy : MonoBehaviour
     public float SpawnedAt => _spawnedAt;
 
     public ExperienceGem ExperienceGem => _experienceGem;
+
+    public CoinDropBehavior PocketDollarDrop => _pocketDollarDrop;
+
+    public float PocketDollarChance => _pocketDollarChance;
+
+    public CoinDropBehavior MonsterBallDrop => _monsterBallDrop;
+
+    public float MonsterBallChance => _monsterBallChance;
 
     #region Unity Methods
 
@@ -97,6 +137,7 @@ public class Enemy : MonoBehaviour
         }
 
         _defenderTypes = visual != null ? visual.Types : DEFAULT_DEFENDER_TYPES;
+        _monsterName = visual != null ? visual.MonsterName : string.Empty;
         var resolvedScale = scale ?? (visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE);
         transform.localScale = new Vector3(resolvedScale, resolvedScale, 1f);
 
@@ -122,8 +163,11 @@ public class Enemy : MonoBehaviour
         Sprite projectileSprite = null,
         int id = 0,
         float hitRadius = 0f,
-        float attackDistance = 0.45f)
+        float attackDistance = 0.45f,
+        BossSkillKind skill = BossSkillKind.None,
+        float skillCooldown = 0f)
     {
+        CancelUnfiredVolley();
         _playerId = playerId;
         _waveIndex = waveIndex;
         _id = id;
@@ -133,17 +177,27 @@ public class Enemy : MonoBehaviour
         _attackKind = attackKind;
         _attackRange = attackRange;
         _attackInterval = attackInterval;
+        _skillCooldown = ResolveSkillCooldown(skill, attackInterval, skillCooldown);
         _hitRadius = Mathf.Max(0f, hitRadius);
         _attackDistance = Mathf.Max(0.01f, attackDistance);
         _projectileSpeed = projectileSpeed;
         _projectileSprite = projectileSprite;
+        _skill = skill;
+        _volleyPhase = VolleyPhase.None;
+        _volleyReleased = 0;
         _nextContactTime = 0f;
-        _nextShotTime = 0f;
+        _nextShotTime = skill == BossSkillKind.RisingVolley
+            ? Time.time + _skillCooldown
+            : 0f;
         _shootPoseUntil = 0f;
         _disableOffscreenTeleport = false;
         _isRushing = false;
         _rushDirection = Vector2.zero;
         _spawnedAt = Time.time;
+        _approachAt = Time.time;
+        _damageTextValue = 0f;
+        _lastTimeDamageText = 0f;
+        _damageTextKind = DamageTextKind.Neutral;
 
         if (_view == null)
         {
@@ -163,6 +217,14 @@ public class Enemy : MonoBehaviour
     {
         _disableOffscreenTeleport = disableOffscreenTeleport;
         _isRushing = isRushing;
+    }
+
+    /// <summary>
+    /// 이 시간 동안은 플레이어 쪽으로 걸어가지 않는다.
+    /// </summary>
+    public void HoldApproach(float seconds)
+    {
+        _approachAt = Time.time + Mathf.Max(0f, seconds);
     }
 
     /// <summary>
@@ -191,6 +253,11 @@ public class Enemy : MonoBehaviour
             return TickRush(playerPosition);
         }
 
+        if (_skill == BossSkillKind.RisingVolley)
+        {
+            return TickRisingVolley(playerPosition);
+        }
+
         if (_attackKind == EnemyAttackKind.Projectile)
         {
             TickProjectile(playerPosition);
@@ -210,13 +277,22 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        var dealt = amount * TypeChart.GetMultiplier(attackType, _defenderTypes);
+        var multiplier = TypeChart.GetMultiplier(attackType, _defenderTypes);
+        if (multiplier <= 0f)
+        {
+            PublishImmuneText();
+            return;
+        }
+
+        var dealt = amount * multiplier;
         if (dealt <= 0f)
         {
             return;
         }
 
         _health = Mathf.Max(0f, _health - dealt);
+        _damageTextKind = DamageTextRequested.FromMultiplier(multiplier);
+        PublishDamageText(dealt);
         if (_health > 0f)
         {
             return;
@@ -232,6 +308,47 @@ public class Enemy : MonoBehaviour
 
     #region Private Methods
 
+    private void PublishImmuneText()
+    {
+        if (Time.unscaledTime - _lastTimeDamageText <= DAMAGE_TEXT_INTERVAL)
+        {
+            return;
+        }
+
+        _lastTimeDamageText = Time.unscaledTime;
+        var message = string.IsNullOrEmpty(_monsterName)
+            ? "효과가 없는 것 같다..."
+            : _monsterName + "에게는 효과가 없는 것 같다...";
+        PublishDamageTextEvent(message, DamageTextKind.Immune);
+    }
+
+    private void PublishDamageText(float dealt)
+    {
+        _damageTextValue += dealt;
+        if (Time.unscaledTime - _lastTimeDamageText <= DAMAGE_TEXT_INTERVAL || _damageTextValue < DAMAGE_TEXT_MIN_VALUE)
+        {
+            return;
+        }
+
+        var damageText = Mathf.RoundToInt(_damageTextValue).ToString();
+        _damageTextValue = 0f;
+        _lastTimeDamageText = Time.unscaledTime;
+        PublishDamageTextEvent(damageText, _damageTextKind);
+    }
+
+    private void PublishDamageTextEvent(string text, DamageTextKind kind)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            return;
+        }
+
+        var position = (Vector2)transform.position + new Vector2(
+            Random.Range(-DAMAGE_TEXT_OFFSET, DAMAGE_TEXT_OFFSET),
+            Random.value * DAMAGE_TEXT_OFFSET);
+        eventManager.Publish(new DamageTextRequested(position, text, kind));
+    }
+
     private bool TickRush(Vector2 playerPosition)
     {
         transform.position += (Vector3)(_rushDirection * _moveSpeed * Time.deltaTime);
@@ -241,6 +358,173 @@ public class Enemy : MonoBehaviour
         }
 
         return TryContactDamage(playerPosition);
+    }
+
+    private bool TickRisingVolley(Vector2 playerPosition)
+    {
+        if (_volleyPhase == VolleyPhase.None && Time.time >= _nextShotTime)
+        {
+            BeginVolley();
+        }
+
+        if (_volleyPhase != VolleyPhase.None)
+        {
+            var look = playerPosition - (Vector2)transform.position;
+            SetAttackView(look);
+            TickVolley(playerPosition);
+            return TryContactDamage(playerPosition);
+        }
+
+        MoveToward(playerPosition, Time.deltaTime);
+        return TryContactDamage(playerPosition);
+    }
+
+    private void BeginVolley()
+    {
+        if (_owner == null)
+        {
+            _nextShotTime = Time.time + _skillCooldown;
+            return;
+        }
+
+        var origin = (Vector2)transform.position;
+        var originX = -((VOLLEY_COUNT - 1) * VOLLEY_SPREAD) * 0.5f;
+        var armed = 0;
+        for (var i = 0; i < VOLLEY_COUNT; i++)
+        {
+            var swayPhase = (i + 1) * 1.37f;
+            var hover = origin + new Vector2(
+                originX + i * VOLLEY_SPREAD + Mathf.Sin(swayPhase) * 0.55f,
+                VOLLEY_RISE_HEIGHT + Mathf.Cos(swayPhase * 0.8f) * 0.4f);
+            var shot = _owner.ArmRisingProjectile(
+                _playerId,
+                origin,
+                hover,
+                VOLLEY_RISE_SECONDS,
+                _attackDistance,
+                _projectileSprite,
+                swayPhase);
+            _volley[i] = shot;
+            if (shot != null)
+            {
+                armed++;
+            }
+        }
+
+        if (armed == 0)
+        {
+            _nextShotTime = Time.time + _skillCooldown;
+            return;
+        }
+
+        _volleyPhase = VolleyPhase.Rising;
+        _volleyReleased = 0;
+    }
+
+    private void TickVolley(Vector2 playerPosition)
+    {
+        if (_volleyPhase == VolleyPhase.Rising)
+        {
+            if (!HasVolleyRisen())
+            {
+                return;
+            }
+
+            _volleyPhase = VolleyPhase.Firing;
+            _nextVolleyShotTime = Time.time;
+        }
+
+        if (_volleyPhase != VolleyPhase.Firing || Time.time < _nextVolleyShotTime)
+        {
+            return;
+        }
+
+        ReleaseNextVolleyShot(playerPosition);
+    }
+
+    private bool HasVolleyRisen()
+    {
+        for (var i = 0; i < _volley.Length; i++)
+        {
+            var shot = _volley[i];
+            if (shot != null && shot.IsRising)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void ReleaseNextVolleyShot(Vector2 playerPosition)
+    {
+        while (_volleyReleased < _volley.Length && _volley[_volleyReleased] == null)
+        {
+            _volleyReleased++;
+        }
+
+        if (_volleyReleased >= _volley.Length)
+        {
+            FinishVolley();
+            return;
+        }
+
+        var shot = _volley[_volleyReleased];
+        var origin = (Vector2)shot.transform.position;
+        var toPlayer = playerPosition - origin;
+        shot.Release(toPlayer, _projectileSpeed, VOLLEY_RANGE, _contactDamage, _hitRadius);
+        _volley[_volleyReleased] = null;
+        _volleyReleased++;
+        if (_volleyReleased >= _volley.Length)
+        {
+            FinishVolley();
+            return;
+        }
+
+        _nextVolleyShotTime = Time.time + VOLLEY_SHOT_GAP;
+    }
+
+    private void FinishVolley()
+    {
+        _volleyPhase = VolleyPhase.None;
+        _nextShotTime = Time.time + _skillCooldown;
+    }
+
+    private static float ResolveSkillCooldown(BossSkillKind skill, float attackInterval, float skillCooldown)
+    {
+        if (skill != BossSkillKind.RisingVolley)
+        {
+            return 0f;
+        }
+
+        var cooldown = skillCooldown > 0f ? skillCooldown : attackInterval;
+        return Mathf.Max(MIN_SHOT_INTERVAL, cooldown);
+    }
+
+    private void CancelUnfiredVolley()
+    {
+        for (var i = 0; i < _volley.Length; i++)
+        {
+            var shot = _volley[i];
+            if (shot != null)
+            {
+                shot.CancelIfUnfired();
+            }
+
+            _volley[i] = null;
+        }
+
+        _volleyPhase = VolleyPhase.None;
+    }
+
+    private void SetAttackView(Vector2 lookDirection)
+    {
+        if (_view == null)
+        {
+            return;
+        }
+
+        _view.SetVisual(false, lookDirection, false, true);
     }
 
     private bool TickContact(Vector2 playerPosition)
@@ -316,8 +600,18 @@ public class Enemy : MonoBehaviour
 
     private void MoveToward(Vector2 target, float deltaTime)
     {
+        if (Time.time < _approachAt)
+        {
+            return;
+        }
+
         var current = (Vector2)transform.position;
         var next = Vector2.MoveTowards(current, target, _moveSpeed * deltaTime);
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            next = fieldManager.ValidatePosition(next);
+        }
+
         transform.position = next;
 
         if (_view == null)

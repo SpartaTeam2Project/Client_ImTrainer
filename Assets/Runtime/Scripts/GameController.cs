@@ -5,10 +5,33 @@ public class GameController : MonoBehaviour
     private const string TITLE_MUSIC_NAME = "TitleScene";
     private const string MAIN_MUSIC_NAME = "MainScene";
 
+    private bool _clockPaused;
+
     /// <summary>
     /// Playing 상태 동안 쌓인 초.
     /// </summary>
     public float ElapsedSeconds { get; private set; }
+
+    /// <summary>
+    /// 스테이지 진행 중에 쓰던 브금을 다시 튼다.
+    /// </summary>
+    public void PlayStageMusic()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlayMusic(MAIN_MUSIC_NAME);
+    }
+
+    /// <summary>
+    /// 연출 동안 위쪽 경과 시간을 멈춘다.
+    /// </summary>
+    public void SetClockPaused(bool paused)
+    {
+        _clockPaused = paused;
+    }
 
     /// <summary>
     /// 지금 게임 씬에 올라와 있는 스테이지. 없으면 null.
@@ -57,7 +80,7 @@ public class GameController : MonoBehaviour
 
     private void Update()
     {
-        if (Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
+        if (_clockPaused || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
         {
             return;
         }

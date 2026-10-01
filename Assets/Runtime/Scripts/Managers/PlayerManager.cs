@@ -50,11 +50,37 @@ public class PlayerManager : BaseManager
     [SerializeField] private Player _playerPrefab;
 
     private Player _player;
+    private bool _movementLocked;
 
 
     public int LocalPlayerId => LOCAL_PLAYER_ID_VALUE;
 
     public Transform PlayerTransform => _player == null ? null : _player.transform;
+
+    /// <summary>
+    /// 서 있는 채로 플레이어가 바라보는 방향을 바꾼다.
+    /// </summary>
+    public void SetLookDirection(Vector2 direction)
+    {
+        if (_player == null)
+        {
+            return;
+        }
+
+        _player.Face(direction);
+    }
+
+    /// <summary>
+    /// 연출 동안 이동 입력을 무시한다.
+    /// </summary>
+    public void SetMovementLocked(bool locked)
+    {
+        _movementLocked = locked;
+        if (locked && _player != null)
+        {
+            _player.Move(Vector2.zero);
+        }
+    }
 
     /// <summary>
     /// 식별자가 로컬 플레이어와 같으면 그 참조를 돌려준다.
@@ -108,6 +134,12 @@ public class PlayerManager : BaseManager
     {
         if (!IsAlive || Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
         {
+            return;
+        }
+
+        if (_movementLocked)
+        {
+            _player.Move(Vector2.zero);
             return;
         }
 

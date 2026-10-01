@@ -163,6 +163,23 @@ public class Player : MonoBehaviour
     }
 
     /// <summary>
+    /// 서 있는 채로 시선을 바꾼다.
+    /// </summary>
+    public void Face(Vector2 direction)
+    {
+        if (!IsAlive || direction.sqrMagnitude <= MOVE_SQR_EPSILON)
+        {
+            return;
+        }
+
+        _lookDirection = direction.normalized;
+        if (_view != null)
+        {
+            _view.SetVisual(false, _lookDirection);
+        }
+    }
+
+    /// <summary>
     /// 전달받은 이동량으로 움직인다. 입력 출처는 모른다.
     /// </summary>
     public void Move(Vector2 movement)
