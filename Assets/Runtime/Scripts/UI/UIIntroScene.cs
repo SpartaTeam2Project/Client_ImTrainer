@@ -2,6 +2,7 @@ using System;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -33,9 +34,13 @@ public class UIIntroScene : MonoBehaviour
     private const string TITLE_MUSIC_NAME = "TitleScene";
     private const string GENDER_PROMPT = "너는 남자니, 아니면 여자니?";
     private const string STARTER_PROMPT = "밖은 위험하니 이 아이들중 하나를 데려가렴.";
+    private const string STARTER_CONFIRM_PROMPT = "{0}{1} 고를거니?";
     private const string DEFAULT_LINE = "안녕! [플레이어이름], 기다리가 해서 미안하구나";
     private const int STARTER_COUNT = 3;
     private const int GENDER_COUNT = 2;
+    private const int ANSWER_COUNT = 2;
+    private const int ANSWER_YES = 0;
+    private const int ANSWER_NO = 1;
     private const float CHARACTERS_PER_SECOND = 28f;
     private const float MIN_TYPE_DURATION = 0.15f;
     private const float OAK_FADE_DURATION = 0.6f;
@@ -48,7 +53,8 @@ public class UIIntroScene : MonoBehaviour
     {
         Dialogue,
         Gender,
-        Starter
+        Starter,
+        Answer
     }
 
     [SerializeField] private TMP_Text _dialogueText;
@@ -62,6 +68,11 @@ public class UIIntroScene : MonoBehaviour
     [SerializeField] private GameObject _girlRow;
     [SerializeField] private GameObject _boySelect;
     [SerializeField] private GameObject _girlSelect;
+    [SerializeField] private GameObject _answerRoot;
+    [SerializeField] private GameObject _yesRow;
+    [SerializeField] private GameObject _noRow;
+    [SerializeField] private GameObject _yesSelect;
+    [SerializeField] private GameObject _noSelect;
     [SerializeField] private GameObject[] _starterObjects = new GameObject[STARTER_COUNT];
     [SerializeField] private string[] _lines = { DEFAULT_LINE };
     [SerializeField] private IntroStarterOption[] _starters = new IntroStarterOption[STARTER_COUNT];
@@ -69,6 +80,7 @@ public class UIIntroScene : MonoBehaviour
     private IntroPhase _phase;
     private int _lineIndex;
     private int _choiceIndex;
+    private int _pendingStarter;
     private int _ignoreClickFrame;
     private bool _opening;
     private TrainerGender _selectedGender = TrainerGender.Boy;
@@ -187,18 +199,20 @@ public class UIIntroScene : MonoBehaviour
 
         _starterButtons = new Button[STARTER_COUNT];
         _starterImages = new Image[STARTER_COUNT];
-        BindGenderRow(_boyRow, _boySelect, TrainerGender.Boy);
-        BindGenderRow(_girlRow, _girlSelect, TrainerGender.Girl);
+        BindChoiceRow(_boyRow, _boySelect, () => ChooseGender(TrainerGender.Boy), () => FocusGender((int)TrainerGender.Boy));
+        BindChoiceRow(_girlRow, _girlSelect, () => ChooseGender(TrainerGender.Girl), () => FocusGender((int)TrainerGender.Girl));
+        BindChoiceRow(_yesRow, _yesSelect, () => ChooseAnswer(ANSWER_YES), () => FocusAnswer(ANSWER_YES));
+        BindChoiceRow(_noRow, _noSelect, () => ChooseAnswer(ANSWER_NO), () => FocusAnswer(ANSWER_NO));
         BindStarterObjects();
         SetChoiceVisible(false, false);
         ApplyGenderSelect();
     }
 
-    private void BindGenderRow(GameObject row, GameObject select, TrainerGender gender)
+    private void BindChoiceRow(GameObject row, GameObject select, Action onClick, Action onEnter)
     {
         if (row == null || select == null)
         {
-            Debug.LogError("성별 선택에 필요한 오브젝트가 없습니다.");
+            Debug.LogError("선택지에 필요한 오브젝트가 없습니다.");
             return;
         }
 
@@ -216,8 +230,8 @@ public class UIIntroScene : MonoBehaviour
 
         button.targetGraphic = row.GetComponent<Graphic>();
         button.transition = Selectable.Transition.None;
-        var captured = gender;
-        button.onClick.AddListener(() => ChooseGender(captured));
+        button.onClick.AddListener(() => onClick());
+        AddPointerEnter(row, onEnter);
     }
 
     private void BindStarterObjects()
@@ -254,8 +268,34 @@ public class UIIntroScene : MonoBehaviour
         button.transition = Selectable.Transition.None;
         var captured = index;
         button.onClick.AddListener(() => ChooseStarter(captured));
+        AddPointerEnter(starter, () => FocusStarter(captured));
         _starterButtons[index] = button;
         _starterImages[index] = image;
+    }
+
+    private static void AddPointerEnter(GameObject target, Action onEnter)
+    {
+        var trigger = target.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = target.AddComponent<EventTrigger>();
+        }
+
+        var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        entry.callback.AddListener(_ => onEnter());
+        trigger.triggers.Add(entry);
+    }
+
+    private void FocusStarter(int index)
+    {
+        if (_phase != IntroPhase.Starter || index == _choiceIndex)
+        {
+            return;
+        }
+
+        _choiceIndex = index;
+        ApplyHighlight(_starterImages, _choiceIndex);
+        PlaySound(MENU_MOVE_SOUND);
     }
 
     private void AdvanceDialogueFromInput()
@@ -308,13 +348,24 @@ public class UIIntroScene : MonoBehaviour
         ApplyGenderSelect();
     }
 
-    private void BeginStarter()
+    private void BeginStarter(int focusIndex = 0)
     {
         _phase = IntroPhase.Starter;
-        _choiceIndex = 0;
+        _choiceIndex = focusIndex;
         SetDialogue(STARTER_PROMPT);
         SetChoiceVisible(false, true);
         ApplyHighlight(_starterImages, _choiceIndex);
+    }
+
+    private void BeginAnswer(int starterIndex, MonsterVisualData visual)
+    {
+        _phase = IntroPhase.Answer;
+        _pendingStarter = starterIndex;
+        _choiceIndex = ANSWER_YES;
+        SetDialogue(string.Format(STARTER_CONFIRM_PROMPT, visual.MonsterName, ObjectParticle(visual.MonsterName)));
+        SetChoiceVisible(false, true, true);
+        ApplyHighlight(_starterImages, _pendingStarter);
+        ApplyAnswerSelect();
     }
 
     private void MoveChoiceFromInput()
@@ -332,6 +383,13 @@ public class UIIntroScene : MonoBehaviour
                 MoveGender(-move.y);
             }
         }
+        else if (_phase == IntroPhase.Answer)
+        {
+            if (move.y != 0)
+            {
+                FocusAnswer(Mathf.Clamp(_choiceIndex - move.y, 0, ANSWER_COUNT - 1));
+            }
+        }
         else if (move.x != 0)
         {
             ShiftChoice(move.x);
@@ -341,32 +399,45 @@ public class UIIntroScene : MonoBehaviour
         {
             ConfirmHighlighted();
         }
+
+        if (inputManager.ConsumeMenuCancel() && _phase == IntroPhase.Answer)
+        {
+            ChooseAnswer(ANSWER_NO);
+        }
     }
 
     private void MoveGender(int direction)
     {
-        var next = Mathf.Clamp(_choiceIndex + direction, 0, GENDER_COUNT - 1);
-        if (next == _choiceIndex)
+        FocusGender(Mathf.Clamp(_choiceIndex + direction, 0, GENDER_COUNT - 1));
+    }
+
+    private void FocusGender(int index)
+    {
+        if (_phase != IntroPhase.Gender || index == _choiceIndex)
         {
             return;
         }
 
-        _choiceIndex = next;
+        _choiceIndex = index;
         ApplyGenderSelect();
+        PlaySound(MENU_MOVE_SOUND);
+    }
+
+    private void FocusAnswer(int index)
+    {
+        if (_phase != IntroPhase.Answer || index == _choiceIndex)
+        {
+            return;
+        }
+
+        _choiceIndex = index;
+        ApplyAnswerSelect();
         PlaySound(MENU_MOVE_SOUND);
     }
 
     private void ShiftChoice(int direction)
     {
-        var previous = _choiceIndex;
-        _choiceIndex = (_choiceIndex + direction + STARTER_COUNT) % STARTER_COUNT;
-        if (_choiceIndex == previous)
-        {
-            return;
-        }
-
-        ApplyHighlight(_starterImages, _choiceIndex);
-        PlaySound(MENU_MOVE_SOUND);
+        FocusStarter((_choiceIndex + direction + STARTER_COUNT) % STARTER_COUNT);
     }
 
     private void ConfirmHighlighted()
@@ -374,6 +445,12 @@ public class UIIntroScene : MonoBehaviour
         if (_phase == IntroPhase.Gender)
         {
             ChooseGender((TrainerGender)_choiceIndex);
+            return;
+        }
+
+        if (_phase == IntroPhase.Answer)
+        {
+            ChooseAnswer(_choiceIndex);
             return;
         }
 
@@ -390,11 +467,55 @@ public class UIIntroScene : MonoBehaviour
 
     private void ChooseStarter(int index)
     {
+        if (_phase != IntroPhase.Starter)
+        {
+            return;
+        }
+
+        var visual = GetStarterVisual(index);
+        if (visual == null)
+        {
+            return;
+        }
+
+        PlaySound(BUTTON_CLICK_SOUND);
+        BeginAnswer(index, visual);
+    }
+
+    private void ChooseAnswer(int answer)
+    {
+        if (_phase != IntroPhase.Answer)
+        {
+            return;
+        }
+
+        if (answer == ANSWER_YES)
+        {
+            CompleteStarter(_pendingStarter);
+            return;
+        }
+
+        PlaySound(BUTTON_CLICK_SOUND);
+        BeginStarter(_pendingStarter);
+    }
+
+    private MonsterVisualData GetStarterVisual(int index)
+    {
         var option = GetOption(index);
         var visual = option != null ? option.Visual : null;
         if (visual == null)
         {
             Debug.LogError("스타터 그림이 연결되지 않았습니다. 인트로 인스펙터의 스타터 칸을 채우세요.");
+        }
+
+        return visual;
+    }
+
+    private void CompleteStarter(int index)
+    {
+        var visual = GetStarterVisual(index);
+        if (visual == null)
+        {
             return;
         }
 
@@ -610,11 +731,29 @@ public class UIIntroScene : MonoBehaviour
         }
     }
 
-    private void SetChoiceVisible(bool genderVisible, bool starterVisible)
+    private void ApplyAnswerSelect()
+    {
+        if (_yesSelect != null)
+        {
+            _yesSelect.SetActive(_choiceIndex == ANSWER_YES);
+        }
+
+        if (_noSelect != null)
+        {
+            _noSelect.SetActive(_choiceIndex == ANSWER_NO);
+        }
+    }
+
+    private void SetChoiceVisible(bool genderVisible, bool starterVisible, bool answerVisible = false)
     {
         if (_genderRoot != null)
         {
             _genderRoot.SetActive(genderVisible);
+        }
+
+        if (_answerRoot != null)
+        {
+            _answerRoot.SetActive(answerVisible);
         }
 
         SetStarterObjectsActive(starterVisible);
@@ -662,6 +801,23 @@ public class UIIntroScene : MonoBehaviour
         }
 
         return line.Replace(PLAYER_NAME_TOKEN, string.Empty);
+    }
+
+    // 이름 끝 글자에 받침이 있으면 "을", 없으면 "를"을 붙인다.
+    private static string ObjectParticle(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return "를";
+        }
+
+        var last = name[name.Length - 1];
+        if (last < '가' || last > '힣')
+        {
+            return "를";
+        }
+
+        return (last - '가') % 28 != 0 ? "을" : "를";
     }
 
     private bool TryConsumeSubmit()
