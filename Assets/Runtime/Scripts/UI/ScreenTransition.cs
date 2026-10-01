@@ -13,6 +13,7 @@ public class ScreenTransition : MonoBehaviour
     private const string WIPE_MATERIAL_PATH = "Materials/ScreenWipe";
     private const float DEFAULT_DURATION = 0.76f;
     private const float CLOSED_HOLD_DURATION = 0.7f;
+    private const float DEFAULT_FADE_DURATION = 0.5f;
     private const float PIXEL_SIZE = 67.5f;
     private const int SORTING_ORDER = 1000;
     private const float CLOSED_PROGRESS = 1f;
@@ -100,6 +101,26 @@ public class ScreenTransition : MonoBehaviour
     }
 
     /// <summary>
+    /// 덮인 화면을 회전 대신 알파로 서서히 걷어내 아래 화면이 페이드인되게 한다.
+    /// 페이드 중에도 덮인 상태로 보고 입력을 막는다.
+    /// </summary>
+    public Tween FadeOut(float duration = DEFAULT_FADE_DURATION)
+    {
+        KillTween();
+        SetProgress(CLOSED_PROGRESS);
+        SetAlpha(1f);
+        _wipeTween = _image.DOFade(0f, duration)
+            .SetEase(Ease.OutQuad)
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                SetProgress(OPENED_PROGRESS);
+                SetAlpha(1f);
+            });
+        return _wipeTween;
+    }
+
+    /// <summary>
     /// 화면을 덮고 대기까지 끝날 때까지 기다린다.
     /// </summary>
     public UniTask CloseAsync(CancellationToken cancellationToken = default, float duration = DEFAULT_DURATION, float holdDuration = CLOSED_HOLD_DURATION)
@@ -184,11 +205,19 @@ public class ScreenTransition : MonoBehaviour
     private Tween PlayWipe(float from, float to, float duration)
     {
         KillTween();
+        SetAlpha(1f);
         SetProgress(from);
         _wipeTween = DOTween.To(() => _progress, SetProgress, to, duration)
             .SetEase(Ease.Linear)
             .SetUpdate(true);
         return _wipeTween;
+    }
+
+    private void SetAlpha(float alpha)
+    {
+        var color = _image.color;
+        color.a = alpha;
+        _image.color = color;
     }
 
     private void SetProgress(float progress)

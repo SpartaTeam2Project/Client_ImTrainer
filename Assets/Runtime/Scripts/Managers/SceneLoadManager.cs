@@ -30,7 +30,6 @@ public class SceneLoadManager : BaseManager
             Managers.Instance.ChangeState(GameState.Loading);
             await LoadSceneAsync(SceneNames.LOADING_SCENE, LoadSceneMode.Additive, cancellationToken);
             await UnloadSceneAsync(SceneNames.TITLE_SCENE, cancellationToken);
-            OpenTransitionIfClosed();
             await LoadSceneAsync(SceneNames.GAME_SCENE, LoadSceneMode.Single, cancellationToken);
 
             if (Managers.Instance != null)
@@ -41,7 +40,6 @@ public class SceneLoadManager : BaseManager
         finally
         {
             _isLoading = false;
-            OpenTransitionIfClosed();
         }
     }
 
@@ -73,19 +71,6 @@ public class SceneLoadManager : BaseManager
         finally
         {
             _isLoading = false;
-        }
-    }
-
-    /// <summary>
-    /// 타이틀에서 덮어 둔 화면 전환이 있으면 로딩 씬이 보이도록 걷어낸다.
-    /// 로드 중 예외가 나도 화면이 덮인 채로 남지 않게 finally에서도 호출한다.
-    /// </summary>
-    private static void OpenTransitionIfClosed()
-    {
-        var transition = ScreenTransition.Instance;
-        if (transition.IsClosed)
-        {
-            transition.Open();
         }
     }
 

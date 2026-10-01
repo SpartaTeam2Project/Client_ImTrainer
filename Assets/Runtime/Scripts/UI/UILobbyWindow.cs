@@ -308,7 +308,7 @@ public class UILobbyWindow : MonoBehaviour
     {
         gameObject.SetActive(false);
         _storageWindow.Open();
-        transition.Open();
+        transition.FadeOut();
     }
 
     private void OpenRegister()

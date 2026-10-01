@@ -1,5 +1,4 @@
 using Cysharp.Threading.Tasks;
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -78,14 +77,7 @@ public class UITitleScene : MonoBehaviour
             return;
         }
 
-        var transition = ScreenTransition.Instance;
-        if (transition.IsCovering)
-        {
-            return;
-        }
-
-        // 화면을 다 덮은 뒤 로딩 씬으로 넘어간다. 걷어내는 건 SceneLoadManager가 한다.
-        transition.Close().OnComplete(() => sceneLoadManager.LoadGameAsync().Forget());
+        sceneLoadManager.LoadGameAsync().Forget();
     }
 
     private void ShowMissingSelection(bool hasTrainer, bool hasMonster)
