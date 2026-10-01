@@ -20,6 +20,22 @@ public class WorldSpaceTextManager : MonoBehaviour
     [SerializeField] private float _maxY = 20f;
     [SerializeField] private float _duration = 1f;
 
+    private const float VERY_SUPER_SCALE = 1.45f;
+    private const float SUPER_SCALE = 1.2f;
+    private const float NEUTRAL_SCALE = 1f;
+    private const float RESISTED_SCALE = 0.85f;
+    private const float VERY_RESISTED_SCALE = 0.75f;
+    private const float NUMBER_FONT_SIZE = 56f;
+    private const float NUMBER_WIDTH = 200f;
+    private const float IMMUNE_FONT_SIZE = 28f;
+    private const float IMMUNE_WIDTH = 720f;
+
+    private static readonly Color VERY_SUPER_COLOR = new Color(1f, 0.72f, 0.05f);
+    private static readonly Color SUPER_COLOR = new Color(1f, 0.92f, 0.35f);
+    private static readonly Color NEUTRAL_COLOR = Color.white;
+    private static readonly Color RESISTED_COLOR = new Color(0.62f, 0.62f, 0.62f);
+    private static readonly Color VERY_RESISTED_COLOR = new Color(0.35f, 0.35f, 0.35f);
+
     private StageObjectPool<TextIndicatorBehavior> _pool;
     private readonly List<ActiveIndicator> _active = new List<ActiveIndicator>();
     private bool _subscribed;
@@ -95,7 +111,7 @@ public class WorldSpaceTextManager : MonoBehaviour
                 continue;
             }
 
-            var scale = _scaleCurve.Evaluate(t) * _maxScale;
+            var scale = _scaleCurve.Evaluate(t) * _maxScale * data.StyleScale;
             var anchoredY = _positionCurve.Evaluate(t) * _maxY;
             data.Indicator.SetAnimationParameters(scale, anchoredY, viewport);
         }
@@ -112,9 +128,9 @@ public class WorldSpaceTextManager : MonoBehaviour
     #region Public Methods
 
     /// <summary>
-    /// 월드 좌표에 피해 숫자를 띄운다.
+    /// 월드 좌표에 피해 숫자나 무효 문장을 띄운다.
     /// </summary>
-    public void SpawnText(Vector2 worldPosition, string text)
+    public void SpawnText(Vector2 worldPosition, string text, DamageTextKind kind)
     {
         if (_pool == null || string.IsNullOrEmpty(text) || Managers.Instance == null)
         {
@@ -142,15 +158,18 @@ public class WorldSpaceTextManager : MonoBehaviour
             return;
         }
 
+        var styleScale = ResolveStyle(kind, out var color, out var fontSize, out var width);
         indicator.SetText(text);
-        var scale = _scaleCurve.Evaluate(0f) * _maxScale;
+        indicator.SetAppearance(color, fontSize, width);
+        var scale = _scaleCurve.Evaluate(0f) * _maxScale * styleScale;
         var anchoredY = _positionCurve.Evaluate(0f) * _maxY;
         indicator.SetAnimationParameters(scale, anchoredY, viewport);
         _active.Add(new ActiveIndicator
         {
             Indicator = indicator,
             SpawnTime = Time.time,
-            WorldPosition = worldPosition
+            WorldPosition = worldPosition,
+            StyleScale = styleScale
         });
     }
 
@@ -176,7 +195,7 @@ public class WorldSpaceTextManager : MonoBehaviour
 
     private void HandleDamageTextRequested(DamageTextRequested requested)
     {
-        SpawnText(requested.WorldPosition, requested.Text);
+        SpawnText(requested.WorldPosition, requested.Text, requested.Kind);
     }
 
     private void HandleGameStateChanged(GameStateChanged changed)
@@ -190,6 +209,35 @@ public class WorldSpaceTextManager : MonoBehaviour
     private static bool IsResultScreen(GameState state)
     {
         return state == GameState.Victory || state == GameState.Defeat;
+    }
+
+    private static float ResolveStyle(DamageTextKind kind, out Color color, out float fontSize, out float width)
+    {
+        fontSize = NUMBER_FONT_SIZE;
+        width = NUMBER_WIDTH;
+        switch (kind)
+        {
+            case DamageTextKind.VerySuper:
+                color = VERY_SUPER_COLOR;
+                return VERY_SUPER_SCALE;
+            case DamageTextKind.Super:
+                color = SUPER_COLOR;
+                return SUPER_SCALE;
+            case DamageTextKind.Resisted:
+                color = RESISTED_COLOR;
+                return RESISTED_SCALE;
+            case DamageTextKind.VeryResisted:
+                color = VERY_RESISTED_COLOR;
+                return VERY_RESISTED_SCALE;
+            case DamageTextKind.Immune:
+                color = NEUTRAL_COLOR;
+                fontSize = IMMUNE_FONT_SIZE;
+                width = IMMUNE_WIDTH;
+                return NEUTRAL_SCALE;
+            default:
+                color = NEUTRAL_COLOR;
+                return NEUTRAL_SCALE;
+        }
     }
 
     private void HideActiveIndicators()
@@ -213,5 +261,6 @@ public class WorldSpaceTextManager : MonoBehaviour
         public TextIndicatorBehavior Indicator;
         public float SpawnTime;
         public Vector2 WorldPosition;
+        public float StyleScale;
     }
 }

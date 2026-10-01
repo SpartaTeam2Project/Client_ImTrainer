@@ -44,6 +44,8 @@ public class Enemy : MonoBehaviour
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
     private float _damageTextValue;
     private float _lastTimeDamageText;
+    private DamageTextKind _damageTextKind;
+    private string _monsterName = string.Empty;
 
     public int Id => _id;
 
@@ -102,6 +104,7 @@ public class Enemy : MonoBehaviour
         }
 
         _defenderTypes = visual != null ? visual.Types : DEFAULT_DEFENDER_TYPES;
+        _monsterName = visual != null ? visual.MonsterName : string.Empty;
         var resolvedScale = scale ?? (visual != null ? visual.Scale : MonsterVisualData.DEFAULT_SCALE);
         transform.localScale = new Vector3(resolvedScale, resolvedScale, 1f);
 
@@ -151,6 +154,7 @@ public class Enemy : MonoBehaviour
         _spawnedAt = Time.time;
         _damageTextValue = 0f;
         _lastTimeDamageText = 0f;
+        _damageTextKind = DamageTextKind.Neutral;
 
         if (_view == null)
         {
@@ -217,13 +221,21 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        var dealt = amount * TypeChart.GetMultiplier(attackType, _defenderTypes);
+        var multiplier = TypeChart.GetMultiplier(attackType, _defenderTypes);
+        if (multiplier <= 0f)
+        {
+            PublishImmuneText();
+            return;
+        }
+
+        var dealt = amount * multiplier;
         if (dealt <= 0f)
         {
             return;
         }
 
         _health = Mathf.Max(0f, _health - dealt);
+        _damageTextKind = DamageTextRequested.FromMultiplier(multiplier);
         PublishDamageText(dealt);
         if (_health > 0f)
         {
@@ -240,6 +252,20 @@ public class Enemy : MonoBehaviour
 
     #region Private Methods
 
+    private void PublishImmuneText()
+    {
+        if (Time.unscaledTime - _lastTimeDamageText <= DAMAGE_TEXT_INTERVAL)
+        {
+            return;
+        }
+
+        _lastTimeDamageText = Time.unscaledTime;
+        var message = string.IsNullOrEmpty(_monsterName)
+            ? "효과가 없는 것 같다..."
+            : _monsterName + "에게는 효과가 없는 것 같다...";
+        PublishDamageTextEvent(message, DamageTextKind.Immune);
+    }
+
     private void PublishDamageText(float dealt)
     {
         _damageTextValue += dealt;
@@ -249,18 +275,22 @@ public class Enemy : MonoBehaviour
         }
 
         var damageText = Mathf.RoundToInt(_damageTextValue).ToString();
-        var position = (Vector2)transform.position + new Vector2(
-            Random.Range(-DAMAGE_TEXT_OFFSET, DAMAGE_TEXT_OFFSET),
-            Random.value * DAMAGE_TEXT_OFFSET);
         _damageTextValue = 0f;
         _lastTimeDamageText = Time.unscaledTime;
+        PublishDamageTextEvent(damageText, _damageTextKind);
+    }
 
+    private void PublishDamageTextEvent(string text, DamageTextKind kind)
+    {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
         {
             return;
         }
 
-        eventManager.Publish(new DamageTextRequested(position, damageText));
+        var position = (Vector2)transform.position + new Vector2(
+            Random.Range(-DAMAGE_TEXT_OFFSET, DAMAGE_TEXT_OFFSET),
+            Random.value * DAMAGE_TEXT_OFFSET);
+        eventManager.Publish(new DamageTextRequested(position, text, kind));
     }
 
     private bool TickRush(Vector2 playerPosition)

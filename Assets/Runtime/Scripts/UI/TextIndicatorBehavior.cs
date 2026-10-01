@@ -23,6 +23,31 @@ public class TextIndicatorBehavior : MonoBehaviour
     }
 
     /// <summary>
+    /// 글자색, 크기, 가로폭을 넣는다. 프리팹 그라데이션은 끈다.
+    /// </summary>
+    public void SetAppearance(Color color, float fontSize, float width)
+    {
+        if (_textComponent != null)
+        {
+            _textComponent.enableVertexGradient = false;
+            _textComponent.color = color;
+            _textComponent.fontSize = fontSize;
+            var textSize = _textComponent.rectTransform.sizeDelta;
+            textSize.x = width;
+            _textComponent.rectTransform.sizeDelta = textSize;
+        }
+
+        if (_rectTransform == null)
+        {
+            return;
+        }
+
+        var size = _rectTransform.sizeDelta;
+        size.x = width;
+        _rectTransform.sizeDelta = size;
+    }
+
+    /// <summary>
     /// 부모 캔버스에서 뷰포트에 해당하는 앵커로 옮긴다.
     /// </summary>
     public void SetAnchors(Vector2 viewportPosition)
