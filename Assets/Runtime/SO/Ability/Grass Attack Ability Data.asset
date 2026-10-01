@@ -11,10 +11,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cf25a72befbdcc344b1e2351c814c97a, type: 3}
   m_Name: Grass Attack Ability Data
-  m_EditorClassIdentifier: Assembly-CSharp::GrassAttackAbilityData
+  m_EditorClassIdentifier: Assembly-CSharp::GrassTypeAttackData
   type: 11
-  title: 
-  description: 
+  title: "\uD480 \uACF5\uACA9"
+  description: "\uC8FC\uC704\uB97C \uC7A0\uC2DC \uB3C4\uB294 \uBCC4"
   icon: {fileID: 0}
   prefab: {fileID: 6046089768498997805, guid: 7788118687ac2254e9574b5bcaf6d2ff, type: 3}
   isActiveAbility: 1
@@ -23,6 +23,33 @@ MonoBehaviour:
   isEvolution: 0
   evolutionRequirements: []
   levels:
-  - fieldRadius: 1.5
-    damage: 30
-    damageCooldown: 1
+  - damage: 5
+    abilityCooldown: 6
+    projectileLifetime: 3
+    projectilesCount: 2
+    radius: 1.5
+    angularSpeed: -200
+  - damage: 10
+    abilityCooldown: 6
+    projectileLifetime: 3
+    projectilesCount: 3
+    radius: 1.5
+    angularSpeed: -200
+  - damage: 10
+    abilityCooldown: 6
+    projectileLifetime: 3
+    projectilesCount: 4
+    radius: 1.5
+    angularSpeed: -200
+  - damage: 15
+    abilityCooldown: 6
+    projectileLifetime: 3
+    projectilesCount: 5
+    radius: 1.5
+    angularSpeed: -250
+  - damage: 20
+    abilityCooldown: 6
+    projectileLifetime: 3
+    projectilesCount: 6
+    radius: 1.5
+    angularSpeed: -300

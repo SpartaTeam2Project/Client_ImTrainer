@@ -1,3 +1,5 @@
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -67,5 +69,50 @@ public abstract class AbilityBehavior<T, K> : MonoBehaviour, IAbilityBehavior wh
         }
 
         return playerManager.TryGetPlayer(PlayerId, out player);
+    }
+
+    /// <summary>
+    /// 일시정지 시간을 제외하고 기다린다. 취소되면 true.
+    /// </summary>
+    protected async UniTask<bool> WaitCombatSecondsAsync(float seconds, CancellationToken token)
+    {
+        var elapsed = 0f;
+        while (elapsed < seconds)
+        {
+            if (token.IsCancellationRequested)
+            {
+                return true;
+            }
+
+            if (!AbilityManager.IsCombatPaused())
+            {
+                elapsed += Time.deltaTime;
+            }
+
+            var frameCanceled = await UniTask.Yield(token).SuppressCancellationThrow();
+            if (frameCanceled)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 이번 판 포켓몬의 공격 타입. 없으면 노말.
+    /// </summary>
+    protected MonsterType ResolveAttackType()
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<AccountManager>(out var account))
+        {
+            var monster = account.ResolveRunMonster();
+            if (monster != null)
+            {
+                return monster.PrimaryType;
+            }
+        }
+
+        return MonsterType.Normal;
     }
 }
