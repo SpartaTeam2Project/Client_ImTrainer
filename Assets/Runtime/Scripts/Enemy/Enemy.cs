@@ -11,6 +11,9 @@ public class Enemy : MonoBehaviour
     private const float MIN_ATTACK_RANGE = 0.5f;
     private const float MIN_SHOT_INTERVAL = 0.05f;
     private const float SHOOT_POSE_SECONDS = 0.25f;
+    private const float DAMAGE_TEXT_INTERVAL = 0.2f;
+    private const float DAMAGE_TEXT_MIN_VALUE = 1f;
+    private const float DAMAGE_TEXT_OFFSET = 0.1f;
     private static readonly MonsterType[] DEFAULT_DEFENDER_TYPES = { MonsterType.Normal };
 
     [Header("Drop")]
@@ -39,6 +42,8 @@ public class Enemy : MonoBehaviour
     private Vector2 _rushDirection;
     private float _spawnedAt;
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
+    private float _damageTextValue;
+    private float _lastTimeDamageText;
 
     public int Id => _id;
 
@@ -144,6 +149,8 @@ public class Enemy : MonoBehaviour
         _isRushing = false;
         _rushDirection = Vector2.zero;
         _spawnedAt = Time.time;
+        _damageTextValue = 0f;
+        _lastTimeDamageText = 0f;
 
         if (_view == null)
         {
@@ -217,6 +224,7 @@ public class Enemy : MonoBehaviour
         }
 
         _health = Mathf.Max(0f, _health - dealt);
+        PublishDamageText(dealt);
         if (_health > 0f)
         {
             return;
@@ -231,6 +239,29 @@ public class Enemy : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    private void PublishDamageText(float dealt)
+    {
+        _damageTextValue += dealt;
+        if (Time.unscaledTime - _lastTimeDamageText <= DAMAGE_TEXT_INTERVAL || _damageTextValue < DAMAGE_TEXT_MIN_VALUE)
+        {
+            return;
+        }
+
+        var damageText = Mathf.RoundToInt(_damageTextValue).ToString();
+        var position = (Vector2)transform.position + new Vector2(
+            Random.Range(-DAMAGE_TEXT_OFFSET, DAMAGE_TEXT_OFFSET),
+            Random.value * DAMAGE_TEXT_OFFSET);
+        _damageTextValue = 0f;
+        _lastTimeDamageText = Time.unscaledTime;
+
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            return;
+        }
+
+        eventManager.Publish(new DamageTextRequested(position, damageText));
+    }
 
     private bool TickRush(Vector2 playerPosition)
     {
