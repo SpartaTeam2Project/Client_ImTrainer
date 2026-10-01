@@ -35,6 +35,9 @@ public class Player : MonoBehaviour
 
     public float moveSpeed { get; private set; }
 
+    public float moveSpeedMultiplier { get; private set; } = 1f;
+    public float receivedDamageMultiplier { get; private set; } = 1f;
+
     public float damageMultiplier { get; private set; } = 1f;
 
     public float magnetRadius { get; private set; }
@@ -104,6 +107,8 @@ public class Player : MonoBehaviour
         maxHealth = Mathf.Max(1f, _maxHealth);
         CurrentHealth = maxHealth;
         moveSpeed = Mathf.Max(0f, _moveSpeed);
+        moveSpeedMultiplier = 1f;
+        receivedDamageMultiplier = 1f;
         damageMultiplier = Mathf.Max(0f, _damageMultiplier);
         magnetRadius = Mathf.Max(0f, _magnetRadius);
         xpMultiplier = Mathf.Max(0f, _xpMultiplier);
@@ -173,7 +178,7 @@ public class Player : MonoBehaviour
             _lookDirection = movement.normalized;
         }
 
-        var delta = movement * moveSpeed * Time.deltaTime;
+        var delta = movement * moveSpeed * moveSpeedMultiplier *Time.deltaTime;
         var next = (Vector2)transform.position + delta;
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
@@ -186,6 +191,39 @@ public class Player : MonoBehaviour
             _view.SetVisual(isMoving, _lookDirection);
         }
     }
+
+    //upgrade 관련 API입니다.(for client)
+    #region UpgradeAPI
+    /// <summary>
+    /// Upgrade에 의한 이동속도 배율을 합연산으로 누적한다.
+    /// input:0.2f = 20%
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddMoveSpeedMultiplier(float value)
+    {
+        moveSpeedMultiplier = Mathf.Max(0f, moveSpeedMultiplier + value);
+    }
+
+    /// <summary>
+    /// Upgrade에 의한 경험치 배율을 합연산으로 누적한다.
+    /// input:0.2f = 20%
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddXpMultiplier(float value)
+    {
+        xpMultiplier = Mathf.Max(0f, xpMultiplier + value);
+    }
+
+    /// <summary>
+    /// Upgrade에 의한 받는 피해 배율을 합연산으로 누적한다.
+    /// input:-0.1f = -10% (받는피해 10%감소)
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddReceivedDamageMultiplier(float value)
+    {
+        receivedDamageMultiplier= Mathf.Max(0f, receivedDamageMultiplier + value);
+    }
+    #endregion
 
     /// <summary>
     /// 피해를 받는다. 체력이 0이면 소유 매니저에 사망을 알린다.
@@ -270,7 +308,7 @@ public class Player : MonoBehaviour
     /// </summary>
     public void RecalculateDamage(float multiplier)
     {
-        damageMultiplier = Mathf.Max(0f, _damageMultiplier) * Mathf.Max(0f, multiplier);
+        damageMultiplier = Mathf.Max(0f, _damageMultiplier) + Mathf.Max(0f, multiplier);
     }
 
     /// <summary>
@@ -280,7 +318,7 @@ public class Player : MonoBehaviour
     {
         moveSpeed = Mathf.Max(0f, _moveSpeed) * Mathf.Max(0f, multiplier);
     }
-
+    
     /// <summary>
     /// 최대 체력 배율을 기본값에 곱하고, 현재 체력 비율은 유지한다.
     /// </summary>

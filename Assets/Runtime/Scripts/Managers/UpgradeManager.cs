@@ -21,9 +21,9 @@ public sealed class UpgradeManager : BaseManager
         MoveSpeed,
         ReceivedDamage,
         Experience,
+        Damage,
 
         // 이후 추가
-        Damage,
         Health,
         ProjectileCount,
         ProjectileSpeed,
@@ -235,9 +235,6 @@ public sealed class UpgradeManager : BaseManager
     private bool _active;
     private int _offerNumber;
 
-    public float MoveSpeedMultiplier { get; private set; } = 1f;
-    public float ReceivedDamageMultiplier { get; private set; } = 1f;
-    public float ExperienceMultiplier { get; private set; } = 1f;
     public IReadOnlyList<UpgradeDefinition> CurrentChoices => _choices;
 
     private void Update()
@@ -342,9 +339,6 @@ public sealed class UpgradeManager : BaseManager
         _choices.Clear();
         _candidates.Clear();
         _offerNumber = 0;
-        MoveSpeedMultiplier = 1f;
-        ReceivedDamageMultiplier = 1f;
-        ExperienceMultiplier = 1f;
     }
 
     private void OpenAugmentChoice()
@@ -390,8 +384,8 @@ public sealed class UpgradeManager : BaseManager
     }
 
     /// <summary>
-    /// 현재 선택지 index를 받아 해당 Upgrade Level을 1 증가시키고,
-    /// 모든 보유 Upgrade의 Effects를 기준으로 최종 배율을 다시 계산한다.
+    /// 선택한 Upgrade의 Level을 증가시키고,
+    /// 해당 Upgrade의 Effects를 적용한다.
     /// </summary>
     public bool TrySelectChoice(int choiceIndex)
     {
@@ -415,17 +409,35 @@ public sealed class UpgradeManager : BaseManager
         // 선택한 Upgrade Level 증가
         _levels[chosen.Id] = previousLevel + 1;
 
-        /*
-         * 기존 배율에 계속 값을 더하거나 곱하지 않는다.
-         *
-         * 현재 보유하고 있는 모든 Upgrade Level을 기준으로
-         * 처음부터 다시 계산한다.
-         *
-         * 따라서 Upgrade 선택 순서에 영향을 받지 않는다.
-         */
-        var speedBonus = 0f;
         var damageChange = 0f;
-        var xpBonus = 0f;
+
+        foreach(var effect in chosen.Effects)
+        {
+            if (effect.Target != UpgradeTarget.Player)
+            {
+                continue;
+            }
+
+            //move speed의 multiplier값을 증감시킨다.
+            switch (effect.Type)
+            {
+                case UpgradeEffectType.MoveSpeed:
+                    _playerManager.AddMoveSpeedMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
+                case UpgradeEffectType.Experience:
+                    _playerManager.AddXpMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
+                case UpgradeEffectType.ReceivedDamage:
+                    _playerManager.AddReceiveDamageMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
+                default:
+                    Debug.LogWarning(
+                        $"[증강] 처리되지 않은 Player Effect Type: {effect.Type}",
+                        this
+                    );
+                    break;
+            }
+        }
 
         foreach (var definition in _definitions)
         {
@@ -452,15 +464,12 @@ public sealed class UpgradeManager : BaseManager
                 switch (effect.Type)
                 {
                     case UpgradeEffectType.MoveSpeed:
-                        speedBonus += totalValue;
                         break;
-
                     case UpgradeEffectType.ReceivedDamage:
                         damageChange += totalValue;
                         break;
 
                     case UpgradeEffectType.Experience:
-                        xpBonus += totalValue;
                         break;
 
                     default:
@@ -473,27 +482,6 @@ public sealed class UpgradeManager : BaseManager
             }
         }
 
-        // 기본값 1에 모든 증강 효과를 합산한다.
-        MoveSpeedMultiplier =
-            Mathf.Max(0f, 1f + speedBonus);
-
-        ReceivedDamageMultiplier =
-            Mathf.Max(0f, 1f + damageChange);
-
-        ExperienceMultiplier =
-            Mathf.Max(0f, 1f + xpBonus);
-
-        Debug.Log(
-            $"[증강 선택] {chosen.Name}: " +
-            $"Lv.{previousLevel} => Lv.{GetLevel(chosen.Id)}/{chosen.MaxLevel}, " +
-            $"다음 추첨 weight={GetWeight(chosen.Id):0.###}\n" +
-            $"[증강 합계] " +
-            $"이동 x{MoveSpeedMultiplier:0.###} " +
-            $"(실제 속도 {_playerManager.Speed:0.###}), " +
-            $"받는 피해 x{ReceivedDamageMultiplier:0.###}, " +
-            $"획득 경험치 x{ExperienceMultiplier:0.###}",
-            this
-        );
 
         // Upgrade Sequence 종료
         _active = false;

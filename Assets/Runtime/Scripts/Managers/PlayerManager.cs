@@ -50,7 +50,6 @@ public class PlayerManager : BaseManager
     [SerializeField] private Player _playerPrefab;
 
     private Player _player;
-    private UpgradeManager _upgradeManager;
 
 
     public int LocalPlayerId => LOCAL_PLAYER_ID_VALUE;
@@ -75,11 +74,7 @@ public class PlayerManager : BaseManager
     public Vector2 LookDirection => _player == null ? Vector2.right : _player.LookDirection;
 
 
-    public float Speed =>
-    _player == null
-        ? 0f
-        : _player.moveSpeed *
-          (_upgradeManager != null ? _upgradeManager.MoveSpeedMultiplier : 1f);
+    public float Speed => _player == null ? 0f : _player.moveSpeed * _player.moveSpeedMultiplier;
 
     public float MagnetRadius => _player == null ? 0f : _player.magnetRadius;
 
@@ -121,9 +116,8 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        var movementMultiplier = _upgradeManager != null ? _upgradeManager.MoveSpeedMultiplier : 1f;
 
-        _player.Move(inputManager.MovementValue * movementMultiplier);
+        _player.Move(inputManager.MovementValue);
     }
 
     #endregion
@@ -140,11 +134,9 @@ public class PlayerManager : BaseManager
         _player = CreatePlayer();
         _player.Bind(this);
         _player.Initialize();
+
         ApplySelectedPlayable();
-        if (Managers.Instance != null)
-        {
-            Managers.Instance.TryGetManager<UpgradeManager>(out _upgradeManager);
-        }
+
         return LocalPlayerId;
     }
 
@@ -159,19 +151,39 @@ public class PlayerManager : BaseManager
         }
 
         var levelBefore = _player.Level;
-        var gainedXp =
-            amount *
-            (_upgradeManager != null
-                ? _upgradeManager.ExperienceMultiplier
-                : 1f);
-
-        _player.AddExperience(gainedXp);
+        _player.AddExperience(amount);
         PublishExperience(playerId);
         for (var level = levelBefore + 1; level <= _player.Level; level++)
         {
             NotifyLevelUp(playerId, level);
         }
     }
+
+    #region PlayerStatAPI
+    /// <summary>
+    /// Player의 Upgrade 이동속도 배율을 증가시킨다. value=0.1f=10%만큼 배율 증가
+    /// </summary>
+    /// <param name="playerId"></param>
+    /// <param name="value"></param>
+    public void AddMoveSpeedMultiplier(int playerId,float value)
+    {
+        if (playerId != LocalPlayerId || _player == null) return;
+
+        _player.AddMoveSpeedMultiplier(value);
+    }
+
+    public void AddXpMultiplier(int playerId,float value)
+    {
+        if(playerId!=LocalPlayerId || _player == null) return;
+        _player.AddXpMultiplier(value);
+    }
+
+    public void AddReceiveDamageMultiplier(int playerId,float value)
+    {
+        if (playerId != LocalPlayerId || _player == null) return;
+        _player.AddReceivedDamageMultiplier(value);
+    }
+    #endregion
 
     /// <summary>
     /// 플레이어 식별자에 피해를 준다.
@@ -183,13 +195,7 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        var appliedDamage =
-            amount *
-            (_upgradeManager != null
-                ? _upgradeManager.ReceivedDamageMultiplier
-                : 1f);
-
-        _player.TakeDamage(appliedDamage);
+        _player.TakeDamage(amount);
     }
 
     /// <summary>
