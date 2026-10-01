@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,10 +27,23 @@ public class UIGameScene : MonoBehaviour
     private const float HP_MEDIUM_THRESHOLD = 0.5f;
     private const float HP_LOW_THRESHOLD = 0.25f;
     private const int HP_BAR_PIXELS = 48;
+    private const float HP_TWEEN_DURATION = 0.3f;
+    private const float EXP_TWEEN_DURATION = 0.4f;
 
     private GameController _gameController;
     private int _shownHp = -1;
     private int _shownMaxHp = -1;
+    private bool _hpReady;
+    private float _hpTarget;
+    private float _hpMax;
+    private float _hpShown;
+    private Tweener _hpTween;
+    private bool _expReady;
+    private int _expLevel;
+    private float _expTarget;
+    private int _expShownLevel;
+    private float _expShown;
+    private Sequence _expTween;
 
     private void Awake()
     {
@@ -46,8 +60,8 @@ public class UIGameScene : MonoBehaviour
         var state = Managers.Instance.CurrentState;
         ApplyPauseWindow(state, state != GameState.Paused);
         ApplyResultScreens(state);
-        RefreshHealth();
-        RefreshExperience();
+        RefreshHealth(true);
+        RefreshExperience(true);
     }
 
     private void Start()
@@ -62,6 +76,10 @@ public class UIGameScene : MonoBehaviour
             eventManager.Unsubscribe<GameStateChanged>(HandleGameStateChanged);
         }
 
+        KillTween(ref _hpTween);
+        KillTween(ref _expTween);
+        _hpReady = false;
+        _expReady = false;
         _gameController = null;
     }
 
@@ -201,7 +219,7 @@ public class UIGameScene : MonoBehaviour
         RefreshExperience();
     }
 
-    private void RefreshHealth()
+    private void RefreshHealth(bool instant = false)
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
@@ -210,9 +228,35 @@ public class UIGameScene : MonoBehaviour
 
         var current = playerManager.CurrentHealth;
         var max = playerManager.MaxHealth;
+        instant |= !_hpReady;
+        if (!instant && current == _hpTarget && max == _hpMax)
+        {
+            return;
+        }
 
-        var hp = Mathf.CeilToInt(current);
-        var maxHp = Mathf.CeilToInt(max);
+        _hpTarget = current;
+        _hpMax = max;
+        KillTween(ref _hpTween);
+
+        if (instant)
+        {
+            // 플레이어가 아직 없으면 최대 체력이 0이라, 실제 값이 들어올 때도 바로 적용한다.
+            _hpReady = max > 0f;
+            ApplyHealth(current);
+            return;
+        }
+
+        _hpTween = DOTween.To(() => _hpShown, ApplyHealth, current, HP_TWEEN_DURATION)
+            .SetEase(Ease.OutQuad)
+            .SetUpdate(true);
+    }
+
+    private void ApplyHealth(float shown)
+    {
+        _hpShown = shown;
+
+        var hp = Mathf.CeilToInt(shown);
+        var maxHp = Mathf.CeilToInt(_hpMax);
         if (_hpText != null && (hp != _shownHp || maxHp != _shownMaxHp))
         {
             _shownHp = hp;
@@ -225,7 +269,7 @@ public class UIGameScene : MonoBehaviour
             return;
         }
 
-        var ratio = max <= 0f ? 0f : Mathf.Clamp01(current / max);
+        var ratio = _hpMax <= 0f ? 0f : Mathf.Clamp01(shown / _hpMax);
         // 스프라이트 픽셀 단위로 끊어 바 끝이 픽셀 중간에서 잘리지 않게 한다.
         _hpFill.fillAmount = Mathf.Ceil(ratio * HP_BAR_PIXELS) / HP_BAR_PIXELS;
 
@@ -236,18 +280,65 @@ public class UIGameScene : MonoBehaviour
         }
     }
 
-    private void RefreshExperience()
+    private void RefreshExperience(bool instant = false)
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             return;
         }
 
-        if (_levelText != null)
+        var level = playerManager.Level;
+        var required = playerManager.RequiredXp;
+        var progress = required <= 0f ? 0f : Mathf.Clamp01(playerManager.CurrentXp / required);
+        instant |= !_expReady;
+        if (!instant && level == _expLevel && progress == _expTarget)
         {
-            _levelText.text = $"{playerManager.Level}";
+            return;
         }
 
+        _expLevel = level;
+        _expTarget = progress;
+        KillTween(ref _expTween);
+
+        if (instant)
+        {
+            _expReady = true;
+            ApplyExperienceLevel(level);
+            ApplyExperience(progress);
+            return;
+        }
+
+        _expTween = DOTween.Sequence().SetUpdate(true);
+        if (level != _expShownLevel)
+        {
+            // 레벨이 오르면 바를 끝까지 채운 뒤 비우고 새 레벨 진행도까지 다시 채운다.
+            if (level > _expShownLevel)
+            {
+                _expTween.Append(DOTween.To(() => _expShown, ApplyExperience, 1f, EXP_TWEEN_DURATION).SetEase(Ease.OutQuad));
+            }
+
+            _expTween.AppendCallback(() =>
+            {
+                ApplyExperienceLevel(level);
+                ApplyExperience(0f);
+            });
+        }
+
+        _expTween.Append(DOTween.To(() => _expShown, ApplyExperience, progress, EXP_TWEEN_DURATION).SetEase(Ease.OutQuad));
+    }
+
+    private void ApplyExperienceLevel(int level)
+    {
+        _expShownLevel = level;
+        if (_levelText != null)
+        {
+            _levelText.text = $"{level}";
+        }
+    }
+
+    private void ApplyExperience(float shown)
+    {
+        _expShown = shown;
         if (_experienceMask == null)
         {
             return;
@@ -259,14 +350,21 @@ public class UIGameScene : MonoBehaviour
             return;
         }
 
-        var required = playerManager.RequiredXp;
-        var progress = required <= 0f ? 0f : Mathf.Clamp01(playerManager.CurrentXp / required);
         var padding = _experienceMask.padding;
-        padding.z = width * (1f - progress);
+        padding.z = width * (1f - shown);
         _experienceMask.padding = padding;
     }
 
+    private static void KillTween<T>(ref T tween) where T : Tween
+    {
+        if (tween == null)
+        {
+            return;
+        }
 
+        tween.Kill();
+        tween = null;
+    }
 
     private void CacheGameController()
     {
