@@ -16,6 +16,7 @@ public class StageController : MonoBehaviour
     private bool _missingTimelineLogged;
     private bool _directorHooked;
     private bool _acceptDirectorStop;
+    private bool _bossTimelinePaused;
 
     public StageResult LastResult { get; private set; }
 
@@ -56,6 +57,8 @@ public class StageController : MonoBehaviour
         Time.timeScale = 1f;
         _acceptDirectorStop = false;
         UnsubscribeDirector();
+        AbandonBossTimeline();
+        BossArenaPlayback.Cancel();
         _stageActive = false;
         UnsubscribeDeath();
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
@@ -176,6 +179,7 @@ public class StageController : MonoBehaviour
 
         SubscribeDirector();
         _acceptDirectorStop = false;
+        _bossTimelinePaused = false;
         _director.Stop();
         _director.playableAsset = _stageData.Timeline;
         _director.extrapolationMode = DirectorWrapMode.None;
@@ -193,6 +197,60 @@ public class StageController : MonoBehaviour
         }
 
         EndStage(GameState.Victory);
+    }
+
+    /// <summary>
+    /// 보스전 동안 타임라인을 멈춘다. 정지는 클리어로 치지 않는다.
+    /// </summary>
+    public void PauseTimelineForBoss()
+    {
+        if (_director == null || !_stageActive)
+        {
+            return;
+        }
+
+        _bossTimelinePaused = true;
+        _director.Pause();
+    }
+
+    /// <summary>
+    /// 보스를 모두 쓰러뜨린 뒤 멈춘 시각부터 타임라인을 다시 튼다.
+    /// </summary>
+    public void ResumeTimelineAfterBoss()
+    {
+        if (!_bossTimelinePaused || _director == null)
+        {
+            _bossTimelinePaused = false;
+            return;
+        }
+
+        _bossTimelinePaused = false;
+        if (!_stageActive || !_acceptDirectorStop)
+        {
+            return;
+        }
+
+        _director.Play();
+    }
+
+    /// <summary>
+    /// 패배로 판이 끝날 때 보스 정지를 푼다. 클리어로 처리하지 않는다.
+    /// </summary>
+    public void ReleaseBossTimeline()
+    {
+        var wasPaused = _bossTimelinePaused;
+        _bossTimelinePaused = false;
+        if (!wasPaused || _director == null)
+        {
+            return;
+        }
+
+        _director.Play();
+    }
+
+    private void AbandonBossTimeline()
+    {
+        _bossTimelinePaused = false;
     }
 
     private void SubscribeDirector()
@@ -295,6 +353,7 @@ public class StageController : MonoBehaviour
 
         _acceptDirectorStop = false;
         _stageActive = false;
+        BossArenaPlayback.Cancel();
         UnsubscribeDeath();
         if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
         {
@@ -328,6 +387,7 @@ public class StageController : MonoBehaviour
 
         LastResult = new StageResult(playerId, killCount, _gameController.ElapsedSeconds, currencies);
         Time.timeScale = 0f;
+        ReleaseBossTimeline();
         Managers.Instance.ChangeState(resultState);
     }
 
@@ -342,6 +402,8 @@ public class StageController : MonoBehaviour
         UnsubscribeDirector();
         Time.timeScale = 1f;
         _stageActive = false;
+        AbandonBossTimeline();
+        BossArenaPlayback.Cancel();
         UnsubscribeDeath();
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
         {

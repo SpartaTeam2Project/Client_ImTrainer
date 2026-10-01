@@ -286,6 +286,39 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
+    /// 살아 있는 적과 투사체를 풀로 돌린다. 처치 수는 올리지 않고 판은 유지한다.
+    /// </summary>
+    public void DismissAlive()
+    {
+        DeactivateProjectiles();
+        for (var i = _alive.Count - 1; i >= 0; i--)
+        {
+            var enemy = _alive[i];
+            _alive.RemoveAt(i);
+            if (enemy != null)
+            {
+                ReturnEnemy(enemy);
+            }
+        }
+
+        _deathCallbacks.Clear();
+    }
+
+    /// <summary>
+    /// 보스전 중에도 지정 위치에 보스 한 마리를 낸다. 죽으면 콜백을 부른다.
+    /// </summary>
+    public Enemy SpawnBoss(int playerId, MonsterWaveProfile profile, Vector2 position, Action<Enemy> onDied)
+    {
+        if (!_stageActive || playerId != _playerId || profile == null || profile.Monster == null || _alive.Count >= MAX_ALIVE)
+        {
+            return null;
+        }
+
+        profile.DisableOffscreenTeleport = true;
+        return CreateEnemy(profile, position, onDied);
+    }
+
+    /// <summary>
     /// 적 투사체를 풀에서 꺼내 플레이어 쪽으로 날린다.
     /// </summary>
     public void LaunchProjectile(int playerId, Vector2 position, Vector2 direction, float speed, float range, float damage, float hitRadius, float attackDistance, Sprite sprite)
@@ -298,6 +331,22 @@ public class EnemyManager : BaseManager
 
         projectile.ApplySprite(sprite);
         projectile.Launch(playerId, position, direction, speed, range, damage, hitRadius, attackDistance);
+    }
+
+    /// <summary>
+    /// 보스 스킬용 투사체를 꺼내 머리 위까지 올린다. 맞추기 전에는 피해가 없다.
+    /// </summary>
+    public EnemyProjectile ArmRisingProjectile(int playerId, Vector2 origin, Vector2 hoverPoint, float riseSeconds, float attackDistance, Sprite sprite, float swayPhase)
+    {
+        var projectile = GetProjectile();
+        if (projectile == null)
+        {
+            return null;
+        }
+
+        projectile.ApplySprite(sprite);
+        projectile.BeginRise(playerId, origin, hoverPoint, riseSeconds, attackDistance, swayPhase);
+        return projectile;
     }
 
     /// <summary>
@@ -471,7 +520,9 @@ public class EnemyManager : BaseManager
             visual != null ? visual.ProjectileSprite : null,
             profile.Id,
             profile.HitRadius,
-            profile.AttackDistance);
+            profile.AttackDistance,
+            profile.Skill,
+            profile.SkillCooldown);
         enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
         if (onDied != null)
         {
