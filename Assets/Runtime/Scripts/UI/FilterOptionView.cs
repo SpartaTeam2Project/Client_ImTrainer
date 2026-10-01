@@ -18,16 +18,18 @@ public class FilterOptionView : MonoBehaviour, IPointerEnterHandler, IPointerCli
 
     private Action<FilterOptionView> _onFocus;
     private Action<FilterOptionView> _onConfirm;
+    private Action<FilterOptionView> _onRelease;
 
     /// <summary>
-    /// 포커스와 확정 콜백을 연결하고 표시를 끈다.
+    /// 포커스와 확정 콜백을 연결하고 표시를 끈다. 우클릭 해제 콜백은 없어도 된다.
     /// </summary>
-    public void Bind(Action<FilterOptionView> onFocus, Action<FilterOptionView> onConfirm)
+    public void Bind(Action<FilterOptionView> onFocus, Action<FilterOptionView> onConfirm, Action<FilterOptionView> onRelease = null)
     {
         CacheIndicators();
         DisableChildRaycasts();
         _onFocus = onFocus;
         _onConfirm = onConfirm;
+        _onRelease = onRelease;
         SetFocused(false);
     }
 
@@ -67,10 +69,16 @@ public class FilterOptionView : MonoBehaviour, IPointerEnterHandler, IPointerCli
     }
 
     /// <summary>
-    /// 항목을 클릭하면 확정을 시도한다.
+    /// 항목을 클릭하면 확정을 시도한다. 해제 콜백이 있으면 우클릭은 해제다.
     /// </summary>
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (eventData.button == PointerEventData.InputButton.Right && _onRelease != null)
+        {
+            _onRelease(this);
+            return;
+        }
+
         _onConfirm?.Invoke(this);
     }
 
@@ -79,7 +87,7 @@ public class FilterOptionView : MonoBehaviour, IPointerEnterHandler, IPointerCli
         for (var i = 0; i < transform.childCount; i++)
         {
             var child = transform.GetChild(i).gameObject;
-            if (_select == null && child.name == SELECT_NAME)
+            if (_select == null && string.Equals(child.name, SELECT_NAME, StringComparison.OrdinalIgnoreCase))
             {
                 _select = child;
             }
