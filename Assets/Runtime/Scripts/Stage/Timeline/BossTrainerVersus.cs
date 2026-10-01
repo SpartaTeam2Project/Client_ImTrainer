@@ -36,14 +36,15 @@ public static class BossTrainerVersus
 
     /// <summary>
     /// VS 화면을 연다. 브금 뒤 조작이 있거나 1.4초가 지나면 true.
+    /// 그림이 비어 있으면 화면만 건너뛰고 true를 돌려 보스전으로 넘어간다.
     /// </summary>
     public static async UniTask<bool> PlayAsync(int token, BossTrainerVersusCast cast)
     {
         Stop();
         if (!HasCast(cast))
         {
-            Debug.LogWarning("보스 VS 화면이 비어 있습니다. 클립에 공용 프리팹, 빨간 바, 등 사진, 보스 프레임, 슬래시, VS를 넣으세요.");
-            return false;
+            Debug.LogWarning("보스 VS 화면이 비어 있습니다. 화면을 건너뛰고 보스전을 엽니다. 클립에 공용 프리팹, 빨간 바, 등 사진, 보스 프레임, 슬래시, VS를 넣으세요.");
+            return true;
         }
 
         if (!await WaitSecondsAsync(token, HOLD_SECONDS))
