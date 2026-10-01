@@ -8,9 +8,13 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
 {
     private const float CLOSEST_RANGE = 80f;
     private const float MIN_DIRECTION = 0.0001f;
+    private const float MIN_LIFETIME = 0.01f;
+    private const float PARTICLE_SIZE_PER_WIDTH = 2f;
 
     [SerializeField] private BoxCollider2D beamCollider;
     [SerializeField] private Transform visuals;
+    [Tooltip("비우면 visuals를 빔 크기로 늘린다. 넣으면 이 파티클을 빔 길이만큼 쏘아 물줄기로 보여 준다.")]
+    [SerializeField] private ParticleSystem streamParticle;
 
     private readonly Dictionary<Enemy, float> _nextHit = new Dictionary<Enemy, float>();
 
@@ -130,11 +134,31 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
             beamCollider.offset = new Vector2(0f, length * 0.5f);
         }
 
+        if (streamParticle != null)
+        {
+            ApplyStream(length, width);
+            return;
+        }
+
         if (visuals != null)
         {
             visuals.localScale = new Vector3(width, length, 1f);
             visuals.localPosition = new Vector3(0f, length * 0.5f, 0f);
         }
+    }
+
+    /// <summary>
+    /// 물방울이 수명 동안 빔 끝까지 날아가도록 속도를 맞춘다. 파티클 쪽 +X가 빔 방향이다.
+    /// </summary>
+    private void ApplyStream(float length, float width)
+    {
+        var main = streamParticle.main;
+        main.startSize = width * PARTICLE_SIZE_PER_WIDTH;
+
+        var velocity = streamParticle.velocityOverLifetime;
+        velocity.x = length / Mathf.Max(MIN_LIFETIME, main.startLifetime.constant);
+        velocity.y = 0f;
+        velocity.z = 0f;
     }
 
     private void Aim()
