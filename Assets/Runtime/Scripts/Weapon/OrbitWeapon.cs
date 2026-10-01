@@ -69,7 +69,7 @@ public class OrbitWeapon : Weapon
             _orbitDuration,
             Stats.HitRadius,
             _hitInterval,
-            Stats.Damage,
+            GetFinalDamage(),
             AttackType);
     }
 
@@ -138,7 +138,7 @@ public class OrbitWeapon : Weapon
                 continue;
             }
 
-            projectile.Refresh(_orbitDuration, Stats.ProjectileSpeed, _orbitRadius, Stats.HitRadius, Stats.Damage);
+            projectile.Refresh(_orbitDuration, Stats.ProjectileSpeed, _orbitRadius, Stats.HitRadius, GetFinalDamage());
         }
     }
 

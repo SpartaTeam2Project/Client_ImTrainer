@@ -409,7 +409,6 @@ public sealed class UpgradeManager : BaseManager
         // 선택한 Upgrade Level 증가
         _levels[chosen.Id] = previousLevel + 1;
 
-        var damageChange = 0f;
 
         foreach(var effect in chosen.Effects)
         {
@@ -430,55 +429,15 @@ public sealed class UpgradeManager : BaseManager
                 case UpgradeEffectType.ReceivedDamage:
                     _playerManager.AddReceiveDamageMultiplier(_playerManager.LocalPlayerId, effect.Value);
                     break;
+                case UpgradeEffectType.Damage:
+                    _playerManager.AddDamageMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
                 default:
                     Debug.LogWarning(
                         $"[증강] 처리되지 않은 Player Effect Type: {effect.Type}",
                         this
                     );
                     break;
-            }
-        }
-
-        foreach (var definition in _definitions)
-        {
-            var level = GetLevel(definition.Id);
-
-            // 보유하지 않은 Upgrade라면 계산할 필요 없음
-            if (level <= 0)
-            {
-                continue;
-            }
-
-            foreach (var effect in definition.Effects)
-            {
-                // 현재 구현에서는 Player Effect만 처리한다.
-                // Weapon Effect는 이후 AbilityManager 연결 시 추가한다.
-                if (effect.Target != UpgradeTarget.Player)
-                {
-                    continue;
-                }
-
-                // effect.Value는 Level 1당 적용량
-                var totalValue = effect.Value * level;
-
-                switch (effect.Type)
-                {
-                    case UpgradeEffectType.MoveSpeed:
-                        break;
-                    case UpgradeEffectType.ReceivedDamage:
-                        damageChange += totalValue;
-                        break;
-
-                    case UpgradeEffectType.Experience:
-                        break;
-
-                    default:
-                        Debug.LogWarning(
-                            $"[증강] 처리되지 않은 Player Effect Type: {effect.Type}",
-                            this
-                        );
-                        break;
-                }
             }
         }
 

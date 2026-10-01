@@ -183,6 +183,29 @@ public class PlayerManager : BaseManager
         if (playerId != LocalPlayerId || _player == null) return;
         _player.AddReceivedDamageMultiplier(value);
     }
+
+    public void AddDamageMultiplier(int playerId,float value)
+    {
+        if (playerId != LocalPlayerId || _player == null) return;
+        _player.AddDamageMultiplier(value);
+    }
+    #endregion
+
+
+
+    #region player의 private field 조회 API
+    /// <summary>
+    /// player가 보유한 전역 주는 피해 배율을 반환한다.
+    /// player가 없으면 1을 반환한다.
+    /// </summary>
+    /// <param name="playerId"></param>
+    /// <returns></returns>
+    public float GetDamageMultiplier(int playerId)
+    {
+        if (playerId != LocalPlayerId || _player == null) return 1f;
+        return _player.damageMultiplier;
+    }
+
     #endregion
 
     /// <summary>
@@ -197,6 +220,8 @@ public class PlayerManager : BaseManager
 
         _player.TakeDamage(amount);
     }
+
+    
 
     /// <summary>
     /// 플레이어 체력이 0이 되면 사망을 알린다.

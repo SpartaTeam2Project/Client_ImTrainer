@@ -23,7 +23,7 @@ public class LaserWeapon : Weapon
     protected override void LaunchOne(Vector2 origin, Vector2 direction)
     {
         var beam = GetBeam();
-        beam.Fire(origin, direction, Stats.AttackRange, Stats.HitRadius, _beamDuration, Stats.Damage, AttackType);
+        beam.Fire(origin, direction, Stats.AttackRange, Stats.HitRadius, _beamDuration, GetFinalDamage(), AttackType);
     }
 
     /// <summary>

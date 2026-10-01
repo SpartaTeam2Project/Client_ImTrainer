@@ -196,7 +196,7 @@ public class Player : MonoBehaviour
     #region UpgradeAPI
     /// <summary>
     /// Upgrade에 의한 이동속도 배율을 합연산으로 누적한다.
-    /// input:0.2f = 20%
+    /// input:0.2f = +20%
     /// </summary>
     /// <param name="value"></param>
     public void AddMoveSpeedMultiplier(float value)
@@ -206,7 +206,7 @@ public class Player : MonoBehaviour
 
     /// <summary>
     /// Upgrade에 의한 경험치 배율을 합연산으로 누적한다.
-    /// input:0.2f = 20%
+    /// input:0.2f = +20%
     /// </summary>
     /// <param name="value"></param>
     public void AddXpMultiplier(float value)
@@ -223,6 +223,15 @@ public class Player : MonoBehaviour
     {
         receivedDamageMultiplier= Mathf.Max(0f, receivedDamageMultiplier + value);
     }
+    /// <summary>
+    /// Upgrade에 의한 주는 피해 배율을 합연산으로 누적한다.
+    /// input:0.2f = +20%
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddDamageMultiplier(float value)
+    {
+        damageMultiplier= Mathf.Max(0f, damageMultiplier + value);
+    }
     #endregion
 
     /// <summary>
@@ -235,8 +244,10 @@ public class Player : MonoBehaviour
             return;
         }
 
-        var reduced = amount * (100f - Mathf.Clamp(damageReductionPercent, 0f, 100f)) / 100f;
-        CurrentHealth = Mathf.Max(0f, CurrentHealth - reduced);
+        var multipliedDamage = amount * Mathf.Max(0f, receivedDamageMultiplier);
+
+
+        CurrentHealth = Mathf.Max(0f, CurrentHealth - multipliedDamage);
         if (_healthbar != null)
         {
             _healthbar.Apply(CurrentHealth, maxHealth);

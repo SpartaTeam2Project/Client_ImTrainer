@@ -253,6 +253,16 @@ public abstract class Weapon : MonoBehaviour
     {
     }
 
+    protected float GetFinalDamage()
+    {
+        if(Managers.Instance==null||!Managers.Instance.TryGetComponent<PlayerManager>(out var playermanager))
+        {
+            return Stats.Damage;
+        }
+
+        return Stats.Damage * playermanager.GetDamageMultiplier(PlayerId);
+    }
+
     #endregion
 
     #region Private Methods
