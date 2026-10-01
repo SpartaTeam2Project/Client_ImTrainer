@@ -234,7 +234,7 @@ public sealed class UpgradeManager : BaseManager
     private PlayerManager _playerManager;
     private bool _active;
     private int _offerNumber;
-
+    private AugmentWindowBehavior _augmentWindow;
     public IReadOnlyList<UpgradeDefinition> CurrentChoices => _choices;
 
     private void Update()
@@ -354,7 +354,13 @@ public sealed class UpgradeManager : BaseManager
         }
 
         Time.timeScale = 0f;
-        PrintChoices();
+        var window = EnsureAugmentWindow();
+
+        window.Open(
+            _playerManager.LocalPlayerId,
+            _playerManager.Level,
+            null
+        );
     }
 
     /// <summary>증강 Id의 현재 Level을 반환한다. 보유하지 않은 Id는 0.</summary>
@@ -383,71 +389,6 @@ public sealed class UpgradeManager : BaseManager
         return 0f;
     }
 
-    /// <summary>
-    /// 선택한 Upgrade의 Level을 증가시키고,
-    /// 해당 Upgrade의 Effects를 적용한다.
-    /// </summary>
-    public bool TrySelectChoice(int choiceIndex)
-    {
-        if (!CanSelect() ||
-            choiceIndex < 0 ||
-            choiceIndex >= _choices.Count)
-        {
-            return false;
-        }
-
-        var chosen = _choices[choiceIndex];
-
-        // 이미 최대 Level에 도달했거나 Weight가 0이면 선택하지 않는다.
-        if (GetWeight(chosen.Id) <= 0f)
-        {
-            return false;
-        }
-
-        var previousLevel = GetLevel(chosen.Id);
-
-        // 선택한 Upgrade Level 증가
-        _levels[chosen.Id] = previousLevel + 1;
-
-
-        foreach(var effect in chosen.Effects)
-        {
-            if (effect.Target != UpgradeTarget.Player)
-            {
-                continue;
-            }
-
-            //move speed의 multiplier값을 증감시킨다.
-            switch (effect.Type)
-            {
-                case UpgradeEffectType.MoveSpeed:
-                    _playerManager.AddMoveSpeedMultiplier(_playerManager.LocalPlayerId, effect.Value);
-                    break;
-                case UpgradeEffectType.Experience:
-                    _playerManager.AddXpMultiplier(_playerManager.LocalPlayerId, effect.Value);
-                    break;
-                case UpgradeEffectType.ReceivedDamage:
-                    _playerManager.AddReceiveDamageMultiplier(_playerManager.LocalPlayerId, effect.Value);
-                    break;
-                case UpgradeEffectType.Damage:
-                    _playerManager.AddDamageMultiplier(_playerManager.LocalPlayerId, effect.Value);
-                    break;
-                default:
-                    Debug.LogWarning(
-                        $"[증강] 처리되지 않은 Player Effect Type: {effect.Type}",
-                        this
-                    );
-                    break;
-            }
-        }
-
-
-        // Upgrade Sequence 종료
-        _active = false;
-        Time.timeScale = 1f;
-
-        return true;
-    }
 
 
     private bool CanSelect()
@@ -503,7 +444,6 @@ public sealed class UpgradeManager : BaseManager
     /// </summary>
     private void PrintChoices()
     {
-        RefreshChoices();
 
         _offerNumber++;
 
@@ -523,6 +463,7 @@ public sealed class UpgradeManager : BaseManager
         }
 
         // 선택 중 게임 진행 정지
+        Managers.Instance.ChangeState(GameState.LevelUp);
         Time.timeScale = 0f;
 
         for (var i = 0; i < _choices.Count; i++)
@@ -576,6 +517,74 @@ public sealed class UpgradeManager : BaseManager
         }
 
         Debug.Log(text.ToString(), this);
+    }
+
+
+    /// <summary>
+    /// 선택한 Upgrade의 Level을 증가시키고,
+    /// 해당 Upgrade의 Effects를 적용한다.
+    /// </summary>
+    public bool TrySelectChoice(int choiceIndex)
+    {
+        if (!CanSelect() ||
+            choiceIndex < 0 ||
+            choiceIndex >= _choices.Count)
+        {
+            return false;
+        }
+
+        var chosen = _choices[choiceIndex];
+
+        // 이미 최대 Level에 도달했거나 Weight가 0이면 선택하지 않는다.
+        if (GetWeight(chosen.Id) <= 0f)
+        {
+            return false;
+        }
+
+        var previousLevel = GetLevel(chosen.Id);
+
+        // 선택한 Upgrade Level 증가
+        _levels[chosen.Id] = previousLevel + 1;
+
+
+        foreach (var effect in chosen.Effects)
+        {
+            if (effect.Target != UpgradeTarget.Player)
+            {
+                continue;
+            }
+
+            //move speed의 multiplier값을 증감시킨다.
+            switch (effect.Type)
+            {
+                case UpgradeEffectType.MoveSpeed:
+                    _playerManager.AddMoveSpeedMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
+                case UpgradeEffectType.Experience:
+                    _playerManager.AddXpMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
+                case UpgradeEffectType.ReceivedDamage:
+                    _playerManager.AddReceiveDamageMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
+                case UpgradeEffectType.Damage:
+                    _playerManager.AddDamageMultiplier(_playerManager.LocalPlayerId, effect.Value);
+                    break;
+                default:
+                    Debug.LogWarning(
+                        $"[증강] 처리되지 않은 Player Effect Type: {effect.Type}",
+                        this
+                    );
+                    break;
+            }
+        }
+
+
+        // Upgrade Sequence 종료
+        _active = false;
+        Time.timeScale = 1f;
+        Managers.Instance.ChangeState(GameState.Playing);
+
+        return true;
     }
 
 
@@ -636,5 +645,21 @@ public sealed class UpgradeManager : BaseManager
         {
             Debug.Log("[Upgrade] Abillity를 찾지 못했습니다.");
         }
+    }
+    private AugmentWindowBehavior EnsureAugmentWindow()
+    {
+        if (_augmentWindow != null)
+        {
+            return _augmentWindow;
+        }
+
+        _augmentWindow = GetComponent<AugmentWindowBehavior>();
+
+        if (_augmentWindow == null)
+        {
+            _augmentWindow = gameObject.AddComponent<AugmentWindowBehavior>();
+        }
+
+        return _augmentWindow;
     }
 }
