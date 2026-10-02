@@ -5714,6 +5714,7 @@ GameObject:
   m_Component:
   - component: {fileID: 133800491148691989}
   - component: {fileID: 4213398911071486334}
+  - component: {fileID: 8102030405060708091}
   m_Layer: 5
   m_Name: ' Panel_Progress'
   m_TagString: Untagged
@@ -5737,10 +5738,10 @@ RectTransform:
   - {fileID: 6309712367909791706}
   m_Father: {fileID: 5963112004131019691}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.25, y: 1}
+  m_AnchorMax: {x: 0.75, y: 1}
   m_AnchoredPosition: {x: 0, y: -48}
-  m_SizeDelta: {x: -40, y: 60}
+  m_SizeDelta: {x: -20, y: 60}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!225 &4213398911071486334
 CanvasGroup:
@@ -5754,6 +5755,20 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &8102030405060708091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6990785013069192166}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3a8e1f74b2d4e9a8f6c5d4e3b2a1907, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StageProgressBar
+  _fillMask: {fileID: 7458041930470046469}
+  _markerSprite: {fileID: -6290967213661906991, guid: 5f7a1d7502d416c42a74c1bb4ee2c104, type: 3}
 --- !u!1 &7275922662030439668
 GameObject:
   m_ObjectHideFlags: 0

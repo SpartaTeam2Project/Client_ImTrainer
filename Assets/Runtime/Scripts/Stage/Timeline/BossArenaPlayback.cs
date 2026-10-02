@@ -166,6 +166,11 @@ public static class BossArenaPlayback
         }
 
         _nextBoss = null;
+        if (TryGetStage(out var stage))
+        {
+            stage.MarkBossCleared();
+        }
+
         Finish(_fightToken);
     }
 

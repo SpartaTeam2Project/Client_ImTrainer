@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
+using UnityEngine.Timeline;
 
 /// <summary>
 /// 게임 씬에서 한 판의 시작, 일시정지, 타임라인 클리어, 사망 패배를 맡는다.
@@ -19,6 +21,7 @@ public class StageController : MonoBehaviour
     private bool _bossTimelinePaused;
     private bool _manualDirector;
     private double _bossPausedTime;
+    private readonly List<double> _clearedBossTimes = new List<double>();
 
     public StageResult LastResult { get; private set; }
 
@@ -126,6 +129,7 @@ public class StageController : MonoBehaviour
 
         Time.timeScale = 1f;
         LastResult = null;
+        _clearedBossTimes.Clear();
         if (Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
             fieldManager.Begin(_stageData);
@@ -218,6 +222,99 @@ public class StageController : MonoBehaviour
         }
 
         EndStage(GameState.Victory);
+    }
+
+    /// <summary>
+    /// 타임라인 현재 시각과 전체 길이를 돌려준다. 재생 전이면 시각은 0이다.
+    /// </summary>
+    public bool TryGetTimelineProgress(out double time, out double duration)
+    {
+        time = 0d;
+        duration = 0d;
+        var timeline = ResolveTimeline();
+        if (timeline == null)
+        {
+            return false;
+        }
+
+        duration = timeline.duration;
+        if (duration <= 0d)
+        {
+            return false;
+        }
+
+        if (_director != null && _director.playableAsset == timeline)
+        {
+            time = _director.time;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 보스 조우 클립이 시작하는 시각을 모은다. 진행도 바가 마커 위치를 계산할 때 쓴다.
+    /// </summary>
+    public void CopyBossMarkerTimes(List<double> times)
+    {
+        if (times == null)
+        {
+            return;
+        }
+
+        times.Clear();
+        var timeline = ResolveTimeline();
+        if (timeline == null)
+        {
+            return;
+        }
+
+        foreach (var track in timeline.GetOutputTracks())
+        {
+            if (track == null || track.muted || track is not BossEncounterTrack)
+            {
+                continue;
+            }
+
+            foreach (var clip in track.GetClips())
+            {
+                times.Add(clip.start);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 이번 판에서 클리어한 보스 조우 시각을 모은다. 진행도 바가 잡은 보스의 마커를 지울 때 쓴다.
+    /// </summary>
+    public void CopyClearedBossTimes(List<double> times)
+    {
+        if (times == null)
+        {
+            return;
+        }
+
+        times.Clear();
+        for (var i = 0; i < _clearedBossTimes.Count; i++)
+        {
+            times.Add(_clearedBossTimes[i]);
+        }
+    }
+
+    /// <summary>
+    /// 지금 멈춰 있는 보스 조우를 클리어로 기록한다.
+    /// </summary>
+    public void MarkBossCleared()
+    {
+        _clearedBossTimes.Add(_bossPausedTime);
+    }
+
+    private TimelineAsset ResolveTimeline()
+    {
+        if (_director != null && _director.playableAsset is TimelineAsset playing)
+        {
+            return playing;
+        }
+
+        return _stageData != null ? _stageData.Timeline : null;
     }
 
     /// <summary>
