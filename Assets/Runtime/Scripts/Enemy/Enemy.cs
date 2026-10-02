@@ -38,6 +38,7 @@ public class Enemy : MonoBehaviour
 
     private EnemyManager _owner;
     private EnemyView _view;
+    private CircleCollider2D _hitCollider;
     private int _playerId;
     private float _health;
     private float _contactDamage;
@@ -102,11 +103,29 @@ public class Enemy : MonoBehaviour
 
     public float MonsterBallChance => _monsterBallChance;
 
+    /// <summary>
+    /// 그림에 맞춘 맞는 판정이 트랜스폼 중심에서 닿는 거리.
+    /// </summary>
+    public float BodyReach
+    {
+        get
+        {
+            if (_hitCollider == null)
+            {
+                return 0f;
+            }
+
+            var scale = Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.y));
+            return (_hitCollider.radius + _hitCollider.offset.magnitude) * scale;
+        }
+    }
+
     #region Unity Methods
 
     private void Awake()
     {
         _view = GetComponent<EnemyView>();
+        _hitCollider = GetComponent<CircleCollider2D>();
     }
 
     private void OnDestroy()

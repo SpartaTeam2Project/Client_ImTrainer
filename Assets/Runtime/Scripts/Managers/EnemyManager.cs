@@ -421,7 +421,6 @@ public class EnemyManager : BaseManager
             return;
         }
 
-        var radiusSqr = radius * radius;
         for (var i = 0; i < _alive.Count; i++)
         {
             var candidate = _alive[i];
@@ -431,7 +430,8 @@ public class EnemyManager : BaseManager
             }
 
             var offset = (Vector2)candidate.transform.position - origin;
-            if (offset.sqrMagnitude > radiusSqr)
+            var reach = radius + candidate.BodyReach;
+            if (offset.sqrMagnitude > reach * reach)
             {
                 continue;
             }
@@ -459,7 +459,6 @@ public class EnemyManager : BaseManager
         }
 
         var forward = direction.normalized;
-        var radiusSqr = radius * radius;
         for (var i = 0; i < _alive.Count; i++)
         {
             var candidate = _alive[i];
@@ -469,14 +468,16 @@ public class EnemyManager : BaseManager
             }
 
             var offset = (Vector2)candidate.transform.position - origin;
+            var reach = candidate.BodyReach;
             var along = Vector2.Dot(offset, forward);
-            if (along < 0f || along > length)
+            if (along < -reach || along > length + reach)
             {
                 continue;
             }
 
             var lateral = offset - forward * along;
-            if (lateral.sqrMagnitude > radiusSqr)
+            var lateralReach = radius + reach;
+            if (lateral.sqrMagnitude > lateralReach * lateralReach)
             {
                 continue;
             }
