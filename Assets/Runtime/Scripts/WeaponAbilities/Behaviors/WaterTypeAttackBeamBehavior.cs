@@ -55,7 +55,7 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
             return;
         }
 
-        transform.position = player.transform.position;
+        transform.position = player.Weapons.FirePosition;
         _timeLeft -= Time.deltaTime;
         if (_timeLeft <= 0f)
         {
@@ -166,8 +166,8 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
         var direction = Vector2.up;
         if (TryGetPlayer(out var player))
         {
-            transform.position = player.transform.position;
-            direction = ResolveDirection(player.transform.position);
+            transform.position = player.Weapons.FirePosition;
+            direction = ResolveDirection(player.Weapons.FirePosition);
         }
 
         transform.rotation = Quaternion.FromToRotation(Vector2.up, direction);

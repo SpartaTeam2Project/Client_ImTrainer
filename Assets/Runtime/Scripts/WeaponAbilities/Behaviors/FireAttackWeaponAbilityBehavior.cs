@@ -179,7 +179,7 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
             return;
         }
 
-        var origin = player.transform.position;
+        var origin = player.Weapons.FirePosition;
         var direction = ResolveDirection(origin);
         if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
