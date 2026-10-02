@@ -9,10 +9,6 @@ public class StageProgressBar : MonoBehaviour
 {
     private static readonly Vector2 MARKER_SIZE = new Vector2(100f, 100f);
 
-    // MVP 시연 임시. 진행도 바만 이 길이(초)로 그린다. 0이면 타임라인 실제 길이를 쓴다.
-    // 정상화 요청 문구: "진행도 바 정상화해줘"
-    private const double MVP_DEMO_BAR_SECONDS = 40d;
-
     [SerializeField] private RectMask2D _fillMask;
     [SerializeField] private Sprite _markerSprite;
 
@@ -56,14 +52,13 @@ public class StageProgressBar : MonoBehaviour
             return;
         }
 
-        var barDuration = BarDuration(duration);
         if (!_markersBuilt)
         {
-            _markersBuilt = BuildMarkers(stage, barDuration);
+            _markersBuilt = BuildMarkers(stage, duration);
         }
 
         RemoveClearedMarkers(stage);
-        ApplyFill(Mathf.Clamp01((float)(time / barDuration)));
+        ApplyFill(Mathf.Clamp01((float)(time / duration)));
     }
 
     private static StageController ResolveStage()
@@ -75,11 +70,6 @@ public class StageProgressBar : MonoBehaviour
 
         var gameController = Managers.Instance.GetComponent<GameController>();
         return gameController != null ? gameController.ActiveStage : null;
-    }
-
-    private static double BarDuration(double timelineDuration)
-    {
-        return MVP_DEMO_BAR_SECONDS > 0d ? MVP_DEMO_BAR_SECONDS : timelineDuration;
     }
 
     private bool BuildMarkers(StageController stage, double duration)
