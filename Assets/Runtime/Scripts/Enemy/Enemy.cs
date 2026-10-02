@@ -26,6 +26,7 @@ public class Enemy : MonoBehaviour
 
     [Header("Drop")]
     [SerializeField] private ExperienceGem _experienceGem;
+    private ExperienceGem _dropGem;
     [SerializeField] private CoinDropBehavior _pocketDollarDrop;
     [SerializeField, Range(0f, 100f)] private float _pocketDollarChance;
     [SerializeField] private CoinDropBehavior _monsterBallDrop;
@@ -87,7 +88,7 @@ public class Enemy : MonoBehaviour
 
     public float SpawnedAt => _spawnedAt;
 
-    public ExperienceGem ExperienceGem => _experienceGem;
+    public ExperienceGem ExperienceGem => _dropGem != null ? _dropGem : _experienceGem;
 
     public CoinDropBehavior PocketDollarDrop => _pocketDollarDrop;
 
@@ -125,6 +126,14 @@ public class Enemy : MonoBehaviour
     public void Bind(EnemyManager owner)
     {
         _owner = owner;
+    }
+
+    /// <summary>
+    /// 이번 스폰의 경험치 구슬을 바꾼다. 비우면 프리팹 구슬을 쓴다.
+    /// </summary>
+    public void SetDropGem(ExperienceGem gem)
+    {
+        _dropGem = gem;
     }
 
     /// <summary>
