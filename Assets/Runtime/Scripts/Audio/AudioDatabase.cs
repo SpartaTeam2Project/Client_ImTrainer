@@ -38,12 +38,18 @@ public class AudioDatabase : ScriptableObject
     [FormerlySerializedAs("_entries")]
     [SerializeField] private List<AudioEntry> _music = new List<AudioEntry>();
 
-    [Header("효과음")]
-    [SerializeField] private List<AudioEntry> _sounds = new List<AudioEntry>();
+    [Header("UI 효과음")]
+    [FormerlySerializedAs("_sounds")]
+    [SerializeField] private List<AudioEntry> _uiSounds = new List<AudioEntry>();
+
+    [Header("전투 효과음")]
+    [SerializeField] private List<AudioEntry> _combatSounds = new List<AudioEntry>();
 
     public IReadOnlyList<AudioEntry> Music => _music;
 
-    public IReadOnlyList<AudioEntry> Sounds => _sounds;
+    public IReadOnlyList<AudioEntry> UISounds => _uiSounds;
+
+    public IReadOnlyList<AudioEntry> CombatSounds => _combatSounds;
 }
 
 /// <summary>
