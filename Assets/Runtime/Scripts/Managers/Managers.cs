@@ -23,7 +23,7 @@ public class Managers : MonoBehaviour
     [SerializeField] private DropManager _dropManager;
     [SerializeField] private CurrenciesManager _currenciesManager;
     [SerializeField] private UpgradeManager _upgradeManager;
-    [SerializeField] private AbilityManager _abilityManager;
+    [SerializeField] private WeaponAbilityManager _abilityManager;
     [SerializeField] private AccountManager _accountManager;
     [SerializeField] private SceneLoadManager _sceneLoadManager;
     [SerializeField] private TrainingManager _trainingManager;
@@ -217,7 +217,7 @@ public class Managers : MonoBehaviour
             await currenciesManager.InitializeAsync();
         }
 
-        if (TryGetManager<AbilityManager>(out var abilityManager))
+        if (TryGetManager<WeaponAbilityManager>(out var abilityManager))
         {
             await abilityManager.InitializeAsync();
         }

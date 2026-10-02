@@ -33,7 +33,7 @@ public sealed class UpgradeManager : BaseManager
     {
         None,
         Augment,
-        Ability
+        WeaponAbility
     }
     public enum UpgradeTarget
     {
@@ -640,9 +640,9 @@ public sealed class UpgradeManager : BaseManager
         }
         // 그 외 홀수는 포켓몬 강화
         if (Managers.Instance != null &&
-            Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+            Managers.Instance.TryGetManager<WeaponAbilityManager>(out var abilityManager))
         {
-            Debug.Log($"[Upgrade] Ability 호출 - Lv.{level}");
+            Debug.Log($"[Upgrade] WeaponAbility 호출 - Lv.{level}");
             abilityManager.OfferLevelUp(playerId, level);
         }
         else

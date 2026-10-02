@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07ec5241f91a836e3250afb482169357, type: 3}
+  m_Name: Water Type Attack Data
+  m_EditorClassIdentifier: Assembly-CSharp::WaterTypeAttackData
+  type: 10
+  title: "\uBB3C \uACF5\uACA9"
+  description: "\uAC00\uAE4C\uC6B4 \uC801 \uBC29\uD5A5\uC758 \uAD00\uD1B5 \uBE54"
+  icon: {fileID: 0}
+  prefab: {fileID: 7100000000000000001, guid: 5c31b7964e6fd8b387a5f409d76b4802, type: 3}
+  isActiveAbility: 1
+  isWeaponAbility: 0
+  isEndgameAbility: 0
+  isEvolution: 0
+  evolutionRequirements: []
+  levels:
+  - damage: 8
+    abilityCooldown: 2.2
+    beamLength: 2
+    beamWidth: 0.225
+    beamDuration: 0.5
+    damageInterval: 0.12
+  - damage: 10
+    abilityCooldown: 2.1
+    beamLength: 3
+    beamWidth: 0.25
+    beamDuration: 1
+    damageInterval: 0.12
+  - damage: 12
+    abilityCooldown: 2
+    beamLength: 4
+    beamWidth: 0.275
+    beamDuration: 1.5
+    damageInterval: 0.1
+  - damage: 15
+    abilityCooldown: 1.9
+    beamLength: 5
+    beamWidth: 0.3
+    beamDuration: 1.5
+    damageInterval: 0.1
+  - damage: 18
+    abilityCooldown: 1.8
+    beamLength: 6
+    beamWidth: 0.325
+    beamDuration: 1.5
+    damageInterval: 0.1

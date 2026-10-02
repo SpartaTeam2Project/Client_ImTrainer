@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.85, y: 0.85, z: 1}
+  m_LocalScale: {x: 2.2, y: 2.2, z: 2.5882354}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -108,8 +108,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _spriteRenderer: {fileID: 100003}
   _xp: 3
-  _frames: []
-  _framesPerSecond: 8
+  _frames:
+  - {fileID: 1532440346177022758, guid: efda8d3478ccd0c4eb8c1a802bc1820b, type: 3}
+  _framesPerSecond: 0
 --- !u!114 &100005
 MonoBehaviour:
   m_ObjectHideFlags: 0

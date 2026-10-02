@@ -40,7 +40,7 @@ public class BossTrainerVersusView : MonoBehaviour
     public Image Rival => _rival;
 
     /// <summary>
-    /// 캐릭터 뒤에 두는 슬래시. 0번부터 3번이다.
+    /// 캐릭터 뒤에 두는 슬래시 네 칸. 같은 순서로 화염 프레임을 갈아 끼운다.
     /// </summary>
     public Image[] Slashes => _slashes;
 

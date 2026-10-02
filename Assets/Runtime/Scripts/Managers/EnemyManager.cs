@@ -44,10 +44,13 @@ public class EnemyManager : BaseManager
 
     [Header("Enemy Settings")]
     [SerializeField] private Enemy _enemyPrefab;
+    [SerializeField] private ExperienceGem _bossExperienceGem;
 
     private readonly List<Enemy> _alive = new List<Enemy>();
     private readonly List<EnemyProjectile> _projectiles = new List<EnemyProjectile>();
     private readonly Dictionary<Enemy, Action<Enemy>> _deathCallbacks = new Dictionary<Enemy, Action<Enemy>>();
+    private readonly List<Enemy> _hurting = new List<Enemy>();
+    private int _hurtEpoch;
     private CombatObjectPool _pool;
     private Transform _projectileRoot;
     private GameObject _fallbackPrefab;
@@ -291,6 +294,7 @@ public class EnemyManager : BaseManager
     public void DismissAlive()
     {
         DeactivateProjectiles();
+        CancelHurtDeaths();
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
             var enemy = _alive[i];
@@ -357,6 +361,12 @@ public class EnemyManager : BaseManager
         var index = _alive.IndexOf(enemy);
         if (index < 0)
         {
+            return;
+        }
+
+        if (_deathCallbacks.ContainsKey(enemy) && enemy.HasHurtSprite)
+        {
+            BeginHurtDeath(index, enemy);
             return;
         }
 
@@ -480,6 +490,12 @@ public class EnemyManager : BaseManager
     /// </summary>
     public void NotifyActorDestroyed(Enemy enemy)
     {
+        if (_hurting.Remove(enemy))
+        {
+            InvokeDeathCallback(enemy);
+            return;
+        }
+
         var index = _alive.IndexOf(enemy);
         if (index < 0)
         {
@@ -524,6 +540,7 @@ public class EnemyManager : BaseManager
             profile.Skill,
             profile.SkillCooldown);
         enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
+        enemy.SetDropGem(onDied != null ? _bossExperienceGem : null);
         if (onDied != null)
         {
             _deathCallbacks[enemy] = onDied;
@@ -896,6 +913,44 @@ public class EnemyManager : BaseManager
         ReturnEnemy(enemy);
     }
 
+    /// <summary>
+    /// 보스 사망 그림을 재생한 뒤에 경험치를 떨어뜨리고, 풀로 돌린 다음 보스 콜백을 연다.
+    /// </summary>
+    private void BeginHurtDeath(int index, Enemy enemy)
+    {
+        var dropPosition = (Vector2)enemy.transform.position;
+        var gem = enemy.ExperienceGem;
+        KillCount++;
+        _alive.RemoveAt(index);
+        DropCurrencies(dropPosition, enemy);
+        _hurting.Add(enemy);
+        FinishHurtDeathAsync(enemy, dropPosition, gem, _hurtEpoch).Forget();
+    }
+
+    private async UniTaskVoid FinishHurtDeathAsync(Enemy enemy, Vector2 dropPosition, ExperienceGem gem, int epoch)
+    {
+        await enemy.PlayHurtAsync();
+        if (epoch != _hurtEpoch || enemy == null || !_hurting.Remove(enemy))
+        {
+            return;
+        }
+
+        DropExperience(dropPosition, gem);
+        InvokeDeathCallback(enemy);
+        ReturnEnemy(enemy);
+    }
+
+    private void CancelHurtDeaths()
+    {
+        _hurtEpoch++;
+        for (var i = _hurting.Count - 1; i >= 0; i--)
+        {
+            var enemy = _hurting[i];
+            _hurting.RemoveAt(i);
+            ReturnEnemy(enemy);
+        }
+    }
+
     private void DropCurrencies(Vector2 position, Enemy enemy)
     {
         if (enemy == null || Managers.Instance == null || !Managers.Instance.TryGetManager<DropManager>(out var dropManager))
@@ -1012,6 +1067,7 @@ public class EnemyManager : BaseManager
     {
         _stageActive = false;
         DeactivateProjectiles();
+        CancelHurtDeaths();
         for (var i = _alive.Count - 1; i >= 0; i--)
         {
             var enemy = _alive[i];
@@ -1036,6 +1092,7 @@ public class EnemyManager : BaseManager
         // 비활성 보관 중의 피해/파괴 알림이 기존 판의 상태를 바꾸지 않도록 해제한다.
         // 사망 콜백은 이미 죽었을 때만 부르고, 판 종료에서는 호출하지 않는다.
         _deathCallbacks.Remove(enemy);
+        enemy.SetDropGem(null);
         enemy.Bind(null);
         enemy.ApplyVisual(null);
         enemy.Initialize(0, -1, 0f, 0f, 0f);

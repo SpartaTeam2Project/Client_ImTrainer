@@ -1,13 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// 시계 칸에 장착된 포켓몬. 플레이어를 따라가고 그림만 재생한다.
+/// 시계 칸에 장착된 포켓몬. 칸을 따라가고 그림만 재생한다.
 /// </summary>
-public abstract class Weapon : MonoBehaviour
+public class Weapon : MonoBehaviour
 {
     private const float LOOK_AXIS_EPSILON = 0.01f;
-    private const float AIM_SQR_EPSILON = 0.0001f;
-    private const float VOLLEY_SPREAD_DEGREES = 12f;
     private const int SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
     private const float ATTACK_POSE_SECONDS = 0.6f;
@@ -41,42 +39,28 @@ public abstract class Weapon : MonoBehaviour
     [Header("Stats")]
     [SerializeField] private WeaponStats _stats = new WeaponStats();
 
-    [Header("Upgrade")]
-    [SerializeField] private WeaponStatUpgrade[] _statUpgrades;
-
     private MonsterVisualData _visual;
-    private AbilityManager _owner;
+    private Player _owner;
     private SpriteRenderer _renderer;
-    private Vector2 _offset = Vector2.right;
     private int _playerId;
-    private float _cooldownTimer;
     private float _attackFacingTimer;
-    private bool _isAttacking;
     private bool _shotPose;
     private bool _facingRight;
     private EightWay _eightWay = EightWay.Right;
     private int _frameIndex;
     private float _frameTimer;
-
-    protected WeaponStats Stats => _stats;
+    private bool _fainting;
+    private bool _lastSideRight = true;
 
     public int PlayerId => _playerId;
 
-    protected MonsterVisualData Visual => _visual;
-
-    protected MonsterType AttackType => Visual != null ? Visual.PrimaryType : MonsterType.Normal;
+    public float FollowDistance => _stats != null ? _stats.FollowDistance : 0f;
 
     #region Unity Methods
 
     private void Awake()
     {
-        _renderer = GetComponent<SpriteRenderer>();
-        if (_renderer == null)
-        {
-            _renderer = gameObject.AddComponent<SpriteRenderer>();
-            _renderer.sortingOrder = SORTING_ORDER;
-        }
-
+        CacheRenderer();
         if (HasFrames(CurrentFrames()))
         {
             ShowCurrentFrame();
@@ -86,16 +70,33 @@ public abstract class Weapon : MonoBehaviour
         EnsurePlaceholder();
     }
 
-    private void OnDestroy()
+    private void LateUpdate()
     {
-        ClearShots();
+        if (_fainting)
+        {
+            // 패배 직후 시간이 멈추므로 기절 그림은 스케일을 무시한다.
+            AdvanceFaint(Time.unscaledDeltaTime);
+            return;
+        }
+
         if (_owner == null)
         {
             return;
         }
 
-        _owner.NotifyWeaponDestroyed(this);
+        Tick(Time.deltaTime);
+    }
+
+    private void OnDestroy()
+    {
+        if (_owner == null)
+        {
+            return;
+        }
+
+        var owner = _owner;
         _owner = null;
+        owner.Weapons.NotifyWeaponDestroyed(this);
     }
 
     #endregion
@@ -103,21 +104,29 @@ public abstract class Weapon : MonoBehaviour
     #region Public Methods
 
     /// <summary>
-    /// 소유 매니저를 연결한다.
+    /// 장착한 플레이어를 연결한다.
     /// </summary>
-    public void Bind(AbilityManager owner)
+    public void Bind(Player owner)
     {
         _owner = owner;
     }
 
     /// <summary>
-    /// 이번 무기에 쓸 종 그림을 넣는다. 크기와 총알은 그 에셋의 칸을 쓴다.
+    /// 파괴 알림 없이 연결을 끊는다.
     /// </summary>
-    public virtual void ApplyVisual(MonsterVisualData visual)
+    public void Unbind()
+    {
+        _owner = null;
+    }
+
+    /// <summary>
+    /// 이번 칸에 쓸 종 그림을 넣는다.
+    /// </summary>
+    public void ApplyVisual(MonsterVisualData visual)
     {
         _visual = visual;
-        _isAttacking = false;
         _shotPose = false;
+        _fainting = false;
         _frameIndex = 0;
         _frameTimer = 0f;
         if (visual == null)
@@ -130,9 +139,9 @@ public abstract class Weapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 시계 칸에 두고 레벨 수치는 프리팹에 있는 값을 쓴다.
+    /// 시계 칸에 두고 그림 재생을 시작한다.
     /// </summary>
-    public void Initialize(int playerId, WeaponSlot slot)
+    public void Initialize(int playerId)
     {
         _playerId = playerId;
         if (_stats == null)
@@ -140,15 +149,15 @@ public abstract class Weapon : MonoBehaviour
             _stats = new WeaponStats();
         }
 
-        _offset = WeaponSlots.GetDirection(slot) * _stats.FollowDistance;
-        _cooldownTimer = 0f;
         _attackFacingTimer = 0f;
-        _isAttacking = false;
         _shotPose = false;
+        _fainting = false;
+        _lastSideRight = true;
         _facingRight = false;
         _eightWay = EightWay.Right;
         _frameIndex = 0;
         _frameTimer = 0f;
+        CacheRenderer();
         if (HasFrames(CurrentFrames()))
         {
             ShowCurrentFrame();
@@ -157,22 +166,18 @@ public abstract class Weapon : MonoBehaviour
         {
             _renderer.flipX = false;
         }
-
-        OnInitialized();
     }
 
     /// <summary>
-    /// 플레이어 옆 시계 칸을 따라가고 포켓몬 그림을 재생한다.
+    /// 연출이 멈춘 동안을 빼고 걷기 그림을 재생한다.
     /// </summary>
     public void Tick(float deltaTime)
     {
-        if (!TryGetPlayer(out var playerManager))
+        if (Managers.Instance == null || !Managers.Instance.IsSimulationRunning || WeaponAbilityManager.IsCombatPaused())
         {
             return;
         }
 
-        var playerTransform = playerManager.PlayerTransform;
-        transform.position = (Vector2)playerTransform.position + _offset;
         if (_attackFacingTimer > 0f)
         {
             _attackFacingTimer -= deltaTime;
@@ -181,26 +186,25 @@ public abstract class Weapon : MonoBehaviour
         if (_attackFacingTimer <= 0f)
         {
             _shotPose = false;
-            ApplyFacing(playerManager.LookDirection);
+            if (_owner != null)
+            {
+                ApplyFacing(_owner.Movement.LookDirection);
+            }
         }
 
         AdvanceIdle(deltaTime);
     }
 
     /// <summary>
-    /// 이미 나간 탄을 끄고 다시 쓸 수 있게 둔다.
-    /// </summary>
-    public void DismissShots()
-    {
-        DismissActiveShots();
-    }
-
-    /// <summary>
-    /// 발사 방향의 걷기 8방향을 한 바퀴 재생한다. 사격·공격으로 바꿀 때는 ShotFrames만 고친다.
+    /// 발사 방향의 걷기 8방향을 한 바퀴 재생한다.
     /// </summary>
     public void FaceShot(Vector2 direction)
     {
-        _isAttacking = false;
+        if (_fainting)
+        {
+            return;
+        }
+
         _shotPose = true;
         ApplyFacing(direction);
         _frameIndex = 0;
@@ -210,128 +214,41 @@ public abstract class Weapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 고른 증강만 한 칸 올린다. 그 수치 칸이 없으면 false.
+    /// 마지막으로 본 좌우 방향의 기절 그림을 한 번 재생하고 마지막 장에서 멈춘다. 사망 조명 위에 그린다.
     /// </summary>
-    public bool TryApplyUpgrade(WeaponStatKind stat)
+    public void PlayFaint()
     {
-        if (_stats == null || !TryGetStatUpgrade(stat, out var upgrade))
+        _fainting = true;
+        _shotPose = false;
+        _attackFacingTimer = 0f;
+        _frameIndex = 0;
+        _frameTimer = 0f;
+        CacheRenderer();
+        if (_renderer != null)
         {
-            return false;
+            _renderer.sortingOrder = PlayerView.DEATH_SORTING_ORDER;
         }
 
-        _stats.AddStat(stat, upgrade.Amount);
-        return true;
-    }
-
-    #endregion
-
-    #region Protected Methods
-
-    /// <summary>
-    /// 조준 방향으로 한 발을 낸다.
-    /// </summary>
-    protected abstract void LaunchOne(Vector2 origin, Vector2 direction);
-
-    /// <summary>
-    /// 쿨다운이 끝났을 때 발사체를 낸다. 배치가 다른 무기는 이 메서드를 바꾼다.
-    /// </summary>
-    protected virtual void LaunchAttack(Vector2 origin, Vector2 direction)
-    {
-        LaunchVolley(origin, direction);
-    }
-
-    /// <summary>
-    /// 이미 나간 발사체를 진행한다.
-    /// </summary>
-    protected virtual void TickShots(float deltaTime)
-    {
-    }
-
-    /// <summary>
-    /// 켜져 있는 탄만 끈다. 발사체 뿌리는 남긴다.
-    /// </summary>
-    protected virtual void DismissActiveShots()
-    {
-    }
-
-    /// <summary>
-    /// 무기가 사라질 때 발사체를 치운다.
-    /// </summary>
-    protected virtual void ClearShots()
-    {
-    }
-
-    /// <summary>
-    /// 시계 칸 배치가 끝난 뒤 발사체 뿌리를 만든다.
-    /// </summary>
-    protected virtual void OnInitialized()
-    {
-    }
-
-    protected float GetFinalDamage()
-    {
-        Debug.Log("GetFinalDamage 호출됨");
-
-        if (Managers.Instance == null)
-        {
-            Debug.LogError("Managers.Instance가 null");
-            return Stats.Damage;
-        }
-
-        if (!Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
-        {
-            Debug.LogError("PlayerManager를 찾지 못함");
-            return Stats.Damage;
-        }
-        if (Managers.Instance==null||!Managers.Instance.TryGetManager<PlayerManager>(out var playermanager))
-        {
-            return Stats.Damage;
-        }
-        Debug.Log("원래 데미지: " +Stats.Damage+"\n최종 데미지: "+Stats.Damage * playermanager.GetDamageMultiplier(PlayerId));
-        return Stats.Damage * playermanager.GetDamageMultiplier(PlayerId);
+        ShowCurrentFrame();
     }
 
     #endregion
 
     #region Private Methods
 
-    private bool TryGetStatUpgrade(WeaponStatKind stat, out WeaponStatUpgrade upgrade)
+    private void CacheRenderer()
     {
-        upgrade = null;
-        if (_statUpgrades == null)
+        if (_renderer != null)
         {
-            return false;
+            return;
         }
 
-        for (var i = 0; i < _statUpgrades.Length; i++)
+        _renderer = GetComponent<SpriteRenderer>();
+        if (_renderer == null)
         {
-            var candidate = _statUpgrades[i];
-            if (candidate == null || candidate.Stat != stat)
-            {
-                continue;
-            }
-
-            upgrade = candidate;
-            return true;
+            _renderer = gameObject.AddComponent<SpriteRenderer>();
+            _renderer.sortingOrder = SORTING_ORDER;
         }
-
-        return false;
-    }
-
-    private bool TryGetPlayer(out PlayerManager playerManager)
-    {
-        playerManager = null;
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager(out playerManager))
-        {
-            return false;
-        }
-
-        if (playerManager.LocalPlayerId != _playerId || !playerManager.IsAlive || playerManager.PlayerTransform == null)
-        {
-            return false;
-        }
-
-        return true;
     }
 
     /// <summary>
@@ -373,6 +290,16 @@ public abstract class Weapon : MonoBehaviour
             return;
         }
 
+        // 기절 그림은 좌우만 있어서, 위아래를 볼 때도 마지막 좌우를 기억한다.
+        if (lookDirection.x > LOOK_AXIS_EPSILON)
+        {
+            _lastSideRight = true;
+        }
+        else if (lookDirection.x < -LOOK_AXIS_EPSILON)
+        {
+            _lastSideRight = false;
+        }
+
         var next = ResolveEightWay(lookDirection);
         if (next == _eightWay)
         {
@@ -409,60 +336,28 @@ public abstract class Weapon : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 공격 장은 한 번만 재생하고, 끝나면 아이들로 돌아간다.
-    /// </summary>
-    private void AdvanceAttack(float deltaTime)
+    private void AdvanceFaint(float deltaTime)
     {
-        var frames = GetAttackFrames(_eightWay);
-        if (!HasFrames(frames))
+        var frames = CurrentFrames();
+        if (!HasFrames(frames) || _frameIndex >= frames.Length - 1 || _framesPerSecond <= 0f)
         {
-            EndAttack();
             return;
         }
 
         _frameTimer += deltaTime;
-        var frameDuration = ATTACK_POSE_SECONDS / frames.Length;
-        while (_frameTimer >= frameDuration)
+        var frameDuration = 1f / _framesPerSecond;
+        var changed = false;
+        while (_frameTimer >= frameDuration && _frameIndex < frames.Length - 1)
         {
             _frameTimer -= frameDuration;
             _frameIndex++;
-            if (_frameIndex >= frames.Length)
-            {
-                EndAttack();
-                return;
-            }
+            changed = true;
         }
 
-        ShowCurrentFrame();
-    }
-
-    /// <summary>
-    /// 조준 방향에 공격 장이 있으면 0번부터 재생하고, 없으면 아이들 방향을 잠시 유지한다.
-    /// </summary>
-    private void BeginAttackPose()
-    {
-        var attackFrames = GetAttackFrames(_eightWay);
-        if (!HasFrames(attackFrames))
+        if (changed)
         {
-            _isAttacking = false;
-            _attackFacingTimer = ATTACK_POSE_SECONDS;
-            return;
+            ShowCurrentFrame();
         }
-
-        _isAttacking = true;
-        _attackFacingTimer = 0f;
-        _frameIndex = 0;
-        _frameTimer = 0f;
-        ShowCurrentFrame();
-    }
-
-    private void EndAttack()
-    {
-        _isAttacking = false;
-        _frameIndex = 0;
-        _frameTimer = 0f;
-        ShowCurrentFrame();
     }
 
     private void ShowCurrentFrame()
@@ -491,21 +386,17 @@ public abstract class Weapon : MonoBehaviour
 
     private Sprite[] CurrentFrames()
     {
+        if (_fainting)
+        {
+            return GetFaintFrames();
+        }
+
         if (_shotPose)
         {
-            var shotFrames = ShotFrames();
+            var shotFrames = GetEightWayFrames(_eightWay);
             if (HasFrames(shotFrames))
             {
                 return shotFrames;
-            }
-        }
-
-        if (_isAttacking)
-        {
-            var attackFrames = GetAttackFrames(_eightWay);
-            if (HasFrames(attackFrames))
-            {
-                return attackFrames;
             }
         }
 
@@ -517,17 +408,9 @@ public abstract class Weapon : MonoBehaviour
         return _idleFrames;
     }
 
-    /// <summary>
-    /// 지금은 그 방향 걷기 장이다. 사격·공격으로 바꿀 때 이 반환만 고친다.
-    /// </summary>
-    private Sprite[] ShotFrames()
-    {
-        return GetEightWayFrames(_eightWay);
-    }
-
     private float ShotCycleSeconds()
     {
-        var frames = ShotFrames();
+        var frames = GetEightWayFrames(_eightWay);
         if (!HasFrames(frames) || _framesPerSecond <= 0f)
         {
             return ATTACK_POSE_SECONDS;
@@ -537,6 +420,18 @@ public abstract class Weapon : MonoBehaviour
     }
 
     private bool UsesEightDirection => _visual != null || _facingMode == FacingMode.EightDirection;
+
+    private Sprite[] GetFaintFrames()
+    {
+        if (_visual == null)
+        {
+            return null;
+        }
+
+        return _lastSideRight
+            ? FirstFrames(_visual.FaintRight, _visual.FaintLeft)
+            : FirstFrames(_visual.FaintLeft, _visual.FaintRight);
+    }
 
     private Sprite[] GetEightWayFrames(EightWay way)
     {
@@ -563,37 +458,6 @@ public abstract class Weapon : MonoBehaviour
                 return FirstFrames(_visual.Walk.DownRight, _visual.Walk.Right);
             default:
                 return _visual.Walk.Right;
-        }
-    }
-
-    /// <summary>
-    /// 그 방향 공격 장만 돌려준다. 비어 있으면 다른 방향 공격으로 대체하지 않는다.
-    /// </summary>
-    private Sprite[] GetAttackFrames(EightWay way)
-    {
-        if (_visual == null || _visual.Attack == null)
-        {
-            return null;
-        }
-
-        switch (way)
-        {
-            case EightWay.UpRight:
-                return _visual.Attack.UpRight;
-            case EightWay.Up:
-                return _visual.Attack.Up;
-            case EightWay.UpLeft:
-                return _visual.Attack.UpLeft;
-            case EightWay.Left:
-                return _visual.Attack.Left;
-            case EightWay.DownLeft:
-                return _visual.Attack.DownLeft;
-            case EightWay.Down:
-                return _visual.Attack.Down;
-            case EightWay.DownRight:
-                return _visual.Attack.DownRight;
-            default:
-                return _visual.Attack.Right;
         }
     }
 
@@ -646,68 +510,6 @@ public abstract class Weapon : MonoBehaviour
 
         _renderer.sprite = PrototypeSprite.WhiteSquare;
         _renderer.color = PLACEHOLDER_COLOR;
-    }
-
-    private void TryAttack(float deltaTime)
-    {
-        if (_cooldownTimer > 0f)
-        {
-            _cooldownTimer -= deltaTime;
-            if (_cooldownTimer > 0f)
-            {
-                return;
-            }
-        }
-
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
-        {
-            return;
-        }
-
-        var origin = (Vector2)transform.position;
-        if (!enemyManager.TryGetClosest(origin, _stats.AttackRange, out var enemy))
-        {
-            return;
-        }
-
-        var aim = (Vector2)enemy.transform.position - origin;
-        if (aim.sqrMagnitude <= AIM_SQR_EPSILON)
-        {
-            aim = Vector2.right;
-        }
-        else
-        {
-            aim.Normalize();
-        }
-
-        ApplyFacing(aim);
-        BeginAttackPose();
-        LaunchAttack(origin, aim);
-        _cooldownTimer = _stats.Cooldown;
-    }
-
-    private void LaunchVolley(Vector2 origin, Vector2 direction)
-    {
-        var count = _stats.ProjectileCount;
-        if (count <= 1)
-        {
-            LaunchOne(origin, direction);
-            return;
-        }
-
-        var start = -VOLLEY_SPREAD_DEGREES * (count - 1) * 0.5f;
-        for (var i = 0; i < count; i++)
-        {
-            LaunchOne(origin, Rotate(direction, start + VOLLEY_SPREAD_DEGREES * i));
-        }
-    }
-
-    private static Vector2 Rotate(Vector2 direction, float degrees)
-    {
-        var radians = degrees * Mathf.Deg2Rad;
-        var sin = Mathf.Sin(radians);
-        var cos = Mathf.Cos(radians);
-        return new Vector2(direction.x * cos - direction.y * sin, direction.x * sin + direction.y * cos);
     }
 
     #endregion

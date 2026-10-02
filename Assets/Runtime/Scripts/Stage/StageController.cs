@@ -132,6 +132,7 @@ public class StageController : MonoBehaviour
         }
 
         var playerId = playerManager.SpawnLocal();
+        playerManager.EquipStarting(playerId);
         if (Managers.Instance.TryGetManager<CurrenciesManager>(out var currenciesManager))
         {
             currenciesManager.ClearStage(playerId);
@@ -145,7 +146,7 @@ public class StageController : MonoBehaviour
         }
 
 
-        if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        if (Managers.Instance.TryGetManager<WeaponAbilityManager>(out var abilityManager))
         {
             abilityManager.BeginStage(playerId);
         }
@@ -427,7 +428,7 @@ public class StageController : MonoBehaviour
             upgradeManager.EndStage();
         }
 
-        if (Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        if (Managers.Instance.TryGetManager<WeaponAbilityManager>(out var abilityManager))
         {
             abilityManager.EndStage();
         }
@@ -454,6 +455,11 @@ public class StageController : MonoBehaviour
         if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             playerId = playerManager.LocalPlayerId;
+            // 패배 화면에서는 기절한 포켓몬을 남긴다. 씬을 떠나며 Loading이 될 때 치운다.
+            if (resultState != GameState.Defeat)
+            {
+                playerManager.ClearEquipped();
+            }
         }
 
         var currencies = System.Array.Empty<CurrencyAmount>();
@@ -487,7 +493,7 @@ public class StageController : MonoBehaviour
             enemyManager.ClearStage();
         }
 
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<WeaponAbilityManager>(out var abilityManager))
         {
             abilityManager.EndStage();
         }
@@ -504,6 +510,11 @@ public class StageController : MonoBehaviour
         if (Managers.Instance != null && Managers.Instance.TryGetManager<DropManager>(out var dropManager))
         {
             dropManager.EndStage();
+        }
+
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            playerManager.ClearEquipped();
         }
 
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))

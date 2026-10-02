@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -21,10 +22,15 @@ public class Enemy : MonoBehaviour
     private const float DAMAGE_TEXT_INTERVAL = 0.2f;
     private const float DAMAGE_TEXT_MIN_VALUE = 1f;
     private const float DAMAGE_TEXT_OFFSET = 0.1f;
+    private const string DAMAGE_ZERO_SOUND = "damage_zero";
+    private const string DAMAGE_LOW_SOUND = "damage_low";
+    private const string DAMAGE_MIDDLE_SOUND = "damage_middle";
+    private const string DAMAGE_HIGH_SOUND = "damage_high";
     private static readonly MonsterType[] DEFAULT_DEFENDER_TYPES = { MonsterType.Normal };
 
     [Header("Drop")]
     [SerializeField] private ExperienceGem _experienceGem;
+    private ExperienceGem _dropGem;
     [SerializeField] private CoinDropBehavior _pocketDollarDrop;
     [SerializeField, Range(0f, 100f)] private float _pocketDollarChance;
     [SerializeField] private CoinDropBehavior _monsterBallDrop;
@@ -86,7 +92,7 @@ public class Enemy : MonoBehaviour
 
     public float SpawnedAt => _spawnedAt;
 
-    public ExperienceGem ExperienceGem => _experienceGem;
+    public ExperienceGem ExperienceGem => _dropGem != null ? _dropGem : _experienceGem;
 
     public CoinDropBehavior PocketDollarDrop => _pocketDollarDrop;
 
@@ -127,6 +133,14 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
+    /// 이번 스폰의 경험치 구슬을 바꾼다. 비우면 프리팹 구슬을 쓴다.
+    /// </summary>
+    public void SetDropGem(ExperienceGem gem)
+    {
+        _dropGem = gem;
+    }
+
+    /// <summary>
     /// 스폰 직후 그림과 크기를 넣는다. 크기를 넘기지 않으면 종 크기를 쓴다.
     /// </summary>
     public void ApplyVisual(MonsterVisualData visual, float? scale = null)
@@ -145,6 +159,40 @@ public class Enemy : MonoBehaviour
         {
             _view.ApplyVisual(visual);
         }
+    }
+
+    /// <summary>
+    /// hurt 칸에 죽는 그림이 있으면 true.
+    /// </summary>
+    public bool HasHurtSprite
+    {
+        get
+        {
+            if (_view == null)
+            {
+                _view = GetComponent<EnemyView>();
+            }
+
+            return _view != null && _view.HasHurtSprite;
+        }
+    }
+
+    /// <summary>
+    /// 지금 보는 방향의 hurt 그림을 한 번 재생한다. 칸이 비어 있으면 바로 끝난다.
+    /// </summary>
+    public UniTask PlayHurtAsync()
+    {
+        if (_view == null)
+        {
+            _view = GetComponent<EnemyView>();
+        }
+
+        if (_view == null)
+        {
+            return UniTask.CompletedTask;
+        }
+
+        return _view.PlayHurtAsync();
     }
 
     /// <summary>
@@ -280,6 +328,7 @@ public class Enemy : MonoBehaviour
         var multiplier = TypeChart.GetMultiplier(attackType, _defenderTypes);
         if (multiplier <= 0f)
         {
+            PlayDamageSound(DamageTextKind.Immune);
             PublishImmuneText();
             return;
         }
@@ -292,6 +341,7 @@ public class Enemy : MonoBehaviour
 
         _health = Mathf.Max(0f, _health - dealt);
         _damageTextKind = DamageTextRequested.FromMultiplier(multiplier);
+        PlayDamageSound(_damageTextKind);
         PublishDamageText(dealt);
         if (_health > 0f)
         {
@@ -307,6 +357,36 @@ public class Enemy : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// 효과가 없으면 zero, 별로면 low, 1배면 middle, 효과가 굉장하면 high를 튼다.
+    /// </summary>
+    private static void PlayDamageSound(DamageTextKind kind)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(GetDamageSoundName(kind));
+    }
+
+    private static string GetDamageSoundName(DamageTextKind kind)
+    {
+        switch (kind)
+        {
+            case DamageTextKind.Immune:
+                return DAMAGE_ZERO_SOUND;
+            case DamageTextKind.VeryResisted:
+            case DamageTextKind.Resisted:
+                return DAMAGE_LOW_SOUND;
+            case DamageTextKind.Super:
+            case DamageTextKind.VerySuper:
+                return DAMAGE_HIGH_SOUND;
+            default:
+                return DAMAGE_MIDDLE_SOUND;
+        }
+    }
 
     private void PublishImmuneText()
     {

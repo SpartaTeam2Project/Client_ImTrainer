@@ -219,7 +219,7 @@ public static class BossTrainerEntrance
 
     private static void SetWeaponsPaused(bool paused)
     {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AbilityManager>(out var abilityManager))
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<WeaponAbilityManager>(out var abilityManager))
         {
             return;
         }

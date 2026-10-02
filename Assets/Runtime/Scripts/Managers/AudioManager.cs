@@ -272,7 +272,8 @@ public class AudioManager : BaseManager
         }
 
         AddEntries(_database.Music, _musicEntries, "BGM");
-        AddEntries(_database.Sounds, _soundEntries, "효과음");
+        AddEntries(_database.UISounds, _soundEntries, "효과음");
+        AddEntries(_database.CombatSounds, _soundEntries, "효과음");
     }
 
     private static void AddEntries(IReadOnlyList<AudioEntry> source, Dictionary<string, AudioEntry> target, string category)
