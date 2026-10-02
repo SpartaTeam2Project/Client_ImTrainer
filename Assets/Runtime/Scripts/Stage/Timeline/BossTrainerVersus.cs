@@ -24,8 +24,12 @@ public static class BossTrainerVersus
     private const float SCROLL_WIDTHS_PER_SECOND = 0.75f;
     private const float SLIDE_SECONDS = 0.55f;
     private const float FRAME_SECONDS = 0.16f;
+    private const float SLASH_FRAME_SECONDS = 0.06f;
+    private const float SLASH_SWEEP_SECONDS = 0.4f;
+    private const float SLASH_STAGGER_SECONDS = 0.06f;
+    private const int SLASH_PIECES = 4;
     private const float MUSIC_DELAY_SECONDS = 0.6f;
-    private const float BATTLE_START_SECONDS = 1.4f;
+    private const float BATTLE_START_SECONDS = 2f;
     private const string LAST_BATTLE_MUSIC_NAME = "LastBattle";
 
     private static BossTrainerVersusView _view;
@@ -33,9 +37,12 @@ public static class BossTrainerVersus
     private static RectTransform _secondBar;
     private static Image _rivalImage;
     private static float _rivalPixelScale;
+    private static Sprite[] _slashFrames;
+    private static int _slashFrame;
+    private static float _slashTimer;
 
     /// <summary>
-    /// VS 화면을 연다. 브금 뒤 조작이 있거나 1.4초가 지나면 true.
+    /// VS 화면을 연다. 브금 뒤 조작이 있거나 2초가 지나면 true.
     /// 그림이 비어 있으면 화면만 건너뛰고 true를 돌려 보스전으로 넘어간다.
     /// </summary>
     public static async UniTask<bool> PlayAsync(int token, BossTrainerVersusCast cast)
@@ -91,6 +98,11 @@ public static class BossTrainerVersus
             return false;
         }
 
+        if (!await SweepSlashAsync(token, cast.SlashFrames))
+        {
+            return false;
+        }
+
         ShowVersus(cast.Versus);
         if (!await WaitSecondsAsync(token, MUSIC_DELAY_SECONDS))
         {
@@ -116,6 +128,9 @@ public static class BossTrainerVersus
         _secondBar = null;
         _rivalImage = null;
         _rivalPixelScale = 0f;
+        _slashFrames = null;
+        _slashFrame = 0;
+        _slashTimer = 0f;
     }
 
     private static void HideUntilShown()
@@ -183,6 +198,145 @@ public static class BossTrainerVersus
 
         _firstBar.anchoredPosition = first;
         _secondBar.anchoredPosition = second;
+    }
+
+    /// <summary>
+    /// 왼쪽 화염은 왼쪽 끝에서, 오른쪽 화염은 오른쪽 끝에서 타듯이 번진다.
+    /// </summary>
+    private static async UniTask<bool> SweepSlashAsync(int token, Sprite[] frames)
+    {
+        if (_view == null || frames == null || frames.Length < SLASH_PIECES)
+        {
+            return IsCurrent(token);
+        }
+
+        var slashes = _view.Slashes;
+        var count = slashes != null ? Mathf.Min(slashes.Length, SLASH_PIECES) : 0;
+        if (count == 0)
+        {
+            return IsCurrent(token);
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            var image = slashes[i];
+            if (image == null)
+            {
+                continue;
+            }
+
+            image.type = Image.Type.Filled;
+            image.fillMethod = Image.FillMethod.Horizontal;
+            image.fillOrigin = i % 2 == 0 ? 0 : 1;
+            image.fillAmount = 0f;
+        }
+
+        BeginSlash(frames);
+        var duration = SLASH_SWEEP_SECONDS + SLASH_STAGGER_SECONDS;
+        var elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (!IsCurrent(token) || _view == null)
+            {
+                return false;
+            }
+
+            TickScroll();
+            TickSlash();
+            elapsed += Time.deltaTime;
+            for (var i = 0; i < count; i++)
+            {
+                var image = slashes[i];
+                if (image == null)
+                {
+                    continue;
+                }
+
+                var linear = Mathf.Clamp01((elapsed - SlashStagger(i)) / SLASH_SWEEP_SECONDS);
+                var blend = linear * linear * (3f - 2f * linear);
+                image.fillAmount = blend;
+            }
+
+            await UniTask.Yield();
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            if (slashes[i] != null)
+            {
+                slashes[i].fillAmount = 1f;
+            }
+        }
+
+        return IsCurrent(token);
+    }
+
+    private static float SlashStagger(int index)
+    {
+        return index == 0 || index == 3 ? 0f : SLASH_STAGGER_SECONDS;
+    }
+
+    /// <summary>
+    /// 슬래시 네 칸을 시트 순서대로 바꿔 화염이 일렁이게 한다.
+    /// </summary>
+    private static void BeginSlash(Sprite[] frames)
+    {
+        if (_view == null || frames == null || frames.Length < SLASH_PIECES)
+        {
+            return;
+        }
+
+        _slashFrames = frames;
+        _slashFrame = 0;
+        _slashTimer = 0f;
+        ApplySlashFrame();
+    }
+
+    private static void TickSlash()
+    {
+        if (_view == null || _slashFrames == null || _slashFrames.Length < SLASH_PIECES)
+        {
+            return;
+        }
+
+        var groups = _slashFrames.Length / SLASH_PIECES;
+        if (groups <= 1)
+        {
+            return;
+        }
+
+        _slashTimer += Time.deltaTime;
+        if (_slashTimer < SLASH_FRAME_SECONDS)
+        {
+            return;
+        }
+
+        _slashTimer -= SLASH_FRAME_SECONDS;
+        _slashFrame = (_slashFrame + 1) % groups;
+        ApplySlashFrame();
+    }
+
+    private static void ApplySlashFrame()
+    {
+        var slashes = _view.Slashes;
+        if (slashes == null)
+        {
+            return;
+        }
+
+        var pieceCount = Mathf.Min(slashes.Length, SLASH_PIECES);
+        for (var i = 0; i < pieceCount; i++)
+        {
+            var image = slashes[i];
+            var index = _slashFrame * SLASH_PIECES + i;
+            if (image == null || index >= _slashFrames.Length || _slashFrames[index] == null)
+            {
+                continue;
+            }
+
+            image.sprite = _slashFrames[index];
+            Show(image);
+        }
     }
 
     private static async UniTask<bool> PlayRivalFramesAsync(int token, Sprite[] frames)
@@ -264,6 +418,7 @@ public static class BossTrainerVersus
             }
 
             TickScroll();
+            TickSlash();
             elapsed += Time.deltaTime;
             rect.anchoredPosition = Vector2.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
             await UniTask.Yield();
@@ -288,6 +443,7 @@ public static class BossTrainerVersus
             }
 
             TickScroll();
+            TickSlash();
             elapsed += Time.deltaTime;
             await UniTask.Yield();
         }
@@ -306,6 +462,7 @@ public static class BossTrainerVersus
             }
 
             TickScroll();
+            TickSlash();
             if (ConsumeActionPressed())
             {
                 return true;
