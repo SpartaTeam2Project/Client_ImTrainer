@@ -93,6 +93,17 @@ public class Player : MonoBehaviour
     }
 
     /// <summary>
+    /// 피해를 받으면 PlayerHealth가 부른다. 피격 번쩍임을 켠다.
+    /// </summary>
+    public void NotifyDamaged()
+    {
+        if (View != null)
+        {
+            View.PlayHitFlash();
+        }
+    }
+
+    /// <summary>
     /// 체력이 0이 되면 PlayerHealth가 부른다. 사망 연출과 장착 포켓몬 기절을 켜고 소유 매니저에 알린다.
     /// </summary>
     public void NotifyDied()

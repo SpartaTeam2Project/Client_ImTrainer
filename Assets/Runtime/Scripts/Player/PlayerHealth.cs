@@ -74,6 +74,11 @@ public class PlayerHealth : MonoBehaviour
             _healthbar.Apply(CurrentHealth, maxHealth);
         }
 
+        if (finalDamage > 0f && _owner != null)
+        {
+            _owner.NotifyDamaged();
+        }
+
         if (CurrentHealth > 0f)
         {
             return;
