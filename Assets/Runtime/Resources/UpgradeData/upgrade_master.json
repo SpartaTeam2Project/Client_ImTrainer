@@ -3,6 +3,7 @@
     {
       "id": "move_speed",
       "name": "이동속도 증가",
+      "iconPath": "UI/Augment/augment_runningShoes",
       "maxLevel": 1,
       "weight": 1.0,
       "effects": [
@@ -16,6 +17,7 @@
     {
       "id": "damage_reduction",
       "name": "받는 피해 감소",
+      "iconPath": "UI/Augment/augment_assaultVest",
       "maxLevel": 2,
       "weight": 1.0,
       "effects": [
@@ -29,6 +31,7 @@
     {
       "id": "damage_up",
       "name": "주는 피해 증가",
+      "iconPath": "UI/Augment/augment_lifeOrb",
       "maxLevel": 3,
       "weight": 1.0,
       "effects": [
@@ -42,6 +45,7 @@
     {
       "id": "experience",
       "name": "획득 경험치 증가",
+      "iconPath": "UI/Augment/augment_luckyEgg",
       "maxLevel": 3,
       "weight": 1.0,
       "effects": [
@@ -54,19 +58,20 @@
     },
     {
       "id": "risky_growth",
-      "name": "받는 피해 증가 + 경험치 증가",
+      "name": "생명의 구슬",
+      "iconPath": "UI/Augment/augment_lifeOrb",
       "maxLevel": 1,
-      "weight": 0.01,
+      "weight": 10,
       "effects": [
         {
           "target": "Player",
-          "type": "ReceivedDamage",
-          "value": 0.1
+          "type": "Damage",
+          "value": 0.6
         },
         {
           "target": "Player",
-          "type": "Experience",
-          "value": 0.2
+          "type": "ReceivedDamage",
+          "value": 0.3
         }
       ]
     }
