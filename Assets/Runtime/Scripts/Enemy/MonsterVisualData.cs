@@ -48,6 +48,9 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [SerializeField] private bool _hasSecondaryType;
     [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
 
+    [Header("Evolution")]
+    [SerializeField] private MonsterVisualData _evolution;
+
     [Header("Storage")]
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
     [SerializeField] private string _monsterName = string.Empty;
@@ -89,6 +92,11 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     public Sprite ProjectileSprite => _projectileSprite;
 
     public WeaponAbilityData WeaponAbility => _ability;
+
+    /// <summary>
+    /// 3성 세 마리를 합성하면 나오는 다음 종. 최종 진화는 비운다.
+    /// </summary>
+    public MonsterVisualData Evolution => _evolution;
 
     public MonsterType PrimaryType => _primaryType;
 

@@ -14,7 +14,9 @@ public class PlayerWeapon : MonoBehaviour
 
     private Player _owner;
     private readonly Weapon[] _weapons = new Weapon[WeaponSlots.MAX_COUNT];
+    private readonly MonsterVisualData[] _slotVisuals = new MonsterVisualData[WeaponSlots.MAX_COUNT];
     private int _playerId;
+    private bool _equipmentSubscribed;
 
     public MonsterVisualData EquippedVisual { get; private set; }
 
@@ -30,6 +32,20 @@ public class PlayerWeapon : MonoBehaviour
         }
     }
 
+    #region Unity Methods
+
+    private void OnEnable()
+    {
+        SubscribeEquipment();
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeEquipment();
+    }
+
+    #endregion
+
     #region Public Methods
 
     /// <summary>
@@ -41,14 +57,14 @@ public class PlayerWeapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 시작 칸에 포켓몬을 붙인다. 그림은 스토리지 엔트리에서 고른 포켓몬을 쓴다.
+    /// 시작 칸에 포켓몬을 붙인다. 그림은 이번 판 장착 목록을 따른다.
     /// </summary>
     public void EquipStarting(int playerId)
     {
         _playerId = playerId;
         ApplyEquippedScale();
-        EquippedVisual = ResolveStartingVisual();
-        Equip(STARTING_SLOT, EquippedVisual);
+        SubscribeEquipment();
+        SyncFromInventory();
     }
 
     /// <summary>
@@ -126,6 +142,8 @@ public class PlayerWeapon : MonoBehaviour
             }
 
             _weapons[i] = null;
+            _slotVisuals[i] = null;
+            RefreshEquippedVisual();
             return;
         }
     }
@@ -157,6 +175,7 @@ public class PlayerWeapon : MonoBehaviour
         weapon.Bind(_owner);
         weapon.ApplyVisual(visual);
         weapon.Initialize(_playerId);
+        _slotVisuals[index] = visual;
         return true;
     }
 
@@ -190,6 +209,7 @@ public class PlayerWeapon : MonoBehaviour
     {
         var weapon = _weapons[index];
         _weapons[index] = null;
+        _slotVisuals[index] = null;
         if (weapon == null)
         {
             var slot = SlotTransform(index);
@@ -254,6 +274,100 @@ public class PlayerWeapon : MonoBehaviour
         }
 
         return 1f / scale;
+    }
+
+    private void SyncFromInventory()
+    {
+        if (Managers.Instance != null
+            && Managers.Instance.TryGetManager<ItemManager>(out var itemManager)
+            && itemManager.GetEquipment(_playerId) != null)
+        {
+            var equipment = itemManager.GetEquipment(_playerId);
+            for (var i = 0; i < _weapons.Length; i++)
+            {
+                ReleaseWeapon(i);
+                if (i >= equipment.Stacks.Count || equipment.Stacks[i].Empty || equipment.Stacks[i].Item == null)
+                {
+                    continue;
+                }
+
+                var visual = itemManager.GetVisual(equipment.Stacks[i].Item.uid);
+                if (visual != null)
+                {
+                    Equip((WeaponSlot)i, visual);
+                }
+            }
+
+            RefreshEquippedVisual();
+            return;
+        }
+
+        EquippedVisual = ResolveStartingVisual();
+        Equip(STARTING_SLOT, EquippedVisual);
+    }
+
+    private void HandleEquipmentChanged(EquipmentChanged changed)
+    {
+        if (changed.PlayerId != _playerId || changed.Slot < 0 || changed.Slot >= _weapons.Length)
+        {
+            return;
+        }
+
+        ReleaseWeapon(changed.Slot);
+        if (changed.Uid >= 0 && Managers.Instance != null && Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            var visual = itemManager.GetVisual(changed.Uid);
+            if (visual != null)
+            {
+                Equip((WeaponSlot)changed.Slot, visual);
+            }
+        }
+
+        RefreshEquippedVisual();
+    }
+
+    private void RefreshEquippedVisual()
+    {
+        var starting = _slotVisuals[(int)STARTING_SLOT];
+        if (starting != null)
+        {
+            EquippedVisual = starting;
+            return;
+        }
+
+        for (var i = 0; i < _slotVisuals.Length; i++)
+        {
+            if (_slotVisuals[i] != null)
+            {
+                EquippedVisual = _slotVisuals[i];
+                return;
+            }
+        }
+
+        EquippedVisual = null;
+    }
+
+    private void SubscribeEquipment()
+    {
+        if (_equipmentSubscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            return;
+        }
+
+        eventManager.Subscribe<EquipmentChanged>(HandleEquipmentChanged);
+        _equipmentSubscribed = true;
+    }
+
+    private void UnsubscribeEquipment()
+    {
+        if (!_equipmentSubscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            _equipmentSubscribed = false;
+            return;
+        }
+
+        eventManager.Unsubscribe<EquipmentChanged>(HandleEquipmentChanged);
+        _equipmentSubscribed = false;
     }
 
     private MonsterVisualData ResolveStartingVisual()

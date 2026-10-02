@@ -19,6 +19,9 @@ public class WeaponAbilityManager : BaseManager
     [Header("Level Up")]
     [SerializeField] private AudioClip _levelUpFanfare;
 
+    private readonly List<EquippedAbilityLevel> _equippedLevels = new List<EquippedAbilityLevel>();
+    private readonly Dictionary<WeaponAbilityType, int> _appliedStarLevels = new Dictionary<WeaponAbilityType, int>();
+    private readonly List<WeaponAbilityType> _removedAbilityTypes = new List<WeaponAbilityType>();
     private readonly Queue<int> _levelUpQueue = new Queue<int>();
     private readonly Dictionary<int, WeaponAbilityLoadout> _loadouts = new Dictionary<int, WeaponAbilityLoadout>();
     private readonly List<WeaponAbilityData> _currentOffers = new List<WeaponAbilityData>();
@@ -26,6 +29,7 @@ public class WeaponAbilityManager : BaseManager
     private int _playerId;
     private bool _waitingForChoice;
     private bool _weaponsPaused;
+    private bool _stageRunning;
 
     public int PendingLevelUpLevel { get; private set; }
 
@@ -38,11 +42,21 @@ public class WeaponAbilityManager : BaseManager
     /// </summary>
     public override UniTask InitializeAsync()
     {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Subscribe<EquipmentChanged>(HandleEquipmentChanged);
+        }
+
         return base.InitializeAsync();
     }
 
     public override void Cleanup()
     {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Unsubscribe<EquipmentChanged>(HandleEquipmentChanged);
+        }
+
         ClearLevelUpQueue();
         ClearAbilities();
         base.Cleanup();
@@ -53,11 +67,12 @@ public class WeaponAbilityManager : BaseManager
     #region Public Methods
 
     /// <summary>
-    /// 고른 포켓몬의 공격 능력을 레벨 0으로 넣는다.
+    /// 고른 포켓몬의 공격 능력을 성에 맞는 레벨로 넣는다.
     /// </summary>
     public void BeginStage(int playerId)
     {
         _playerId = playerId;
+        _appliedStarLevels.Clear();
         ClearLevelUpQueue();
         ClearAbilities(playerId);
         var playerManager = GetManager<PlayerManager>();
@@ -68,6 +83,8 @@ public class WeaponAbilityManager : BaseManager
         }
 
         GrantStartingWeaponAbility(playerId);
+        ApplyEquippedAbilityLevels(playerId);
+        _stageRunning = true;
     }
 
     /// <summary>
@@ -75,6 +92,8 @@ public class WeaponAbilityManager : BaseManager
     /// </summary>
     public void EndStage()
     {
+        _stageRunning = false;
+        _appliedStarLevels.Clear();
         ClearLevelUpQueue();
         ClearAbilities(_playerId);
     }
@@ -306,6 +325,119 @@ public class WeaponAbilityManager : BaseManager
 
     #region Private Methods
 
+    /// <summary>
+    /// 장착 포켓몬의 성으로 그 무기 능력 레벨을 맞춘다. 같은 타입은 가장 높은 성을 쓴다.
+    /// </summary>
+    public void ApplyEquippedAbilityLevels(int playerId)
+    {
+        if (playerId != _playerId
+            || Managers.Instance == null
+            || !Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            return;
+        }
+
+        itemManager.CollectEquippedAbilityLevels(playerId, _equippedLevels);
+        RemoveUnequippedCatalogAbilities(playerId, itemManager);
+        for (var i = 0; i < _equippedLevels.Count; i++)
+        {
+            var equipped = _equippedLevels[i];
+            if (equipped.Ability == null)
+            {
+                continue;
+            }
+
+            var abilityType = equipped.Ability.WeaponAbilityType;
+            var acquired = GetAquiredWeaponAbility(playerId, abilityType);
+            if (acquired == null)
+            {
+                AddWeaponAbility(playerId, equipped.Ability, equipped.LevelIndex);
+                _appliedStarLevels[abilityType] = equipped.LevelIndex;
+                continue;
+            }
+
+            if (_appliedStarLevels.TryGetValue(abilityType, out var appliedStar) && appliedStar == equipped.LevelIndex)
+            {
+                continue;
+            }
+
+            acquired.ApplyLevel(equipped.LevelIndex);
+            GetLoadout(playerId).Levels[abilityType] = equipped.LevelIndex;
+            _appliedStarLevels[abilityType] = equipped.LevelIndex;
+        }
+    }
+
+    /// <summary>
+    /// 장착에서 빠진 종 목록 무기 능력만 치운다. 레벨업으로 얻은 다른 능력은 남긴다.
+    /// </summary>
+    private void RemoveUnequippedCatalogAbilities(int playerId, ItemManager itemManager)
+    {
+        var loadout = GetLoadout(playerId);
+        _removedAbilityTypes.Clear();
+        for (var i = 0; i < loadout.Acquired.Count; i++)
+        {
+            var ability = loadout.Acquired[i];
+            if (ability == null || !itemManager.IsCatalogWeaponAbility(ability.WeaponAbilityType))
+            {
+                continue;
+            }
+
+            if (HasEquippedAbility(ability.WeaponAbilityType))
+            {
+                continue;
+            }
+
+            _removedAbilityTypes.Add(ability.WeaponAbilityType);
+        }
+
+        for (var i = 0; i < _removedAbilityTypes.Count; i++)
+        {
+            RemoveAbility(playerId, _removedAbilityTypes[i]);
+        }
+    }
+
+    private bool HasEquippedAbility(WeaponAbilityType abilityType)
+    {
+        for (var i = 0; i < _equippedLevels.Count; i++)
+        {
+            if (_equippedLevels[i].Ability != null && _equippedLevels[i].Ability.WeaponAbilityType == abilityType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void RemoveAbility(int playerId, WeaponAbilityType abilityType)
+    {
+        var loadout = GetLoadout(playerId);
+        for (var i = loadout.Acquired.Count - 1; i >= 0; i--)
+        {
+            var ability = loadout.Acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityType)
+            {
+                continue;
+            }
+
+            ability.Clear();
+            loadout.Acquired.RemoveAt(i);
+        }
+
+        loadout.Levels.Remove(abilityType);
+        _appliedStarLevels.Remove(abilityType);
+    }
+
+    private void HandleEquipmentChanged(EquipmentChanged changed)
+    {
+        if (!_stageRunning)
+        {
+            return;
+        }
+
+        ApplyEquippedAbilityLevels(changed.PlayerId);
+    }
+
     private void GrantStartingWeaponAbility(int playerId)
     {
         var visual = ResolveStartingVisual(playerId);
@@ -315,7 +447,13 @@ public class WeaponAbilityManager : BaseManager
             return;
         }
 
-        AddWeaponAbility(playerId, visual.WeaponAbility, 0);
+        var level = 0;
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            level = itemManager.GetEquippedAbilityLevel(playerId, visual.WeaponAbility);
+        }
+
+        AddWeaponAbility(playerId, visual.WeaponAbility, level);
     }
 
     private MonsterVisualData ResolveStartingVisual(int playerId)
