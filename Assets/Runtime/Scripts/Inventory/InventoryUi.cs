@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 판 안에서 포켓몬을 사고, 합성하고, 장착하는 창.
+/// 판 안에서 가방과 장착을 다루는 창. 구매 목록은 ShopUi가 그린다.
 /// </summary>
 public class InventoryUi : MonoBehaviour
 {
@@ -21,12 +21,11 @@ public class InventoryUi : MonoBehaviour
 
     private Canvas _canvas;
     private EquipmentUi _equipmentUi;
+    private ShopUi _shopUi;
     private InventoryItem _slotPrefab;
     private InventoryItem _balanceSlot;
     private TextMeshProUGUI _status;
-    private RectTransform _catalogContent;
     private RectTransform _bagContent;
-    private readonly List<InventoryItem> _catalogSlots = new List<InventoryItem>();
     private readonly List<InventoryItem> _bagSlots = new List<InventoryItem>();
     private SelectionKind _selection = SelectionKind.None;
     private int _selectedIndex = -1;
@@ -37,11 +36,12 @@ public class InventoryUi : MonoBehaviour
     private bool _subscribed;
 
     /// <summary>
-    /// 장착 칸 창을 연결한다.
+    /// 장착 칸과 상점을 연결한다.
     /// </summary>
-    public void Bind(EquipmentUi equipmentUi, InventoryItem slotPrefab)
+    public void Bind(EquipmentUi equipmentUi, ShopUi shopUi, InventoryItem slotPrefab)
     {
         _equipmentUi = equipmentUi;
+        _shopUi = shopUi;
         _slotPrefab = slotPrefab;
     }
 
@@ -240,8 +240,12 @@ public class InventoryUi : MonoBehaviour
         _status.rectTransform.anchoredPosition = new Vector2(0f, 78f);
         _status.rectTransform.sizeDelta = new Vector2(1200f, 32f);
 
-        _catalogContent = CreateScroll("Catalog", panel, new Vector2(0.02f, 0.18f), new Vector2(0.34f, 0.84f));
         _bagContent = CreateScroll("Bag", panel, new Vector2(0.36f, 0.18f), new Vector2(0.7f, 0.84f));
+        if (_shopUi != null)
+        {
+            _shopUi.Build(panel, _slotPrefab, Refresh);
+        }
+
         if (_equipmentUi != null)
         {
             _equipmentUi.Build(panel, _slotPrefab);
@@ -270,8 +274,11 @@ public class InventoryUi : MonoBehaviour
             _status.text = itemManager.LastMessage;
         }
 
-        RebuildCatalog(itemManager, playerId);
         RebuildBag(itemManager, playerId);
+        if (_shopUi != null)
+        {
+            _shopUi.Refresh(playerId);
+        }
         if (_equipmentUi != null)
         {
             var selectedSlot = _selection == SelectionKind.Equipment ? _selectedIndex : -1;
@@ -296,28 +303,6 @@ public class InventoryUi : MonoBehaviour
         }
 
         _balanceSlot.ShowBalance(icon, amount);
-    }
-
-    private void RebuildCatalog(ItemManager itemManager, int playerId)
-    {
-        EnsureCatalogSlots(itemManager, playerId);
-        var icon = MonsterBallIcon();
-        var slotIndex = 0;
-        for (var i = 0; i < itemManager.Items.Count; i++)
-        {
-            var item = itemManager.Items[i];
-            if (item == null || slotIndex >= _catalogSlots.Count)
-            {
-                continue;
-            }
-
-            var visual = itemManager.GetVisual(item.uid);
-            var portrait = visual != null ? visual.Portrait : null;
-            var slot = _catalogSlots[slotIndex];
-            slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, false);
-            slot.ShowPrice(icon, item.price);
-            slotIndex++;
-        }
     }
 
     private void RebuildBag(ItemManager itemManager, int playerId)
@@ -347,43 +332,6 @@ public class InventoryUi : MonoBehaviour
             var portrait = visual != null ? visual.Portrait : null;
             slot.ShowPokemon(portrait, stack.Item.name, stack.Item.upgradeLevel, stack.Number, true, selected);
             slot.HidePrice();
-        }
-    }
-
-    private void EnsureCatalogSlots(ItemManager itemManager, int playerId)
-    {
-        if (_slotPrefab == null || _catalogContent == null)
-        {
-            return;
-        }
-
-        var count = 0;
-        for (var i = 0; i < itemManager.Items.Count; i++)
-        {
-            if (itemManager.Items[i] != null)
-            {
-                count++;
-            }
-        }
-
-        if (_catalogSlots.Count == count)
-        {
-            return;
-        }
-
-        ClearSlots(_catalogSlots);
-        for (var i = 0; i < itemManager.Items.Count; i++)
-        {
-            var item = itemManager.Items[i];
-            if (item == null)
-            {
-                continue;
-            }
-
-            var uid = item.uid;
-            var slot = Instantiate(_slotPrefab, _catalogContent);
-            slot.Button.onClick.AddListener(() => Purchase(playerId, uid));
-            _catalogSlots.Add(slot);
         }
     }
 
@@ -421,27 +369,6 @@ public class InventoryUi : MonoBehaviour
         }
 
         _selectedIndex = index;
-    }
-
-    private static Sprite MonsterBallIcon()
-    {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
-        {
-            return null;
-        }
-
-        return currencies.GetIcon(CurrenciesManager.MONSTER_BALL_ID);
-    }
-
-    private void Purchase(int playerId, int uid)
-    {
-        if (!Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
-        {
-            return;
-        }
-
-        itemManager.TryPurchase(playerId, uid);
-        Refresh();
     }
 
     private void SelectBag(int index)

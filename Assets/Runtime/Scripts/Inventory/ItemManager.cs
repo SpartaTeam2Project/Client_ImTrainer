@@ -539,7 +539,8 @@ public class ItemManager : BaseManager
 
         var window = gameObject.AddComponent<InventoryUi>();
         var equipment = gameObject.AddComponent<EquipmentUi>();
-        window.Bind(equipment, _slotPrefab);
+        var shop = gameObject.AddComponent<ShopUi>();
+        window.Bind(equipment, shop, _slotPrefab);
     }
 
     private RunInventory CreateRun()
