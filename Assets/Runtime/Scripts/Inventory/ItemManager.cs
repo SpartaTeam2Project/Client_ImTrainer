@@ -16,6 +16,9 @@ public class ItemManager : BaseManager
     private const int EMPTY_UID = -1;
 
     [SerializeField] private MonsterDatabase _monsters;
+    [SerializeField] private InventoryItem _slotPrefab;
+
+    public InventoryItem SlotPrefab => _slotPrefab;
 
     private readonly List<Item> _items = new List<Item>();
     private readonly List<MonsterVisualData> _visuals = new List<MonsterVisualData>();
@@ -171,7 +174,7 @@ public class ItemManager : BaseManager
         {
             LastMessage = "시작 포켓몬을 찾지 못했습니다.";
             Debug.LogWarning(LastMessage);
-            PublishInventory(playerId);
+            FinishBag(playerId);
             PublishAllEquipment(playerId);
             return;
         }
@@ -185,7 +188,7 @@ public class ItemManager : BaseManager
             Debug.LogWarning(LastMessage);
         }
 
-        PublishInventory(playerId);
+        FinishBag(playerId);
         PublishAllEquipment(playerId);
     }
 
@@ -231,7 +234,7 @@ public class ItemManager : BaseManager
 
         run.Bag.AddItem(created, 1);
         LastMessage = created.name + "을 가방에 넣었습니다.";
-        PublishInventory(playerId);
+        FinishBag(playerId);
         return true;
     }
 
@@ -286,7 +289,7 @@ public class ItemManager : BaseManager
         }
 
         LastMessage = result.name + " " + result.upgradeLevel + "성이 되었습니다.";
-        PublishInventory(playerId);
+        FinishBag(playerId);
         return true;
     }
 
@@ -316,7 +319,7 @@ public class ItemManager : BaseManager
         }
 
         LastMessage = "장착했습니다.";
-        PublishInventory(playerId);
+        FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
     }
@@ -341,7 +344,7 @@ public class ItemManager : BaseManager
         run.Equipment.ClearSlot(slot);
         run.Bag.AddItem(item, 1);
         LastMessage = "해제했습니다.";
-        PublishInventory(playerId);
+        FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
     }
@@ -360,7 +363,7 @@ public class ItemManager : BaseManager
 
         Refund(playerId, item.price * number);
         LastMessage = "판매했습니다.";
-        PublishInventory(playerId);
+        FinishBag(playerId);
         return true;
     }
 
@@ -377,7 +380,7 @@ public class ItemManager : BaseManager
         }
 
         LastMessage = "버렸습니다.";
-        PublishInventory(playerId);
+        FinishBag(playerId);
         return true;
     }
 
@@ -513,7 +516,7 @@ public class ItemManager : BaseManager
 
         var window = gameObject.AddComponent<InventoryUi>();
         var equipment = gameObject.AddComponent<EquipmentUi>();
-        window.Bind(equipment);
+        window.Bind(equipment, _slotPrefab);
     }
 
     private RunInventory CreateRun()
@@ -696,6 +699,17 @@ public class ItemManager : BaseManager
         }
 
         return star;
+    }
+
+    private void FinishBag(int playerId)
+    {
+        var run = GetRun(playerId);
+        if (run != null)
+        {
+            run.Bag.Sort();
+        }
+
+        PublishInventory(playerId);
     }
 
     private void PublishInventory(int playerId)

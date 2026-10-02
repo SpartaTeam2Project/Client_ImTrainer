@@ -9,16 +9,17 @@ using UnityEngine.UI;
 /// </summary>
 public class EquipmentUi : MonoBehaviour
 {
-    private const float ROW_HEIGHT = 42f;
+    private const float SLOT_SCALE = 0.72f;
+    private const float ROW_STEP = 108f;
 
-    private readonly List<Button> _slots = new List<Button>();
+    private readonly List<InventoryItem> _slots = new List<InventoryItem>();
     private RectTransform _root;
     private Action<int> _onSelect;
 
     /// <summary>
     /// 장착 칸을 그릴 영역을 만든다.
     /// </summary>
-    public void Build(RectTransform parent)
+    public void Build(RectTransform parent, InventoryItem prefab)
     {
         if (_root != null)
         {
@@ -32,6 +33,7 @@ public class EquipmentUi : MonoBehaviour
         _root.offsetMax = Vector2.zero;
         var background = _root.gameObject.AddComponent<Image>();
         background.color = new Color(0.1f, 0.12f, 0.16f, 0.95f);
+        background.raycastTarget = false;
 
         var title = InventoryUi.CreateText("Title", _root, "장착", 28);
         title.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -40,12 +42,43 @@ public class EquipmentUi : MonoBehaviour
         title.rectTransform.anchoredPosition = new Vector2(0f, -8f);
         title.rectTransform.sizeDelta = new Vector2(0f, 36f);
 
+        if (prefab == null)
+        {
+            Debug.LogError("장착 칸 프리팹이 없습니다.");
+            return;
+        }
+
         for (var i = 0; i < WeaponSlots.MAX_COUNT; i++)
         {
-            var slot = i;
-            var button = CreateSlot(_root, i);
-            button.onClick.AddListener(() => _onSelect?.Invoke(slot));
-            _slots.Add(button);
+            var slotIndex = i;
+            var row = InventoryUi.CreateRect("Row " + i, _root);
+            row.anchorMin = new Vector2(0.5f, 1f);
+            row.anchorMax = new Vector2(0.5f, 1f);
+            row.pivot = new Vector2(0.5f, 1f);
+            row.sizeDelta = new Vector2(220f, ROW_STEP);
+            row.anchoredPosition = new Vector2(0f, -48f - i * ROW_STEP);
+
+            var label = InventoryUi.CreateText("Clock", row, SlotName(i), 18);
+            label.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+            label.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            label.rectTransform.pivot = new Vector2(0f, 0.5f);
+            label.rectTransform.anchoredPosition = new Vector2(8f, 0f);
+            label.rectTransform.sizeDelta = new Vector2(52f, 32f);
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+
+            var slot = Instantiate(prefab, row);
+            var slotRect = slot.transform as RectTransform;
+            if (slotRect != null)
+            {
+                slotRect.anchorMin = new Vector2(1f, 0.5f);
+                slotRect.anchorMax = new Vector2(1f, 0.5f);
+                slotRect.pivot = new Vector2(1f, 0.5f);
+                slotRect.anchoredPosition = new Vector2(-8f, 0f);
+                slotRect.localScale = new Vector3(SLOT_SCALE, SLOT_SCALE, 1f);
+            }
+
+            slot.Button.onClick.AddListener(() => _onSelect?.Invoke(slotIndex));
+            _slots.Add(slot);
         }
     }
 
@@ -63,45 +96,21 @@ public class EquipmentUi : MonoBehaviour
         var equipment = itemManager.GetEquipment(playerId);
         for (var i = 0; i < _slots.Count; i++)
         {
-            var label = _slots[i].GetComponentInChildren<TextMeshProUGUI>();
-            var text = SlotName(i) + "  비어 있음";
-            if (equipment != null && i < equipment.Stacks.Count && !equipment.Stacks[i].Empty && equipment.Stacks[i].Item != null)
+            var slot = _slots[i];
+            slot.HidePrice();
+            var selected = i == selectedSlot;
+            if (equipment == null || i >= equipment.Stacks.Count || equipment.Stacks[i].Empty || equipment.Stacks[i].Item == null)
             {
-                var item = equipment.Stacks[i].Item;
-                text = SlotName(i) + "  " + item.name + " " + item.upgradeLevel + "성";
+                slot.ShowEmpty();
+                slot.SetSelected(selected);
+                continue;
             }
 
-            if (label != null)
-            {
-                label.text = text;
-            }
-
-            var image = _slots[i].GetComponent<Image>();
-            if (image != null)
-            {
-                image.color = i == selectedSlot
-                    ? new Color(0.25f, 0.45f, 0.3f, 1f)
-                    : new Color(0.16f, 0.18f, 0.22f, 1f);
-            }
+            var item = equipment.Stacks[i].Item;
+            var visual = itemManager.GetVisual(item.uid);
+            var portrait = visual != null ? visual.Portrait : null;
+            slot.ShowPokemon(portrait, item.name, item.upgradeLevel, equipment.Stacks[i].Number, false, selected);
         }
-    }
-
-    private Button CreateSlot(RectTransform parent, int index)
-    {
-        var rect = InventoryUi.CreateRect("Slot " + index, parent);
-        rect.anchorMin = new Vector2(0.04f, 1f);
-        rect.anchorMax = new Vector2(0.96f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.sizeDelta = new Vector2(0f, ROW_HEIGHT);
-        rect.anchoredPosition = new Vector2(0f, -48f - index * (ROW_HEIGHT + 6f));
-        var image = rect.gameObject.AddComponent<Image>();
-        image.color = new Color(0.16f, 0.18f, 0.22f, 1f);
-        var button = rect.gameObject.AddComponent<Button>();
-        var label = InventoryUi.CreateText("Label", rect, string.Empty, 20);
-        InventoryUi.Stretch(label.rectTransform);
-        label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.margin = new Vector4(12f, 4f, 12f, 4f);
-        return button;
     }
 
     private static string SlotName(int index)

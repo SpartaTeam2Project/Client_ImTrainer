@@ -9,7 +9,8 @@ using UnityEngine.UI;
 public class InventoryUi : MonoBehaviour
 {
     private const int CANVAS_SORT_ORDER = 600;
-    private const float ROW_HEIGHT = 36f;
+    private const int GRID_COLUMNS = 3;
+    private static readonly Vector2 CELL_SIZE = new Vector2(108f, 132f);
 
     private enum SelectionKind
     {
@@ -20,14 +21,17 @@ public class InventoryUi : MonoBehaviour
 
     private Canvas _canvas;
     private EquipmentUi _equipmentUi;
+    private InventoryItem _slotPrefab;
+    private InventoryItem _balanceSlot;
     private TextMeshProUGUI _status;
-    private TextMeshProUGUI _ballText;
     private RectTransform _catalogContent;
     private RectTransform _bagContent;
-    private readonly List<Button> _catalogButtons = new List<Button>();
-    private readonly List<Button> _bagButtons = new List<Button>();
+    private readonly List<InventoryItem> _catalogSlots = new List<InventoryItem>();
+    private readonly List<InventoryItem> _bagSlots = new List<InventoryItem>();
     private SelectionKind _selection = SelectionKind.None;
     private int _selectedIndex = -1;
+    private int _selectedUid = -1;
+    private int _selectedStar;
     private bool _open;
     private bool _holdTime;
     private bool _subscribed;
@@ -35,9 +39,10 @@ public class InventoryUi : MonoBehaviour
     /// <summary>
     /// 장착 칸 창을 연결한다.
     /// </summary>
-    public void Bind(EquipmentUi equipmentUi)
+    public void Bind(EquipmentUi equipmentUi, InventoryItem slotPrefab)
     {
         _equipmentUi = equipmentUi;
+        _slotPrefab = slotPrefab;
     }
 
     private void OnEnable()
@@ -210,13 +215,23 @@ public class InventoryUi : MonoBehaviour
         title.rectTransform.anchoredPosition = new Vector2(0f, -16f);
         title.rectTransform.sizeDelta = new Vector2(400f, 48f);
 
-        _ballText = CreateText("Balls", panel, string.Empty, 22);
-        _ballText.alignment = TextAlignmentOptions.MidlineLeft;
-        _ballText.rectTransform.anchorMin = new Vector2(0f, 1f);
-        _ballText.rectTransform.anchorMax = new Vector2(0f, 1f);
-        _ballText.rectTransform.pivot = new Vector2(0f, 1f);
-        _ballText.rectTransform.anchoredPosition = new Vector2(24f, -20f);
-        _ballText.rectTransform.sizeDelta = new Vector2(360f, 36f);
+        if (_slotPrefab != null)
+        {
+            _balanceSlot = Instantiate(_slotPrefab, panel);
+            var balanceRect = _balanceSlot.transform as RectTransform;
+            if (balanceRect != null)
+            {
+                balanceRect.anchorMin = new Vector2(0f, 1f);
+                balanceRect.anchorMax = new Vector2(0f, 1f);
+                balanceRect.pivot = new Vector2(0f, 1f);
+                balanceRect.anchoredPosition = new Vector2(24f, -16f);
+                balanceRect.sizeDelta = new Vector2(220f, 44f);
+            }
+        }
+        else
+        {
+            Debug.LogError("인벤토리 칸 프리팹이 없습니다.");
+        }
 
         _status = CreateText("Status", panel, string.Empty, 20);
         _status.rectTransform.anchorMin = new Vector2(0.5f, 0f);
@@ -229,7 +244,7 @@ public class InventoryUi : MonoBehaviour
         _bagContent = CreateScroll("Bag", panel, new Vector2(0.36f, 0.18f), new Vector2(0.7f, 0.84f));
         if (_equipmentUi != null)
         {
-            _equipmentUi.Build(panel);
+            _equipmentUi.Build(panel, _slotPrefab);
         }
 
         CreateAction(panel, "합성", 0, SynthesizeSelected);
@@ -266,19 +281,97 @@ public class InventoryUi : MonoBehaviour
 
     private void RefreshBalls(int playerId)
     {
-        if (_ballText == null || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
+        if (_balanceSlot == null)
         {
             return;
         }
 
-        var save = currencies.GetCurrency(playerId, CurrenciesManager.MONSTER_BALL_ID, false);
-        var amount = save != null ? save.Amount : 0;
-        _ballText.text = "몬스터볼 " + amount;
+        Sprite icon = null;
+        var amount = 0;
+        if (Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
+        {
+            icon = currencies.GetIcon(CurrenciesManager.MONSTER_BALL_ID);
+            var save = currencies.GetCurrency(playerId, CurrenciesManager.MONSTER_BALL_ID, false);
+            amount = save != null ? save.Amount : 0;
+        }
+
+        _balanceSlot.ShowBalance(icon, amount);
     }
 
     private void RebuildCatalog(ItemManager itemManager, int playerId)
     {
-        ClearButtons(_catalogButtons);
+        EnsureCatalogSlots(itemManager, playerId);
+        var icon = MonsterBallIcon();
+        var slotIndex = 0;
+        for (var i = 0; i < itemManager.Items.Count; i++)
+        {
+            var item = itemManager.Items[i];
+            if (item == null || slotIndex >= _catalogSlots.Count)
+            {
+                continue;
+            }
+
+            var visual = itemManager.GetVisual(item.uid);
+            var portrait = visual != null ? visual.Portrait : null;
+            var slot = _catalogSlots[slotIndex];
+            slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, false);
+            slot.ShowPrice(icon, item.price);
+            slotIndex++;
+        }
+    }
+
+    private void RebuildBag(ItemManager itemManager, int playerId)
+    {
+        var bag = itemManager.GetInventory(playerId);
+        if (bag == null)
+        {
+            return;
+        }
+
+        EnsureBagSlots(bag);
+        ResolveBagSelection(bag);
+        for (var i = 0; i < _bagSlots.Count && i < bag.Stacks.Count; i++)
+        {
+            var slot = _bagSlots[i];
+            var stack = bag.Stacks[i];
+            var selected = _selection == SelectionKind.Bag && _selectedIndex == i;
+            if (stack.Empty || stack.Item == null)
+            {
+                slot.ShowEmpty();
+                slot.HidePrice();
+                slot.SetSelected(false);
+                continue;
+            }
+
+            var visual = itemManager.GetVisual(stack.Item.uid);
+            var portrait = visual != null ? visual.Portrait : null;
+            slot.ShowPokemon(portrait, stack.Item.name, stack.Item.upgradeLevel, stack.Number, true, selected);
+            slot.HidePrice();
+        }
+    }
+
+    private void EnsureCatalogSlots(ItemManager itemManager, int playerId)
+    {
+        if (_slotPrefab == null || _catalogContent == null)
+        {
+            return;
+        }
+
+        var count = 0;
+        for (var i = 0; i < itemManager.Items.Count; i++)
+        {
+            if (itemManager.Items[i] != null)
+            {
+                count++;
+            }
+        }
+
+        if (_catalogSlots.Count == count)
+        {
+            return;
+        }
+
+        ClearSlots(_catalogSlots);
         for (var i = 0; i < itemManager.Items.Count; i++)
         {
             var item = itemManager.Items[i];
@@ -288,43 +381,56 @@ public class InventoryUi : MonoBehaviour
             }
 
             var uid = item.uid;
-            var button = CreateRow(_catalogContent, item.name + "  " + item.price);
-            button.onClick.AddListener(() => Purchase(playerId, uid));
-            _catalogButtons.Add(button);
+            var slot = Instantiate(_slotPrefab, _catalogContent);
+            slot.Button.onClick.AddListener(() => Purchase(playerId, uid));
+            _catalogSlots.Add(slot);
         }
     }
 
-    private void RebuildBag(ItemManager itemManager, int playerId)
+    private void EnsureBagSlots(InventoryHolder bag)
     {
-        ClearButtons(_bagButtons);
-        var bag = itemManager.GetInventory(playerId);
-        if (bag == null)
+        if (_slotPrefab == null || _bagContent == null || bag == null || _bagSlots.Count == bag.Stacks.Count)
         {
             return;
         }
 
+        ClearSlots(_bagSlots);
         for (var i = 0; i < bag.Stacks.Count; i++)
         {
-            var stack = bag.Stacks[i];
-            if (stack.Empty || stack.Item == null)
-            {
-                continue;
-            }
-
             var index = i;
-            var button = CreateRow(_bagContent, stack.Item.name + " " + stack.Item.upgradeLevel + "성 x" + stack.Number);
-            button.onClick.AddListener(() => SelectBag(index));
-            if (_selection == SelectionKind.Bag && _selectedIndex == index)
-            {
-                var image = button.GetComponent<Image>();
-                if (image != null)
-                {
-                    image.color = new Color(0.25f, 0.45f, 0.3f, 1f);
-                }
-            }
-
-            _bagButtons.Add(button);
+            var slot = Instantiate(_slotPrefab, _bagContent);
+            slot.Button.onClick.AddListener(() => SelectBag(index));
+            _bagSlots.Add(slot);
         }
+    }
+
+    private void ResolveBagSelection(InventoryHolder bag)
+    {
+        if (_selection != SelectionKind.Bag || _selectedUid < 0)
+        {
+            return;
+        }
+
+        var index = bag.FindIndex(_selectedUid, _selectedStar);
+        if (index < 0)
+        {
+            _selection = SelectionKind.None;
+            _selectedIndex = -1;
+            _selectedUid = -1;
+            return;
+        }
+
+        _selectedIndex = index;
+    }
+
+    private static Sprite MonsterBallIcon()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
+        {
+            return null;
+        }
+
+        return currencies.GetIcon(CurrenciesManager.MONSTER_BALL_ID);
     }
 
     private void Purchase(int playerId, int uid)
@@ -340,8 +446,25 @@ public class InventoryUi : MonoBehaviour
 
     private void SelectBag(int index)
     {
+        if (!TryGetContext(out var itemManager, out var playerId))
+        {
+            return;
+        }
+
+        var bag = itemManager.GetInventory(playerId);
+        if (bag == null || index < 0 || index >= bag.Stacks.Count || bag.Stacks[index].Empty || bag.Stacks[index].Item == null)
+        {
+            _selection = SelectionKind.None;
+            _selectedIndex = -1;
+            _selectedUid = -1;
+            Refresh();
+            return;
+        }
+
         _selection = SelectionKind.Bag;
         _selectedIndex = index;
+        _selectedUid = bag.Stacks[index].Item.uid;
+        _selectedStar = bag.Stacks[index].Item.upgradeLevel;
         Refresh();
     }
 
@@ -552,33 +675,19 @@ public class InventoryUi : MonoBehaviour
         content.pivot = new Vector2(0.5f, 1f);
         content.anchoredPosition = Vector2.zero;
         content.sizeDelta = new Vector2(0f, 0f);
-        var layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.spacing = 4f;
+        var layout = content.gameObject.AddComponent<GridLayoutGroup>();
+        layout.cellSize = CELL_SIZE;
+        layout.spacing = new Vector2(8f, 8f);
         layout.padding = new RectOffset(8, 8, 8, 8);
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        layout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+        layout.startAxis = GridLayoutGroup.Axis.Horizontal;
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraintCount = GRID_COLUMNS;
         var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scroll.content = content;
         return content;
-    }
-
-    private Button CreateRow(RectTransform parent, string label)
-    {
-        var rect = CreateRect("Row", parent);
-        var element = rect.gameObject.AddComponent<LayoutElement>();
-        element.minHeight = ROW_HEIGHT;
-        element.preferredHeight = ROW_HEIGHT;
-        var image = rect.gameObject.AddComponent<Image>();
-        image.color = new Color(0.16f, 0.18f, 0.22f, 1f);
-        var button = rect.gameObject.AddComponent<Button>();
-        var text = CreateText("Label", rect, label, 20);
-        Stretch(text.rectTransform);
-        text.alignment = TextAlignmentOptions.MidlineLeft;
-        text.margin = new Vector4(10f, 2f, 10f, 2f);
-        return button;
     }
 
     private void CreateAction(RectTransform parent, string label, int index, UnityEngine.Events.UnityAction action)
@@ -597,16 +706,16 @@ public class InventoryUi : MonoBehaviour
         Stretch(text.rectTransform);
     }
 
-    private static void ClearButtons(List<Button> buttons)
+    private static void ClearSlots(List<InventoryItem> slots)
     {
-        for (var i = 0; i < buttons.Count; i++)
+        for (var i = 0; i < slots.Count; i++)
         {
-            if (buttons[i] != null)
+            if (slots[i] != null)
             {
-                Destroy(buttons[i].gameObject);
+                Destroy(slots[i].gameObject);
             }
         }
 
-        buttons.Clear();
+        slots.Clear();
     }
 }

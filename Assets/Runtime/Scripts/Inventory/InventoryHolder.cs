@@ -273,6 +273,19 @@ public class InventoryHolder
     }
 
     /// <summary>
+    /// 들어 있는 칸을 앞으로 모은다. 종 번호가 작은 쪽이 앞이고, 같은 종은 성이 높은 쪽이 앞이다.
+    /// </summary>
+    public void Sort()
+    {
+        if (Stacks == null)
+        {
+            return;
+        }
+
+        Stacks.Sort(CompareStack);
+    }
+
+    /// <summary>
     /// 칸 상태를 복사한다.
     /// </summary>
     public List<InventoryStack> Capture()
@@ -307,5 +320,33 @@ public class InventoryHolder
 
             Stacks[i].SetItem(stacks[i].Item, stacks[i].Number);
         }
+    }
+
+    private static int CompareStack(InventoryStack a, InventoryStack b)
+    {
+        var emptyA = a == null || a.Empty || a.Item == null;
+        var emptyB = b == null || b.Empty || b.Item == null;
+        if (emptyA && emptyB)
+        {
+            return 0;
+        }
+
+        if (emptyA)
+        {
+            return 1;
+        }
+
+        if (emptyB)
+        {
+            return -1;
+        }
+
+        var uidOrder = a.Item.uid.CompareTo(b.Item.uid);
+        if (uidOrder != 0)
+        {
+            return uidOrder;
+        }
+
+        return b.Item.upgradeLevel.CompareTo(a.Item.upgradeLevel);
     }
 }
