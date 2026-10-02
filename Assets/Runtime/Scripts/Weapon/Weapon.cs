@@ -50,6 +50,8 @@ public class Weapon : MonoBehaviour
     private int _frameIndex;
     private float _frameTimer;
     private bool _fainting;
+    private bool _posing;
+    private float _resultDelay;
     private bool _lastSideRight = true;
 
     public int PlayerId => _playerId;
@@ -72,10 +74,15 @@ public class Weapon : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (_fainting)
+        if (_fainting || _posing)
         {
-            // 패배 직후 시간이 멈추므로 기절 그림은 스케일을 무시한다.
-            AdvanceFaint(Time.unscaledDeltaTime);
+            // 승패 직후 시간이 멈추므로 결과 그림은 스케일을 무시한다.
+            if (!ConsumeResultDelay(Time.unscaledDeltaTime))
+            {
+                return;
+            }
+
+            AdvanceResult(Time.unscaledDeltaTime);
             return;
         }
 
@@ -127,6 +134,8 @@ public class Weapon : MonoBehaviour
         _visual = visual;
         _shotPose = false;
         _fainting = false;
+        _posing = false;
+        _resultDelay = 0f;
         _frameIndex = 0;
         _frameTimer = 0f;
         if (visual == null)
@@ -152,6 +161,8 @@ public class Weapon : MonoBehaviour
         _attackFacingTimer = 0f;
         _shotPose = false;
         _fainting = false;
+        _posing = false;
+        _resultDelay = 0f;
         _lastSideRight = true;
         _facingRight = false;
         _eightWay = EightWay.Right;
@@ -200,7 +211,7 @@ public class Weapon : MonoBehaviour
     /// </summary>
     public void FaceShot(Vector2 direction)
     {
-        if (_fainting)
+        if (_fainting || _posing)
         {
             return;
         }
@@ -216,20 +227,22 @@ public class Weapon : MonoBehaviour
     /// <summary>
     /// 마지막으로 본 좌우 방향의 기절 그림을 한 번 재생하고 마지막 장에서 멈춘다. 사망 조명 위에 그린다.
     /// </summary>
-    public void PlayFaint()
+    public void PlayFaint(float delay = 0f)
     {
-        _fainting = true;
-        _shotPose = false;
-        _attackFacingTimer = 0f;
-        _frameIndex = 0;
-        _frameTimer = 0f;
-        CacheRenderer();
-        if (_renderer != null)
+        BeginResult(true, delay);
+    }
+
+    /// <summary>
+    /// 마지막으로 본 좌우 방향의 성공 포즈를 한 번 재생하고 마지막 장에서 멈춘다. 그림이 없으면 현재 장을 유지한다.
+    /// </summary>
+    public void PlayPose(float delay = 0f)
+    {
+        if (_fainting)
         {
-            _renderer.sortingOrder = PlayerView.DEATH_SORTING_ORDER;
+            return;
         }
 
-        ShowCurrentFrame();
+        BeginResult(false, delay);
     }
 
     #endregion
@@ -336,7 +349,58 @@ public class Weapon : MonoBehaviour
         }
     }
 
-    private void AdvanceFaint(float deltaTime)
+    private void BeginResult(bool faint, float delay)
+    {
+        _fainting = faint;
+        _posing = !faint;
+        _shotPose = false;
+        _attackFacingTimer = 0f;
+        _frameIndex = 0;
+        _frameTimer = 0f;
+        _resultDelay = Mathf.Max(0f, delay);
+        if (_resultDelay > 0f)
+        {
+            return;
+        }
+
+        ShowResultStart();
+    }
+
+    /// <summary>
+    /// 대기 중이면 false. 대기가 끝나는 순간 결과 그림의 첫 장을 보여 준다.
+    /// </summary>
+    private bool ConsumeResultDelay(float deltaTime)
+    {
+        if (_resultDelay <= 0f)
+        {
+            return true;
+        }
+
+        _resultDelay -= deltaTime;
+        if (_resultDelay > 0f)
+        {
+            return false;
+        }
+
+        _resultDelay = 0f;
+        _frameIndex = 0;
+        _frameTimer = 0f;
+        ShowResultStart();
+        return true;
+    }
+
+    private void ShowResultStart()
+    {
+        CacheRenderer();
+        if (_fainting && _renderer != null)
+        {
+            _renderer.sortingOrder = PlayerView.DEATH_SORTING_ORDER;
+        }
+
+        ShowCurrentFrame();
+    }
+
+    private void AdvanceResult(float deltaTime)
     {
         var frames = CurrentFrames();
         if (!HasFrames(frames) || _frameIndex >= frames.Length - 1 || _framesPerSecond <= 0f)
@@ -391,6 +455,11 @@ public class Weapon : MonoBehaviour
             return GetFaintFrames();
         }
 
+        if (_posing)
+        {
+            return GetPoseFrames();
+        }
+
         if (_shotPose)
         {
             var shotFrames = GetEightWayFrames(_eightWay);
@@ -431,6 +500,18 @@ public class Weapon : MonoBehaviour
         return _lastSideRight
             ? FirstFrames(_visual.FaintRight, _visual.FaintLeft)
             : FirstFrames(_visual.FaintLeft, _visual.FaintRight);
+    }
+
+    private Sprite[] GetPoseFrames()
+    {
+        if (_visual == null)
+        {
+            return null;
+        }
+
+        return _lastSideRight
+            ? FirstFrames(_visual.PoseRight, _visual.PoseLeft)
+            : FirstFrames(_visual.PoseLeft, _visual.PoseRight);
     }
 
     private Sprite[] GetEightWayFrames(EightWay way)

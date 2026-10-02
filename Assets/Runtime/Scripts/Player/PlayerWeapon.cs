@@ -6,6 +6,7 @@ using UnityEngine;
 public class PlayerWeapon : MonoBehaviour
 {
     private const WeaponSlot STARTING_SLOT = WeaponSlot.Hour3;
+    private const float RESULT_SPREAD_SECONDS = 0.28f;
 
     [Header("Equipped")]
     [SerializeField] private Transform _equippedRoot;
@@ -102,19 +103,19 @@ public class PlayerWeapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 장착한 포켓몬이 모두 기절 그림을 재생하게 한다.
+    /// 장착한 포켓몬이 짧은 구간 안에서 각자 기절 그림을 재생하게 한다.
     /// </summary>
     public void PlayFaint()
     {
-        for (var i = 0; i < _weapons.Length; i++)
-        {
-            if (_weapons[i] == null)
-            {
-                continue;
-            }
+        PlayResult(true);
+    }
 
-            _weapons[i].PlayFaint();
-        }
+    /// <summary>
+    /// 장착한 포켓몬이 짧은 구간 안에서 각자 성공 포즈를 재생하게 한다.
+    /// </summary>
+    public void PlayPose()
+    {
+        PlayResult(false);
     }
 
     /// <summary>
@@ -151,6 +152,43 @@ public class PlayerWeapon : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    private void PlayResult(bool faint)
+    {
+        var equipped = CountEquipped();
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] == null)
+            {
+                continue;
+            }
+
+            // 한 마리는 바로 재생한다. 여러 마리는 칸 순서 없이 같은 구간 안에서만 어긋난다.
+            var delay = equipped <= 1 ? 0f : Random.Range(0f, RESULT_SPREAD_SECONDS);
+            if (faint)
+            {
+                _weapons[i].PlayFaint(delay);
+            }
+            else
+            {
+                _weapons[i].PlayPose(delay);
+            }
+        }
+    }
+
+    private int CountEquipped()
+    {
+        var count = 0;
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] != null)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 
     private bool Equip(WeaponSlot slot, MonsterVisualData visual)
     {

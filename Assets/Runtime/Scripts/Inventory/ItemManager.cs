@@ -193,17 +193,23 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 가방과 장착을 지우고 씬의 무기도 치운다.
+    /// 가방과 장착 데이터를 지운다. 결과 연출 중에는 씬의 포켓몬을 남긴다.
     /// </summary>
-    public void EndRun(int playerId)
+    public void EndRun(int playerId, bool keepSceneWeapons = false)
     {
         _runs.Remove(playerId);
-        PublishAllEquipment(playerId);
-        PublishInventory(playerId);
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        if (!keepSceneWeapons)
         {
-            playerManager.ClearEquipped();
+            PublishAllEquipment(playerId);
         }
+
+        PublishInventory(playerId);
+        if (keepSceneWeapons || Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return;
+        }
+
+        playerManager.ClearEquipped();
     }
 
     /// <summary>

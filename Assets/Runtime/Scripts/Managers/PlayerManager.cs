@@ -138,6 +138,19 @@ public class PlayerManager : BaseManager
         player.Weapons.FaceShot(direction);
     }
 
+    /// <summary>
+    /// 그 플레이어의 장착 포켓몬이 성공 포즈를 재생하게 한다.
+    /// </summary>
+    public void PlayPose(int playerId)
+    {
+        if (!TryGetPlayer(playerId, out var player))
+        {
+            return;
+        }
+
+        player.Weapons.PlayPose();
+    }
+
 
     public float Speed => _player == null ? 0f : _player.Stat.moveSpeed * _player.Stat.moveSpeedMultiplier;
 

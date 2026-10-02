@@ -557,12 +557,15 @@ public class StageController : MonoBehaviour
         if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             playerId = playerManager.LocalPlayerId;
-            if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+            if (resultState == GameState.Victory)
             {
-                itemManager.EndRun(playerId);
+                playerManager.PlayPose(playerId);
             }
 
-            playerManager.ClearEquipped();
+            if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+            {
+                itemManager.EndRun(playerId, true);
+            }
         }
 
         var currencies = System.Array.Empty<CurrencyAmount>();
