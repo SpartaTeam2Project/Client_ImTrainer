@@ -22,7 +22,9 @@ public class PlayerView : MonoBehaviour
     private const float DEATH_FADE_DURATION = 0.3f;
     private const float DEATH_BACKGROUND_ALPHA = 0.98f;
     private const float DEATH_BOTTOM_ALPHA = 0.8f;
+    private const float HIT_FLASH_DURATION = 0.15f;
     private static readonly Color PLACEHOLDER_COLOR = new Color(0.95f, 0.85f, 0.2f, 1f);
+    private static readonly int HIT_EFFECT_BLEND_ID = Shader.PropertyToID("_HitEffectBlend");
 
     [Header("Renderer")]
     [SerializeField] private SpriteRenderer _spriteRenderer;
@@ -52,6 +54,8 @@ public class PlayerView : MonoBehaviour
     private float _frameTimer;
     private Tweener _backgroundFade;
     private Tweener _bottomFade;
+    private Tweener _hitFlash;
+    private Material _bodyMaterial;
 
     #region Unity Methods
 
@@ -60,6 +64,12 @@ public class PlayerView : MonoBehaviour
         if (_spriteRenderer == null)
         {
             _spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        // 이 플레이어만 번쩍이도록 머티리얼 인스턴스를 한 번 만든다.
+        if (_spriteRenderer != null)
+        {
+            _bodyMaterial = _spriteRenderer.material;
         }
     }
 
@@ -74,6 +84,16 @@ public class PlayerView : MonoBehaviour
         KillFade(_bottomFade);
         _backgroundFade = null;
         _bottomFade = null;
+        StopHitFlash();
+    }
+
+    private void OnDestroy()
+    {
+        if (_bodyMaterial != null)
+        {
+            Destroy(_bodyMaterial);
+            _bodyMaterial = null;
+        }
     }
 
     #endregion
@@ -132,6 +152,8 @@ public class PlayerView : MonoBehaviour
     /// </summary>
     public void ShowDeathLight()
     {
+        StopHitFlash();
+
         if (_spriteRenderer != null)
         {
             _spriteRenderer.sortingOrder = DEATH_SORTING_ORDER;
@@ -141,9 +163,41 @@ public class PlayerView : MonoBehaviour
         _bottomFade = FadeDeathSprite(_deathBottom, DEATH_BOTTOM_ALPHA, _bottomFade);
     }
 
+    /// <summary>
+    /// 피격 순간 Hit Effect를 가득 켰다가 짧게 줄인다. 연달아 맞으면 처음부터 다시 시작한다.
+    /// 맞은 직후 시간이 멈춰도 굳지 않도록 스케일을 무시한다.
+    /// </summary>
+    public void PlayHitFlash()
+    {
+        if (!HasHitEffect())
+        {
+            return;
+        }
+
+        KillFade(_hitFlash);
+        _bodyMaterial.SetFloat(HIT_EFFECT_BLEND_ID, 1f);
+        _hitFlash = _bodyMaterial.DOFloat(0f, HIT_EFFECT_BLEND_ID, HIT_FLASH_DURATION).SetUpdate(true);
+    }
+
     #endregion
 
     #region Private Methods
+
+    private bool HasHitEffect()
+    {
+        // 대체 생성 경로는 기본 스프라이트 머티리얼이라 Hit Effect가 없다.
+        return _bodyMaterial != null && _bodyMaterial.HasProperty(HIT_EFFECT_BLEND_ID);
+    }
+
+    private void StopHitFlash()
+    {
+        KillFade(_hitFlash);
+        _hitFlash = null;
+        if (HasHitEffect())
+        {
+            _bodyMaterial.SetFloat(HIT_EFFECT_BLEND_ID, 0f);
+        }
+    }
 
     private Tweener FadeDeathSprite(SpriteRenderer renderer, float alpha, Tweener current)
     {
