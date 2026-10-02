@@ -67,7 +67,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
-  _sounds:
+  _uiSounds:
   - _name: cursor
     _clip: {fileID: 8300000, guid: 64b63911462723b48850fd5ba211aaed, type: 3}
     _volume:
@@ -175,4 +175,41 @@ MonoBehaviour:
     _pitch:
       _min: 1
       _max: 1
+    _cooldown: 0
+  _combatSounds:
+  - _name: damage_low
+    _clip: {fileID: 8300000, guid: 973a37c4999c28247b7f414e46469b17, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: damage_middle
+    _clip: {fileID: 8300000, guid: ee715c04c6411c84e9faad255d3f8874, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: damage_high
+    _clip: {fileID: 8300000, guid: 1e5657bde147c214a95a2ec64719af2f, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+  - _name: damage_zero
+    _clip: {fileID: 8300000, guid: 973a37c4999c28247b7f414e46469b17, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 0.5
+      _max: 0.5
     _cooldown: 0

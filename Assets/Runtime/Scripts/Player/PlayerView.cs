@@ -18,7 +18,7 @@ public enum PlayerFacing
 public class PlayerView : MonoBehaviour
 {
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
-    private const int DEATH_SORTING_ORDER = 102;
+    public const int DEATH_SORTING_ORDER = 102;
     private const float DEATH_FADE_DURATION = 0.3f;
     private const float DEATH_BACKGROUND_ALPHA = 0.98f;
     private const float DEATH_BOTTOM_ALPHA = 0.8f;

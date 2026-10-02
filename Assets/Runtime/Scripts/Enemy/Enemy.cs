@@ -22,6 +22,10 @@ public class Enemy : MonoBehaviour
     private const float DAMAGE_TEXT_INTERVAL = 0.2f;
     private const float DAMAGE_TEXT_MIN_VALUE = 1f;
     private const float DAMAGE_TEXT_OFFSET = 0.1f;
+    private const string DAMAGE_ZERO_SOUND = "damage_zero";
+    private const string DAMAGE_LOW_SOUND = "damage_low";
+    private const string DAMAGE_MIDDLE_SOUND = "damage_middle";
+    private const string DAMAGE_HIGH_SOUND = "damage_high";
     private static readonly MonsterType[] DEFAULT_DEFENDER_TYPES = { MonsterType.Normal };
 
     [Header("Drop")]
@@ -324,6 +328,7 @@ public class Enemy : MonoBehaviour
         var multiplier = TypeChart.GetMultiplier(attackType, _defenderTypes);
         if (multiplier <= 0f)
         {
+            PlayDamageSound(DamageTextKind.Immune);
             PublishImmuneText();
             return;
         }
@@ -336,6 +341,7 @@ public class Enemy : MonoBehaviour
 
         _health = Mathf.Max(0f, _health - dealt);
         _damageTextKind = DamageTextRequested.FromMultiplier(multiplier);
+        PlayDamageSound(_damageTextKind);
         PublishDamageText(dealt);
         if (_health > 0f)
         {
@@ -351,6 +357,36 @@ public class Enemy : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// 효과가 없으면 zero, 별로면 low, 1배면 middle, 효과가 굉장하면 high를 튼다.
+    /// </summary>
+    private static void PlayDamageSound(DamageTextKind kind)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(GetDamageSoundName(kind));
+    }
+
+    private static string GetDamageSoundName(DamageTextKind kind)
+    {
+        switch (kind)
+        {
+            case DamageTextKind.Immune:
+                return DAMAGE_ZERO_SOUND;
+            case DamageTextKind.VeryResisted:
+            case DamageTextKind.Resisted:
+                return DAMAGE_LOW_SOUND;
+            case DamageTextKind.Super:
+            case DamageTextKind.VerySuper:
+                return DAMAGE_HIGH_SOUND;
+            default:
+                return DAMAGE_MIDDLE_SOUND;
+        }
+    }
 
     private void PublishImmuneText()
     {

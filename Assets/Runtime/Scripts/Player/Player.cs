@@ -93,7 +93,7 @@ public class Player : MonoBehaviour
     }
 
     /// <summary>
-    /// 체력이 0이 되면 PlayerHealth가 부른다. 사망 연출을 켜고 소유 매니저에 알린다.
+    /// 체력이 0이 되면 PlayerHealth가 부른다. 사망 연출과 장착 포켓몬 기절을 켜고 소유 매니저에 알린다.
     /// </summary>
     public void NotifyDied()
     {
@@ -101,6 +101,11 @@ public class Player : MonoBehaviour
         {
             View.SetVisual(false, Movement.LookDirection);
             View.ShowDeathLight();
+        }
+
+        if (Weapons != null)
+        {
+            Weapons.PlayFaint();
         }
 
         if (_owner != null)

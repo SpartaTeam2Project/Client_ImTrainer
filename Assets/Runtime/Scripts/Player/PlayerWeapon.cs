@@ -18,6 +18,18 @@ public class PlayerWeapon : MonoBehaviour
 
     public MonsterVisualData EquippedVisual { get; private set; }
 
+    /// <summary>
+    /// 투사체가 나갈 위치. 시작 칸 포켓몬이 있으면 그 위치, 없으면 플레이어 중심.
+    /// </summary>
+    public Vector3 FirePosition
+    {
+        get
+        {
+            var weapon = _weapons[(int)STARTING_SLOT];
+            return weapon != null ? weapon.transform.position : transform.position;
+        }
+    }
+
     #region Public Methods
 
     /// <summary>
@@ -70,6 +82,22 @@ public class PlayerWeapon : MonoBehaviour
             }
 
             _weapons[i].FaceShot(direction);
+        }
+    }
+
+    /// <summary>
+    /// 장착한 포켓몬이 모두 기절 그림을 재생하게 한다.
+    /// </summary>
+    public void PlayFaint()
+    {
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] == null)
+            {
+                continue;
+            }
+
+            _weapons[i].PlayFaint();
         }
     }
 
