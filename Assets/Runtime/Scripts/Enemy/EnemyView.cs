@@ -58,6 +58,7 @@ public class EnemyView : MonoBehaviour
     private float _frameTimer;
     private int _hurtPlayId;
     private bool _hurtPlaying;
+    private CircleCollider2D _hitCollider;
 
     #region Unity Methods
 
@@ -66,6 +67,19 @@ public class EnemyView : MonoBehaviour
         if (_spriteRenderer == null)
         {
             _spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        _hitCollider = GetComponent<CircleCollider2D>();
+        if (_hitCollider != null)
+        {
+            _hitCollider.isTrigger = true;
+        }
+
+        var body = GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.bodyType = RigidbodyType2D.Kinematic;
+            body.gravityScale = 0f;
         }
     }
 
@@ -83,6 +97,7 @@ public class EnemyView : MonoBehaviour
         _frameIndex = 0;
         _frameTimer = 0f;
         _hasVisual = false;
+        FitHitCollider(FindLargestSprite(visual));
     }
 
     /// <summary>
@@ -272,6 +287,80 @@ public class EnemyView : MonoBehaviour
 
         _spriteRenderer.sprite = sprite;
         _spriteRenderer.color = Color.white;
+    }
+
+    /// <summary>
+    /// 맞는 판정을 종 그림 중 가장 큰 장에 한 번만 맞춘다. 프레임마다 바꾸면 겹침이 끊긴다.
+    /// </summary>
+    private void FitHitCollider(Sprite sprite)
+    {
+        if (_hitCollider == null || sprite == null)
+        {
+            return;
+        }
+
+        var bounds = sprite.bounds;
+        _hitCollider.offset = bounds.center;
+        _hitCollider.radius = Mathf.Max(bounds.extents.x, bounds.extents.y);
+    }
+
+    private static Sprite FindLargestSprite(MonsterVisualData visual)
+    {
+        if (visual == null)
+        {
+            return null;
+        }
+
+        Sprite largest = null;
+        var largestSize = 0f;
+        Consider(visual.Walk, ref largest, ref largestSize);
+        Consider(visual.Attack, ref largest, ref largestSize);
+        Consider(visual.Hurt, ref largest, ref largestSize);
+        Consider(visual.Shoot, ref largest, ref largestSize);
+        return largest;
+    }
+
+    private static void Consider(EightDirectionFrames clip, ref Sprite largest, ref float largestSize)
+    {
+        if (clip == null)
+        {
+            return;
+        }
+
+        Consider(clip.Down, ref largest, ref largestSize);
+        Consider(clip.DownRight, ref largest, ref largestSize);
+        Consider(clip.Right, ref largest, ref largestSize);
+        Consider(clip.UpRight, ref largest, ref largestSize);
+        Consider(clip.Up, ref largest, ref largestSize);
+        Consider(clip.UpLeft, ref largest, ref largestSize);
+        Consider(clip.Left, ref largest, ref largestSize);
+        Consider(clip.DownLeft, ref largest, ref largestSize);
+    }
+
+    private static void Consider(Sprite[] frames, ref Sprite largest, ref float largestSize)
+    {
+        if (frames == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < frames.Length; i++)
+        {
+            var sprite = frames[i];
+            if (sprite == null)
+            {
+                continue;
+            }
+
+            var size = Mathf.Max(sprite.bounds.extents.x, sprite.bounds.extents.y);
+            if (size <= largestSize)
+            {
+                continue;
+            }
+
+            largestSize = size;
+            largest = sprite;
+        }
     }
 
     private void ApplyFlip()
