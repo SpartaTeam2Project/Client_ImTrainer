@@ -5,27 +5,40 @@ using UnityEngine;
 /// <summary>
 /// 가까운 적 방향으로 관통 빔을 반복해서 쏜다.
 /// </summary>
-public class WaterTypeAttackBehavior : WeaponAbilityBehavior<WaterTypeAttackData, WaterTypeAttackLevel>
+public class WaterTypeAttackBehavior : WeaponAbilityBehavior<WaterTypeAttackData, WaterTypeAttackLevel>, ISlotOriginAbility
 {
     private const float MIN_MULTIPLIER = 0.01f;
 
     [SerializeField] private WaterTypeAttackBeamBehavior beam;
 
     private CancellationTokenSource _loop;
+    private WeaponSlot _originSlot;
+
+    public WeaponSlot OriginSlot => _originSlot;
 
     #region Unity Methods
 
     private void Awake()
     {
-        if (beam == null)
-        {
-            beam = GetComponentInChildren<WaterTypeAttackBeamBehavior>(true);
-        }
+        CacheBeam();
     }
 
     #endregion
 
     #region Public Methods
+
+    /// <summary>
+    /// 물줄기가 나갈 장착 칸을 빔에 넘긴다.
+    /// </summary>
+    public void BindSlot(WeaponSlot slot)
+    {
+        _originSlot = slot;
+        CacheBeam();
+        if (beam != null)
+        {
+            beam.BindSlot(slot);
+        }
+    }
 
     /// <summary>
     /// 발사 루프와 켜져 있던 빔을 멈춘다.
@@ -51,6 +64,14 @@ public class WaterTypeAttackBehavior : WeaponAbilityBehavior<WaterTypeAttackData
         StopLoop();
         _loop = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
         LaunchLoopAsync(_loop.Token).Forget();
+    }
+
+    private void CacheBeam()
+    {
+        if (beam == null)
+        {
+            beam = GetComponentInChildren<WaterTypeAttackBeamBehavior>(true);
+        }
     }
 
     private void StopLoop()

@@ -442,7 +442,17 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 장착된 포켓몬의 능력과, 그 타입에서 가장 높은 성의 레벨 인덱스를 모은다.
+    /// 점 발사 프리팹이면 true. 칸마다 따로 둔다.
+    /// </summary>
+    public static bool IsSlotOriginAbility(WeaponAbilityData ability)
+    {
+        return ability != null
+            && ability.Prefab != null
+            && ability.Prefab.GetComponent<ISlotOriginAbility>() != null;
+    }
+
+    /// <summary>
+    /// 장착된 포켓몬의 능력을 모은다. 점 발사는 칸마다, 그 외는 타입에서 가장 높은 성이다.
     /// </summary>
     public void CollectEquippedAbilityLevels(int playerId, List<EquippedAbilityLevel> results)
     {
@@ -469,10 +479,17 @@ public class ItemManager : BaseManager
             }
 
             var level = ToAbilityLevel(stack.Item.upgradeLevel, ability);
+            if (IsSlotOriginAbility(ability))
+            {
+                results.Add(new EquippedAbilityLevel(ability, level, i));
+                continue;
+            }
+
             var found = false;
             for (var u = 0; u < results.Count; u++)
             {
-                if (results[u].Ability.WeaponAbilityType != ability.WeaponAbilityType)
+                if (results[u].Slot != EquippedAbilityLevel.UNSLOTTED
+                    || results[u].Ability.WeaponAbilityType != ability.WeaponAbilityType)
                 {
                     continue;
                 }
@@ -480,7 +497,7 @@ public class ItemManager : BaseManager
                 found = true;
                 if (level > results[u].LevelIndex)
                 {
-                    results[u] = new EquippedAbilityLevel(ability, level);
+                    results[u] = new EquippedAbilityLevel(ability, level, EquippedAbilityLevel.UNSLOTTED);
                 }
 
                 break;
@@ -488,7 +505,7 @@ public class ItemManager : BaseManager
 
             if (!found)
             {
-                results.Add(new EquippedAbilityLevel(ability, level));
+                results.Add(new EquippedAbilityLevel(ability, level, EquippedAbilityLevel.UNSLOTTED));
             }
         }
     }
@@ -766,16 +783,20 @@ public class ItemManager : BaseManager
 }
 
 /// <summary>
-/// 장착 포켓몬 하나의 무기 능력과 성으로 고른 레벨 인덱스.
+/// 장착 포켓몬 하나의 무기 능력과 성으로 고른 레벨 인덱스. 점 발사는 칸을 가진다.
 /// </summary>
 public struct EquippedAbilityLevel
 {
+    public const int UNSLOTTED = -1;
+
     public WeaponAbilityData Ability;
     public int LevelIndex;
+    public int Slot;
 
-    public EquippedAbilityLevel(WeaponAbilityData ability, int levelIndex)
+    public EquippedAbilityLevel(WeaponAbilityData ability, int levelIndex, int slot)
     {
         Ability = ability;
         LevelIndex = levelIndex;
+        Slot = slot;
     }
 }

@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>
 /// 가까운 적에게 파이어볼을 연사한다.
 /// </summary>
-public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackWeaponAbilityData, FireAttackWeaponAbilityLevel>
+public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackWeaponAbilityData, FireAttackWeaponAbilityLevel>, ISlotOriginAbility
 {
     private const float CLOSEST_RANGE = 80f;
     private const float MIN_MULTIPLIER = 0.01f;
@@ -17,6 +17,10 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
     private StageObjectPool<FireballProjectileBehavior> _pool;
     private readonly List<FireballProjectileBehavior> _alive = new List<FireballProjectileBehavior>();
     private CancellationTokenSource _loop;
+    private WeaponSlot _originSlot;
+    private bool _hasOriginSlot;
+
+    public WeaponSlot OriginSlot => _originSlot;
 
     #region Unity Methods
 
@@ -28,6 +32,15 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
     #endregion
 
     #region Public Methods
+
+    /// <summary>
+    /// 파이어볼이 나갈 장착 칸을 기억한다.
+    /// </summary>
+    public void BindSlot(WeaponSlot slot)
+    {
+        _originSlot = slot;
+        _hasOriginSlot = true;
+    }
 
     /// <summary>
     /// 수명이 끝난 파이어볼을 발사 목록에서 뺀다.
@@ -179,11 +192,11 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
             return;
         }
 
-        var origin = player.Weapons.FirePosition;
+        var origin = ResolveOrigin(player);
         var direction = ResolveDirection(origin);
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        if (_hasOriginSlot && Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
-            playerManager.FaceShot(PlayerId, direction);
+            playerManager.FaceShot(PlayerId, _originSlot, direction);
         }
 
         fireball.transform.SetPositionAndRotation(origin, Quaternion.FromToRotation(Vector2.up, direction));
@@ -199,6 +212,17 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
             player.Stat.durationMultiplier,
             Mathf.Max(MIN_MULTIPLIER, player.Stat.projectileSpeedMultiplier));
         _alive.Add(fireball);
+    }
+
+    private Vector3 ResolveOrigin(Player player)
+    {
+        if (_hasOriginSlot)
+        {
+            player.Weapons.TryGetFirePosition(_originSlot, out var position);
+            return position;
+        }
+
+        return player.transform.position;
     }
 
     private Vector2 ResolveDirection(Vector3 origin)

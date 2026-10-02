@@ -33,6 +33,22 @@ public class PlayerWeapon : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 그 칸 포켓몬의 발사 위치. 칸이 비어 있으면 플레이어 중심을 넣고 false.
+    /// </summary>
+    public bool TryGetFirePosition(WeaponSlot slot, out Vector3 position)
+    {
+        var index = (int)slot;
+        if (index >= 0 && index < _weapons.Length && _weapons[index] != null)
+        {
+            position = _weapons[index].transform.position;
+            return true;
+        }
+
+        position = transform.position;
+        return false;
+    }
+
     #region Unity Methods
 
     private void OnEnable()
@@ -100,6 +116,46 @@ public class PlayerWeapon : MonoBehaviour
 
             _weapons[i].FaceShot(direction);
         }
+    }
+
+    /// <summary>
+    /// 그 칸 포켓몬만 발사 방향 걷기를 재생하게 한다.
+    /// </summary>
+    public void FaceShot(WeaponSlot slot, Vector2 direction)
+    {
+        var index = (int)slot;
+        if (index < 0 || index >= _weapons.Length || _weapons[index] == null)
+        {
+            return;
+        }
+
+        _weapons[index].FaceShot(direction);
+    }
+
+    /// <summary>
+    /// 시작 그림이 붙어 있는 시계 칸. 3시가 비어 있으면 앞에서부터 찬 칸.
+    /// </summary>
+    public bool TryGetEquippedSlot(out WeaponSlot slot)
+    {
+        if (_slotVisuals[(int)STARTING_SLOT] != null)
+        {
+            slot = STARTING_SLOT;
+            return true;
+        }
+
+        for (var i = 0; i < _slotVisuals.Length; i++)
+        {
+            if (_slotVisuals[i] == null)
+            {
+                continue;
+            }
+
+            slot = (WeaponSlot)i;
+            return true;
+        }
+
+        slot = STARTING_SLOT;
+        return false;
     }
 
     /// <summary>
