@@ -8,7 +8,7 @@ public class HealEndgameWeaponAbilityBehavior : WeaponAbilityBehavior<HealEndgam
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RestoreHp(WeaponAbilityLevel.HealPersentage);
+            player.Health.RestoreHp(WeaponAbilityLevel.HealPersentage);
         }
     }
 }

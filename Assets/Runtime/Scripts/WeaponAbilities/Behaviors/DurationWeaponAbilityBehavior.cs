@@ -8,7 +8,7 @@ public class DurationWeaponAbilityBehavior : WeaponAbilityBehavior<DurationWeapo
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateDurationMultiplier(WeaponAbilityLevel.DurationMultiplier);
+            player.Stat.RecalculateDurationMultiplier(WeaponAbilityLevel.DurationMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class DurationWeaponAbilityBehavior : WeaponAbilityBehavior<DurationWeapo
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateDurationMultiplier(1f);
+            player.Stat.RecalculateDurationMultiplier(1f);
         }
 
         base.Clear();

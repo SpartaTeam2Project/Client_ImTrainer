@@ -8,7 +8,7 @@ public class XPWeaponAbilityBehavior : WeaponAbilityBehavior<XPWeaponAbilityData
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateXpMultiplier(WeaponAbilityLevel.XPMultiplier);
+            player.Stat.RecalculateXpMultiplier(WeaponAbilityLevel.XPMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class XPWeaponAbilityBehavior : WeaponAbilityBehavior<XPWeaponAbilityData
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateXpMultiplier(1f);
+            player.Stat.RecalculateXpMultiplier(1f);
         }
 
         base.Clear();

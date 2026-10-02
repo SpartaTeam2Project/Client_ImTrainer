@@ -67,7 +67,7 @@ public class GrassTypeAttackProjectileBehavior : MonoBehaviour
             return;
         }
 
-        enemy.ApplyDamage(_damageMultiplier * player.damageMultiplier, _attackType);
+        enemy.ApplyDamage(_damageMultiplier * player.Stat.damageMultiplier, _attackType);
     }
 
     #endregion

@@ -43,8 +43,8 @@ public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData
         transform.position = player.transform.position;
         var blendSpeed = 1f / RADIUS_BLEND_SECONDS;
         _radiusMultiplier = Mathf.MoveTowards(_radiusMultiplier, _radiusTarget, blendSpeed * Time.deltaTime);
-        _angle += WeaponAbilityLevel.AngularSpeed * Mathf.Max(MIN_MULTIPLIER, player.projectileSpeedMultiplier) * Time.deltaTime;
-        PlaceStars(player.sizeMultiplier);
+        _angle += WeaponAbilityLevel.AngularSpeed * Mathf.Max(MIN_MULTIPLIER, player.Stat.projectileSpeedMultiplier) * Time.deltaTime;
+        PlaceStars(player.Stat.sizeMultiplier);
     }
 
     #endregion
@@ -113,7 +113,7 @@ public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData
 
             SpawnStars(player);
             _radiusTarget = 1f;
-            var lifetime = WeaponAbilityLevel.ProjectileLifetime * Mathf.Max(MIN_MULTIPLIER, player.durationMultiplier);
+            var lifetime = WeaponAbilityLevel.ProjectileLifetime * Mathf.Max(MIN_MULTIPLIER, player.Stat.durationMultiplier);
             var shown = await WaitCombatSecondsAsync(Mathf.Max(0f, lifetime - RADIUS_BLEND_SECONDS), token);
             if (shown)
             {
@@ -129,7 +129,7 @@ public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData
             }
 
             ClearStars();
-            var cooldown = WeaponAbilityLevel.WeaponAbilityCooldown * Mathf.Max(MIN_MULTIPLIER, player.cooldownMultiplier);
+            var cooldown = WeaponAbilityLevel.WeaponAbilityCooldown * Mathf.Max(MIN_MULTIPLIER, player.Stat.cooldownMultiplier);
             var delay = cooldown - lifetime;
             if (delay < MIN_DELAY)
             {
@@ -162,7 +162,7 @@ public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData
                 continue;
             }
 
-            star.Show(PlayerId, WeaponAbilityLevel.Damage, attackType, player.sizeMultiplier);
+            star.Show(PlayerId, WeaponAbilityLevel.Damage, attackType, player.Stat.sizeMultiplier);
             _stars.Add(star);
         }
     }

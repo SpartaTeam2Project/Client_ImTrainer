@@ -8,7 +8,7 @@ public class CooldownWeaponAbilityBehavior : WeaponAbilityBehavior<CooldownWeapo
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateCooldownMultiplier(WeaponAbilityLevel.CooldownMultiplier);
+            player.Stat.RecalculateCooldownMultiplier(WeaponAbilityLevel.CooldownMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class CooldownWeaponAbilityBehavior : WeaponAbilityBehavior<CooldownWeapo
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateCooldownMultiplier(1f);
+            player.Stat.RecalculateCooldownMultiplier(1f);
         }
 
         base.Clear();

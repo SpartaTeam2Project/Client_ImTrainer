@@ -8,7 +8,7 @@ public class MaxHPWeaponAbilityBehavior : WeaponAbilityBehavior<MaxHPWeaponAbili
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateMaxHp(WeaponAbilityLevel.MaxHPMultiplier);
+            player.Health.RecalculateMaxHp(WeaponAbilityLevel.MaxHPMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class MaxHPWeaponAbilityBehavior : WeaponAbilityBehavior<MaxHPWeaponAbili
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateMaxHp(1f);
+            player.Health.RecalculateMaxHp(1f);
         }
 
         base.Clear();

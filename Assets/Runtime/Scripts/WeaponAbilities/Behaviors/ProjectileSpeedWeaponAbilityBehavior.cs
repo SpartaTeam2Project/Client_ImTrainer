@@ -8,7 +8,7 @@ public class ProjectileSpeedWeaponAbilityBehavior : WeaponAbilityBehavior<Projec
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateProjectileSpeedMultiplier(WeaponAbilityLevel.ProjectileSpeedMultiplier);
+            player.Stat.RecalculateProjectileSpeedMultiplier(WeaponAbilityLevel.ProjectileSpeedMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class ProjectileSpeedWeaponAbilityBehavior : WeaponAbilityBehavior<Projec
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateProjectileSpeedMultiplier(1f);
+            player.Stat.RecalculateProjectileSpeedMultiplier(1f);
         }
 
         base.Clear();

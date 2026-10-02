@@ -87,7 +87,7 @@ public class Weapon : MonoBehaviour
 
         var owner = _owner;
         _owner = null;
-        owner.NotifyWeaponDestroyed(this);
+        owner.Weapons.NotifyWeaponDestroyed(this);
     }
 
     #endregion
@@ -176,7 +176,7 @@ public class Weapon : MonoBehaviour
             _shotPose = false;
             if (_owner != null)
             {
-                ApplyFacing(_owner.LookDirection);
+                ApplyFacing(_owner.Movement.LookDirection);
             }
         }
 

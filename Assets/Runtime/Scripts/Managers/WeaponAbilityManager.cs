@@ -330,7 +330,7 @@ public class WeaponAbilityManager : BaseManager
             return null;
         }
 
-        return player.EquippedVisual;
+        return player.Weapons.EquippedVisual;
     }
 
     private void PresentWeaponAbilityOffer()

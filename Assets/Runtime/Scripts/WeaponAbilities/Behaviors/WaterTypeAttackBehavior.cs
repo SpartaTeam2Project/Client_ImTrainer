@@ -91,10 +91,10 @@ public class WaterTypeAttackBehavior : WeaponAbilityBehavior<WaterTypeAttackData
                 continue;
             }
 
-            var damage = WeaponAbilityLevel.Damage * player.damageMultiplier;
-            var length = WeaponAbilityLevel.BeamLength * player.sizeMultiplier;
-            var width = WeaponAbilityLevel.BeamWidth * player.sizeMultiplier;
-            var duration = WeaponAbilityLevel.BeamDuration * Mathf.Max(MIN_MULTIPLIER, player.durationMultiplier);
+            var damage = WeaponAbilityLevel.Damage * player.Stat.damageMultiplier;
+            var length = WeaponAbilityLevel.BeamLength * player.Stat.sizeMultiplier;
+            var width = WeaponAbilityLevel.BeamWidth * player.Stat.sizeMultiplier;
+            var duration = WeaponAbilityLevel.BeamDuration * Mathf.Max(MIN_MULTIPLIER, player.Stat.durationMultiplier);
             beam.Play(PlayerId, damage, length, width, duration, WeaponAbilityLevel.DamageInterval, ResolveAttackType());
             var shotCanceled = await WaitCombatSecondsAsync(duration, token);
             if (shotCanceled)
@@ -102,7 +102,7 @@ public class WaterTypeAttackBehavior : WeaponAbilityBehavior<WaterTypeAttackData
                 return;
             }
 
-            var cooldown = WeaponAbilityLevel.WeaponAbilityCooldown * Mathf.Max(MIN_MULTIPLIER, player.cooldownMultiplier);
+            var cooldown = WeaponAbilityLevel.WeaponAbilityCooldown * Mathf.Max(MIN_MULTIPLIER, player.Stat.cooldownMultiplier);
             var cooldownCanceled = await WaitCombatSecondsAsync(cooldown, token);
             if (cooldownCanceled)
             {

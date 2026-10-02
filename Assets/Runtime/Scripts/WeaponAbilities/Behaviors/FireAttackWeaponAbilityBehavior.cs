@@ -131,7 +131,7 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
                 }
             }
 
-            var cooldown = WeaponAbilityLevel.WeaponAbilityCooldown * Mathf.Max(MIN_MULTIPLIER, player.cooldownMultiplier);
+            var cooldown = WeaponAbilityLevel.WeaponAbilityCooldown * Mathf.Max(MIN_MULTIPLIER, player.Stat.cooldownMultiplier);
             cooldown -= WeaponAbilityLevel.TimeBetweenFireballs * count;
             var cooldownCanceled = await WaitSecondsAsync(Mathf.Max(0f, cooldown), token);
             if (cooldownCanceled)
@@ -190,14 +190,14 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
         fireball.Launch(
             this,
             ResolveAttackType(),
-            WeaponAbilityLevel.Damage * player.damageMultiplier,
+            WeaponAbilityLevel.Damage * player.Stat.damageMultiplier,
             WeaponAbilityLevel.Speed,
             WeaponAbilityLevel.FireballLifetime,
             WeaponAbilityLevel.ProjectileSize,
             WeaponAbilityLevel.ExplosionRadius,
-            player.sizeMultiplier,
-            player.durationMultiplier,
-            Mathf.Max(MIN_MULTIPLIER, player.projectileSpeedMultiplier));
+            player.Stat.sizeMultiplier,
+            player.Stat.durationMultiplier,
+            Mathf.Max(MIN_MULTIPLIER, player.Stat.projectileSpeedMultiplier));
         _alive.Add(fireball);
     }
 

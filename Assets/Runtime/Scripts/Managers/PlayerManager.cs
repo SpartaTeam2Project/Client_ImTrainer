@@ -67,7 +67,7 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        _player.Face(direction);
+        _player.Movement.Face(direction);
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ public class PlayerManager : BaseManager
         _movementLocked = locked;
         if (locked && _player != null)
         {
-            _player.Move(Vector2.zero);
+            _player.Movement.Move(Vector2.zero);
         }
     }
 
@@ -97,7 +97,7 @@ public class PlayerManager : BaseManager
         return false;
     }
 
-    public Vector2 LookDirection => _player == null ? Vector2.right : _player.LookDirection;
+    public Vector2 LookDirection => _player == null ? Vector2.right : _player.Movement.LookDirection;
 
     /// <summary>
     /// 스폰된 플레이어의 시작 칸에 포켓몬을 붙인다.
@@ -109,7 +109,7 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        player.EquipStarting(playerId);
+        player.Weapons.EquipStarting(playerId);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        _player.ClearWeapons();
+        _player.Weapons.ClearWeapons();
     }
 
     /// <summary>
@@ -135,25 +135,25 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        player.FaceShot(direction);
+        player.Weapons.FaceShot(direction);
     }
 
 
-    public float Speed => _player == null ? 0f : _player.moveSpeed * _player.moveSpeedMultiplier;
+    public float Speed => _player == null ? 0f : _player.Stat.moveSpeed * _player.Stat.moveSpeedMultiplier;
 
-    public float MagnetRadius => _player == null ? 0f : _player.magnetRadius;
+    public float MagnetRadius => _player == null ? 0f : _player.Stat.magnetRadius;
 
-    public float CurrentHealth => _player == null ? 0f : _player.CurrentHealth;
+    public float CurrentHealth => _player == null ? 0f : _player.Health.CurrentHealth;
 
-    public float MaxHealth => _player == null ? 0f : _player.maxHealth;
+    public float MaxHealth => _player == null ? 0f : _player.Health.maxHealth;
 
-    public bool IsAlive => _player != null && _player.IsAlive;
+    public bool IsAlive => _player != null && _player.Health.IsAlive;
 
-    public int Level => _player == null ? STARTING_LEVEL : _player.Level;
+    public int Level => _player == null ? STARTING_LEVEL : _player.Experience.Level;
 
-    public float CurrentXp => _player == null ? 0f : _player.CurrentXp;
+    public float CurrentXp => _player == null ? 0f : _player.Experience.CurrentXp;
 
-    public float RequiredXp => _player == null ? 0f : _player.RequiredXp;
+    public float RequiredXp => _player == null ? 0f : _player.Experience.RequiredXp;
 
     public event Action<int> OnPlayerDied;
 
@@ -178,7 +178,7 @@ public class PlayerManager : BaseManager
 
         if (_movementLocked)
         {
-            _player.Move(Vector2.zero);
+            _player.Movement.Move(Vector2.zero);
             return;
         }
 
@@ -188,7 +188,7 @@ public class PlayerManager : BaseManager
         }
 
 
-        _player.Move(inputManager.MovementValue);
+        _player.Movement.Move(inputManager.MovementValue);
     }
 
     #endregion
@@ -221,10 +221,10 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        var levelBefore = _player.Level;
-        _player.AddExperience(amount);
+        var levelBefore = _player.Experience.Level;
+        _player.Experience.AddExperience(amount);
         PublishExperience(playerId);
-        for (var level = levelBefore + 1; level <= _player.Level; level++)
+        for (var level = levelBefore + 1; level <= _player.Experience.Level; level++)
         {
             NotifyLevelUp(playerId, level);
         }
@@ -274,7 +274,7 @@ public class PlayerManager : BaseManager
     public float GetDamageMultiplier(int playerId)
     {
         if (playerId != LocalPlayerId || _player == null) return 1f;
-        return _player.damageMultiplier;
+        return _player.Stat.damageMultiplier;
     }
 
     #endregion
@@ -289,7 +289,7 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        _player.TakeDamage(amount);
+        _player.Health.TakeDamage(amount);
     }
 
     
@@ -341,7 +341,7 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        eventManager.Publish(new PlayerExperienceChanged(playerId, _player.Level, _player.CurrentXp, _player.RequiredXp));
+        eventManager.Publish(new PlayerExperienceChanged(playerId, _player.Experience.Level, _player.Experience.CurrentXp, _player.Experience.RequiredXp));
     }
 
     private void ApplySelectedPlayable()

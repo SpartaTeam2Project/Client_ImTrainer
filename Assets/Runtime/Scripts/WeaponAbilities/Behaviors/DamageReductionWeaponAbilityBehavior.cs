@@ -8,7 +8,7 @@ public class DamageReductionWeaponAbilityBehavior : WeaponAbilityBehavior<Damage
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateDamageReduction(WeaponAbilityLevel.DamageReductionPercent);
+            player.Stat.RecalculateDamageReduction(WeaponAbilityLevel.DamageReductionPercent);
         }
     }
 
@@ -19,7 +19,7 @@ public class DamageReductionWeaponAbilityBehavior : WeaponAbilityBehavior<Damage
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateDamageReduction(0f);
+            player.Stat.RecalculateDamageReduction(0f);
         }
 
         base.Clear();

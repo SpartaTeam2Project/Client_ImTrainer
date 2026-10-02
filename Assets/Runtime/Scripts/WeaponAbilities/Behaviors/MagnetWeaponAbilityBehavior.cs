@@ -8,7 +8,7 @@ public class MagnetWeaponAbilityBehavior : WeaponAbilityBehavior<MagnetWeaponAbi
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateMagnetRadius(WeaponAbilityLevel.RadiusMultiplier);
+            player.Stat.RecalculateMagnetRadius(WeaponAbilityLevel.RadiusMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class MagnetWeaponAbilityBehavior : WeaponAbilityBehavior<MagnetWeaponAbi
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateMagnetRadius(1f);
+            player.Stat.RecalculateMagnetRadius(1f);
         }
 
         base.Clear();

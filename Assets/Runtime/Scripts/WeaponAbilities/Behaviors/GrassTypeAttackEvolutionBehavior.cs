@@ -39,8 +39,8 @@ public class GrassTypeAttackEvolutionBehavior : WeaponAbilityBehavior<GrassTypeA
         transform.position = player.transform.position;
         var blendSpeed = 1f / RADIUS_BLEND_SECONDS;
         _radiusMultiplier = Mathf.MoveTowards(_radiusMultiplier, _radiusTarget, blendSpeed * Time.deltaTime);
-        _angle += WeaponAbilityLevel.AngularSpeed * Mathf.Max(MIN_MULTIPLIER, player.projectileSpeedMultiplier) * Time.deltaTime;
-        PlaceStars(player.sizeMultiplier);
+        _angle += WeaponAbilityLevel.AngularSpeed * Mathf.Max(MIN_MULTIPLIER, player.Stat.projectileSpeedMultiplier) * Time.deltaTime;
+        PlaceStars(player.Stat.sizeMultiplier);
     }
 
     #endregion
@@ -80,7 +80,7 @@ public class GrassTypeAttackEvolutionBehavior : WeaponAbilityBehavior<GrassTypeA
                 continue;
             }
 
-            star.Show(PlayerId, WeaponAbilityLevel.Damage, attackType, player.sizeMultiplier);
+            star.Show(PlayerId, WeaponAbilityLevel.Damage, attackType, player.Stat.sizeMultiplier);
             _stars.Add(star);
         }
 

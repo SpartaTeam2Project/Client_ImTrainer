@@ -8,7 +8,7 @@ public class SizeWeaponAbilityBehavior : WeaponAbilityBehavior<SizeWeaponAbility
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateSizeMultiplier(WeaponAbilityLevel.SizeMultiplier);
+            player.Stat.RecalculateSizeMultiplier(WeaponAbilityLevel.SizeMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class SizeWeaponAbilityBehavior : WeaponAbilityBehavior<SizeWeaponAbility
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateSizeMultiplier(1f);
+            player.Stat.RecalculateSizeMultiplier(1f);
         }
 
         base.Clear();

@@ -8,7 +8,7 @@ public class SportShoesWeaponAbilityBehavior : WeaponAbilityBehavior<MoveSpeedWe
         base.SetWeaponAbilityLevel(levelId);
         if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
         {
-            player.RecalculateMoveSpeed(WeaponAbilityLevel.SpeedMultiplier);
+            player.Stat.RecalculateMoveSpeed(WeaponAbilityLevel.SpeedMultiplier);
         }
     }
 
@@ -19,7 +19,7 @@ public class SportShoesWeaponAbilityBehavior : WeaponAbilityBehavior<MoveSpeedWe
     {
         if (TryGetPlayer(out var player))
         {
-            player.RecalculateMoveSpeed(1f);
+            player.Stat.RecalculateMoveSpeed(1f);
         }
 
         base.Clear();
