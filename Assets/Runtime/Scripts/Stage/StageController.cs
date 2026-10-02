@@ -455,7 +455,11 @@ public class StageController : MonoBehaviour
         if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             playerId = playerManager.LocalPlayerId;
-            playerManager.ClearEquipped();
+            // 패배 화면에서는 기절한 포켓몬을 남긴다. 씬을 떠나며 Loading이 될 때 치운다.
+            if (resultState != GameState.Defeat)
+            {
+                playerManager.ClearEquipped();
+            }
         }
 
         var currencies = System.Array.Empty<CurrencyAmount>();

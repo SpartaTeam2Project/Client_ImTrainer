@@ -86,6 +86,22 @@ public class PlayerWeapon : MonoBehaviour
     }
 
     /// <summary>
+    /// 장착한 포켓몬이 모두 기절 그림을 재생하게 한다.
+    /// </summary>
+    public void PlayFaint()
+    {
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] == null)
+            {
+                continue;
+            }
+
+            _weapons[i].PlayFaint();
+        }
+    }
+
+    /// <summary>
     /// 칸에 남은 포켓몬을 치운다.
     /// </summary>
     public void ClearWeapons()

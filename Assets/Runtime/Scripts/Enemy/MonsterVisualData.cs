@@ -23,7 +23,10 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [SerializeField] private EightDirectionFrames _swing = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _rotate = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _hop = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _faint = new EightDirectionFrames();
+
+    [Header("Faint")]
+    [SerializeField] private Sprite[] _faintLeft = new Sprite[0];
+    [SerializeField] private Sprite[] _faintRight = new Sprite[0];
 
     [SerializeField, HideInInspector] private Sprite[] _walkDown = new Sprite[0];
     [SerializeField, HideInInspector] private Sprite[] _walkDownRight = new Sprite[0];
@@ -76,7 +79,12 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
 
     public EightDirectionFrames Hop => _hop;
 
-    public EightDirectionFrames Faint => _faint;
+    /// <summary>
+    /// 기절 그림. 좌우 두 방향만 있다.
+    /// </summary>
+    public Sprite[] FaintLeft => _faintLeft;
+
+    public Sprite[] FaintRight => _faintRight;
 
     public Sprite ProjectileSprite => _projectileSprite;
 
@@ -195,6 +203,7 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
         _swing ??= new EightDirectionFrames();
         _rotate ??= new EightDirectionFrames();
         _hop ??= new EightDirectionFrames();
-        _faint ??= new EightDirectionFrames();
+        _faintLeft ??= new Sprite[0];
+        _faintRight ??= new Sprite[0];
     }
 }
