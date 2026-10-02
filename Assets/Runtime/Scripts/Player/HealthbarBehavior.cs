@@ -11,6 +11,7 @@ public class HealthbarBehavior : MonoBehaviour
     private const float HP_LOW_THRESHOLD = 0.25f;
     private const int HP_BAR_PIXELS = 48;
     private const float HP_TWEEN_DURATION = 0.3f;
+    private const string DANGER_SOUND = "danger";
 
     [SerializeField] private SpriteRenderer _fillImage;
     [SerializeField] private SpriteRenderer _backgroundImage;
@@ -129,10 +130,27 @@ public class HealthbarBehavior : MonoBehaviour
         fillTransform.localScale = scale;
 
         var sprite = ratio > HP_MEDIUM_THRESHOLD ? _hpHigh : ratio > HP_LOW_THRESHOLD ? _hpMedium : _hpLow;
-        if (sprite != null && _fillImage.sprite != sprite)
+        if (sprite == null || _fillImage.sprite == sprite)
         {
-            _fillImage.sprite = sprite;
+            return;
         }
+
+        _fillImage.sprite = sprite;
+        // 빨간 구간에 들어설 때 한 번만 울린다. 사망으로 떨어지는 중이면 울리지 않는다.
+        if (sprite == _hpLow && _currentHealth > 0f)
+        {
+            PlayDangerSound();
+        }
+    }
+
+    private static void PlayDangerSound()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(DANGER_SOUND);
     }
 
     private void Show()
