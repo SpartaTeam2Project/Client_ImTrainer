@@ -22,17 +22,37 @@ public class FireballProjectileBehavior : MonoBehaviour
 
     private FireAttackWeaponAbilityBehavior _owner;
     private CancellationTokenSource _hide;
+    private AudioSource[] _loopSources = Array.Empty<AudioSource>();
     private Vector3 _velocity;
     private float _lifeRemaining;
     private float _damage;
     private float _explosionRadius;
     private MonsterType _attackType;
     private bool _flying;
+    private bool _sourcesPaused;
+    private bool _subscribed;
 
     #region Unity Methods
 
+    private void Awake()
+    {
+        CacheLoopSources();
+    }
+
+    private void OnEnable()
+    {
+        Subscribe();
+        if (IsGamePaused())
+        {
+            ApplyLoopPause(true);
+        }
+    }
+
     private void Update()
     {
+        // Play On Awake는 OnEnable 뒤에 재생을 시작하므로, 일시정지 중에 다시 켜진 루프를 멈춘다.
+        KeepLoopPausedWhileGamePaused();
+
         if (WeaponAbilityManager.IsCombatPaused())
         {
             if (_flying)
@@ -58,6 +78,12 @@ public class FireballProjectileBehavior : MonoBehaviour
         {
             Explode();
         }
+    }
+
+    private void OnDisable()
+    {
+        Unsubscribe();
+        _sourcesPaused = false;
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -193,6 +219,97 @@ public class FireballProjectileBehavior : MonoBehaviour
         if (fireballCollider != null)
         {
             fireballCollider.enabled = true;
+        }
+    }
+
+    private void CacheLoopSources()
+    {
+        if (visuals == null)
+        {
+            _loopSources = Array.Empty<AudioSource>();
+            return;
+        }
+
+        _loopSources = visuals.GetComponentsInChildren<AudioSource>(true);
+    }
+
+    private void Subscribe()
+    {
+        if (_subscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            return;
+        }
+
+        eventManager.Subscribe<GameStateChanged>(HandleGameStateChanged);
+        _subscribed = true;
+    }
+
+    private void Unsubscribe()
+    {
+        if (!_subscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            _subscribed = false;
+            return;
+        }
+
+        eventManager.Unsubscribe<GameStateChanged>(HandleGameStateChanged);
+        _subscribed = false;
+    }
+
+    private void HandleGameStateChanged(GameStateChanged changed)
+    {
+        if (changed.Next == GameState.Paused)
+        {
+            ApplyLoopPause(true);
+            return;
+        }
+
+        if (changed.Previous == GameState.Paused && changed.Next == GameState.Playing)
+        {
+            ApplyLoopPause(false);
+        }
+    }
+
+    private static bool IsGamePaused()
+    {
+        return Managers.Instance != null && Managers.Instance.CurrentState == GameState.Paused;
+    }
+
+    private void KeepLoopPausedWhileGamePaused()
+    {
+        if (!_sourcesPaused)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _loopSources.Length; i++)
+        {
+            var source = _loopSources[i];
+            if (source != null && source.isPlaying)
+            {
+                source.Pause();
+            }
+        }
+    }
+
+    private void ApplyLoopPause(bool paused)
+    {
+        _sourcesPaused = paused;
+        for (var i = 0; i < _loopSources.Length; i++)
+        {
+            var source = _loopSources[i];
+            if (source == null)
+            {
+                continue;
+            }
+
+            if (paused)
+            {
+                source.Pause();
+                continue;
+            }
+
+            source.UnPause();
         }
     }
 

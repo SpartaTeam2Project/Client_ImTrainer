@@ -6,6 +6,7 @@ using UnityEngine;
 public class PlayerWeapon : MonoBehaviour
 {
     private const WeaponSlot STARTING_SLOT = WeaponSlot.Hour3;
+    private const float RESULT_SPREAD_SECONDS = 0.28f;
 
     [Header("Equipped")]
     [SerializeField] private Transform _equippedRoot;
@@ -14,7 +15,9 @@ public class PlayerWeapon : MonoBehaviour
 
     private Player _owner;
     private readonly Weapon[] _weapons = new Weapon[WeaponSlots.MAX_COUNT];
+    private readonly MonsterVisualData[] _slotVisuals = new MonsterVisualData[WeaponSlots.MAX_COUNT];
     private int _playerId;
+    private bool _equipmentSubscribed;
 
     public MonsterVisualData EquippedVisual { get; private set; }
 
@@ -30,6 +33,36 @@ public class PlayerWeapon : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 그 칸 포켓몬의 발사 위치. 칸이 비어 있으면 플레이어 중심을 넣고 false.
+    /// </summary>
+    public bool TryGetFirePosition(WeaponSlot slot, out Vector3 position)
+    {
+        var index = (int)slot;
+        if (index >= 0 && index < _weapons.Length && _weapons[index] != null)
+        {
+            position = _weapons[index].transform.position;
+            return true;
+        }
+
+        position = transform.position;
+        return false;
+    }
+
+    #region Unity Methods
+
+    private void OnEnable()
+    {
+        SubscribeEquipment();
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeEquipment();
+    }
+
+    #endregion
+
     #region Public Methods
 
     /// <summary>
@@ -41,14 +74,14 @@ public class PlayerWeapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 시작 칸에 포켓몬을 붙인다. 그림은 스토리지 엔트리에서 고른 포켓몬을 쓴다.
+    /// 시작 칸에 포켓몬을 붙인다. 그림은 이번 판 장착 목록을 따른다.
     /// </summary>
     public void EquipStarting(int playerId)
     {
         _playerId = playerId;
         ApplyEquippedScale();
-        EquippedVisual = ResolveStartingVisual();
-        Equip(STARTING_SLOT, EquippedVisual);
+        SubscribeEquipment();
+        SyncFromInventory();
     }
 
     /// <summary>
@@ -86,19 +119,59 @@ public class PlayerWeapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 장착한 포켓몬이 모두 기절 그림을 재생하게 한다.
+    /// 그 칸 포켓몬만 발사 방향 걷기를 재생하게 한다.
     /// </summary>
-    public void PlayFaint()
+    public void FaceShot(WeaponSlot slot, Vector2 direction)
     {
-        for (var i = 0; i < _weapons.Length; i++)
+        var index = (int)slot;
+        if (index < 0 || index >= _weapons.Length || _weapons[index] == null)
         {
-            if (_weapons[i] == null)
+            return;
+        }
+
+        _weapons[index].FaceShot(direction);
+    }
+
+    /// <summary>
+    /// 시작 그림이 붙어 있는 시계 칸. 3시가 비어 있으면 앞에서부터 찬 칸.
+    /// </summary>
+    public bool TryGetEquippedSlot(out WeaponSlot slot)
+    {
+        if (_slotVisuals[(int)STARTING_SLOT] != null)
+        {
+            slot = STARTING_SLOT;
+            return true;
+        }
+
+        for (var i = 0; i < _slotVisuals.Length; i++)
+        {
+            if (_slotVisuals[i] == null)
             {
                 continue;
             }
 
-            _weapons[i].PlayFaint();
+            slot = (WeaponSlot)i;
+            return true;
         }
+
+        slot = STARTING_SLOT;
+        return false;
+    }
+
+    /// <summary>
+    /// 장착한 포켓몬이 짧은 구간 안에서 각자 기절 그림을 재생하게 한다.
+    /// </summary>
+    public void PlayFaint()
+    {
+        PlayResult(true);
+    }
+
+    /// <summary>
+    /// 장착한 포켓몬이 짧은 구간 안에서 각자 성공 포즈를 재생하게 한다.
+    /// </summary>
+    public void PlayPose()
+    {
+        PlayResult(false);
     }
 
     /// <summary>
@@ -126,6 +199,8 @@ public class PlayerWeapon : MonoBehaviour
             }
 
             _weapons[i] = null;
+            _slotVisuals[i] = null;
+            RefreshEquippedVisual();
             return;
         }
     }
@@ -133,6 +208,43 @@ public class PlayerWeapon : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    private void PlayResult(bool faint)
+    {
+        var equipped = CountEquipped();
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] == null)
+            {
+                continue;
+            }
+
+            // 한 마리는 바로 재생한다. 여러 마리는 칸 순서 없이 같은 구간 안에서만 어긋난다.
+            var delay = equipped <= 1 ? 0f : Random.Range(0f, RESULT_SPREAD_SECONDS);
+            if (faint)
+            {
+                _weapons[i].PlayFaint(delay);
+            }
+            else
+            {
+                _weapons[i].PlayPose(delay);
+            }
+        }
+    }
+
+    private int CountEquipped()
+    {
+        var count = 0;
+        for (var i = 0; i < _weapons.Length; i++)
+        {
+            if (_weapons[i] != null)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 
     private bool Equip(WeaponSlot slot, MonsterVisualData visual)
     {
@@ -157,6 +269,7 @@ public class PlayerWeapon : MonoBehaviour
         weapon.Bind(_owner);
         weapon.ApplyVisual(visual);
         weapon.Initialize(_playerId);
+        _slotVisuals[index] = visual;
         return true;
     }
 
@@ -190,6 +303,7 @@ public class PlayerWeapon : MonoBehaviour
     {
         var weapon = _weapons[index];
         _weapons[index] = null;
+        _slotVisuals[index] = null;
         if (weapon == null)
         {
             var slot = SlotTransform(index);
@@ -254,6 +368,100 @@ public class PlayerWeapon : MonoBehaviour
         }
 
         return 1f / scale;
+    }
+
+    private void SyncFromInventory()
+    {
+        if (Managers.Instance != null
+            && Managers.Instance.TryGetManager<ItemManager>(out var itemManager)
+            && itemManager.GetEquipment(_playerId) != null)
+        {
+            var equipment = itemManager.GetEquipment(_playerId);
+            for (var i = 0; i < _weapons.Length; i++)
+            {
+                ReleaseWeapon(i);
+                if (i >= equipment.Stacks.Count || equipment.Stacks[i].Empty || equipment.Stacks[i].Item == null)
+                {
+                    continue;
+                }
+
+                var visual = itemManager.GetVisual(equipment.Stacks[i].Item.uid);
+                if (visual != null)
+                {
+                    Equip((WeaponSlot)i, visual);
+                }
+            }
+
+            RefreshEquippedVisual();
+            return;
+        }
+
+        EquippedVisual = ResolveStartingVisual();
+        Equip(STARTING_SLOT, EquippedVisual);
+    }
+
+    private void HandleEquipmentChanged(EquipmentChanged changed)
+    {
+        if (changed.PlayerId != _playerId || changed.Slot < 0 || changed.Slot >= _weapons.Length)
+        {
+            return;
+        }
+
+        ReleaseWeapon(changed.Slot);
+        if (changed.Uid >= 0 && Managers.Instance != null && Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            var visual = itemManager.GetVisual(changed.Uid);
+            if (visual != null)
+            {
+                Equip((WeaponSlot)changed.Slot, visual);
+            }
+        }
+
+        RefreshEquippedVisual();
+    }
+
+    private void RefreshEquippedVisual()
+    {
+        var starting = _slotVisuals[(int)STARTING_SLOT];
+        if (starting != null)
+        {
+            EquippedVisual = starting;
+            return;
+        }
+
+        for (var i = 0; i < _slotVisuals.Length; i++)
+        {
+            if (_slotVisuals[i] != null)
+            {
+                EquippedVisual = _slotVisuals[i];
+                return;
+            }
+        }
+
+        EquippedVisual = null;
+    }
+
+    private void SubscribeEquipment()
+    {
+        if (_equipmentSubscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            return;
+        }
+
+        eventManager.Subscribe<EquipmentChanged>(HandleEquipmentChanged);
+        _equipmentSubscribed = true;
+    }
+
+    private void UnsubscribeEquipment()
+    {
+        if (!_equipmentSubscribed || Managers.Instance == null || !Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            _equipmentSubscribed = false;
+            return;
+        }
+
+        eventManager.Unsubscribe<EquipmentChanged>(HandleEquipmentChanged);
+        _equipmentSubscribed = false;
     }
 
     private MonsterVisualData ResolveStartingVisual()

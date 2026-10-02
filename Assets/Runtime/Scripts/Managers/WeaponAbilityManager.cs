@@ -19,6 +19,11 @@ public class WeaponAbilityManager : BaseManager
     [Header("Level Up")]
     [SerializeField] private AudioClip _levelUpFanfare;
 
+    private readonly List<EquippedAbilityLevel> _equippedLevels = new List<EquippedAbilityLevel>();
+    private readonly Dictionary<StarLevelKey, int> _appliedStarLevels = new Dictionary<StarLevelKey, int>();
+    private readonly List<int> _evolutionSlots = new List<int>();
+    private readonly List<int> _evolutionLevels = new List<int>();
+    private readonly List<WeaponAbilityType> _removedAbilityTypes = new List<WeaponAbilityType>();
     private readonly Queue<int> _levelUpQueue = new Queue<int>();
     private readonly Dictionary<int, WeaponAbilityLoadout> _loadouts = new Dictionary<int, WeaponAbilityLoadout>();
     private readonly List<WeaponAbilityData> _currentOffers = new List<WeaponAbilityData>();
@@ -26,6 +31,7 @@ public class WeaponAbilityManager : BaseManager
     private int _playerId;
     private bool _waitingForChoice;
     private bool _weaponsPaused;
+    private bool _stageRunning;
 
     public int PendingLevelUpLevel { get; private set; }
 
@@ -38,11 +44,21 @@ public class WeaponAbilityManager : BaseManager
     /// </summary>
     public override UniTask InitializeAsync()
     {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Subscribe<EquipmentChanged>(HandleEquipmentChanged);
+        }
+
         return base.InitializeAsync();
     }
 
     public override void Cleanup()
     {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Unsubscribe<EquipmentChanged>(HandleEquipmentChanged);
+        }
+
         ClearLevelUpQueue();
         ClearAbilities();
         base.Cleanup();
@@ -53,11 +69,12 @@ public class WeaponAbilityManager : BaseManager
     #region Public Methods
 
     /// <summary>
-    /// 고른 포켓몬의 공격 능력을 레벨 0으로 넣는다.
+    /// 고른 포켓몬의 공격 능력을 성에 맞는 레벨로 넣는다.
     /// </summary>
     public void BeginStage(int playerId)
     {
         _playerId = playerId;
+        _appliedStarLevels.Clear();
         ClearLevelUpQueue();
         ClearAbilities(playerId);
         var playerManager = GetManager<PlayerManager>();
@@ -68,6 +85,8 @@ public class WeaponAbilityManager : BaseManager
         }
 
         GrantStartingWeaponAbility(playerId);
+        ApplyEquippedAbilityLevels(playerId);
+        _stageRunning = true;
     }
 
     /// <summary>
@@ -75,6 +94,8 @@ public class WeaponAbilityManager : BaseManager
     /// </summary>
     public void EndStage()
     {
+        _stageRunning = false;
+        _appliedStarLevels.Clear();
         ClearLevelUpQueue();
         ClearAbilities(_playerId);
     }
@@ -95,32 +116,34 @@ public class WeaponAbilityManager : BaseManager
 
     /// <summary>
     /// 능력 프리팹을 만들고 레벨을 적용한다. 진화면 요구 능력을 치운다.
+    /// 점 발사 진화는 빠지는 칸마다 하나씩 만든다.
     /// </summary>
-    public void AddWeaponAbility(int playerId, WeaponAbilityData abilityData, int level = 0)
+    public void AddWeaponAbility(int playerId, WeaponAbilityData abilityData, int level = 0, int slot = EquippedAbilityLevel.UNSLOTTED)
     {
         if (playerId != _playerId || abilityData == null || abilityData.Prefab == null)
         {
             return;
         }
 
-        var instance = Instantiate(abilityData.Prefab);
-        var ability = instance.GetComponent<IWeaponAbilityBehavior>();
-        if (ability == null)
+        if (abilityData.IsEvolution && ItemManager.IsSlotOriginAbility(abilityData))
         {
-            Debug.LogError("능력 프리팹에 IWeaponAbilityBehavior가 없습니다. " + abilityData.WeaponAbilityType);
-            Destroy(instance);
+            AddSlotOriginEvolution(playerId, abilityData, level);
             return;
         }
 
-        ability.Init(playerId, abilityData, level);
+        if (slot != EquippedAbilityLevel.UNSLOTTED
+            && GetAcquiredAtSlot(playerId, abilityData.WeaponAbilityType, slot) != null)
+        {
+            return;
+        }
+
         RemoveEvolvedAbilities(playerId, abilityData);
-        var loadout = GetLoadout(playerId);
-        loadout.Levels[abilityData.WeaponAbilityType] = level;
-        loadout.Acquired.Add(ability);
+        CreateAbility(playerId, abilityData, level, slot);
     }
 
     /// <summary>
     /// 고른 카드를 적용한다. 엔드게임은 레벨을 올리지 않는다.
+    /// 같은 타입의 칸 인스턴스는 만렙이 아닌 것만 한 단계씩 올린다.
     /// </summary>
     public void ApplyOffer(int playerId, WeaponAbilityData abilityData)
     {
@@ -135,30 +158,42 @@ public class WeaponAbilityManager : BaseManager
             return;
         }
 
-        var nextLevel = GetWeaponAbilityLevel(playerId, abilityData.WeaponAbilityType) + 1;
-        if (nextLevel >= abilityData.LevelsCount)
+        if (IsAbilityMaxed(playerId, abilityData))
         {
             return;
         }
 
-        var acquired = GetAquiredWeaponAbility(playerId, abilityData.WeaponAbilityType);
-        if (acquired == null)
-        {
-            return;
-        }
-
-        acquired.ApplyLevel(nextLevel);
-        GetLoadout(playerId).Levels[abilityData.WeaponAbilityType] = nextLevel;
+        RaiseAcquiredLevels(playerId, abilityData);
     }
 
     /// <summary>
-    /// 가진 능력의 저장 레벨. 없으면 -1.
+    /// 가진 능력의 가장 높은 레벨. 없으면 -1.
     /// </summary>
     public int GetWeaponAbilityLevel(int playerId, WeaponAbilityType abilityType)
     {
         if (!_loadouts.TryGetValue(playerId, out var loadout))
         {
             return MISSING_LEVEL;
+        }
+
+        var max = MISSING_LEVEL;
+        for (var i = 0; i < loadout.Acquired.Count; i++)
+        {
+            var ability = loadout.Acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityType)
+            {
+                continue;
+            }
+
+            if (ability.LevelId > max)
+            {
+                max = ability.LevelId;
+            }
+        }
+
+        if (max != MISSING_LEVEL)
+        {
+            return max;
         }
 
         if (loadout.Levels.TryGetValue(abilityType, out var level))
@@ -306,6 +341,164 @@ public class WeaponAbilityManager : BaseManager
 
     #region Private Methods
 
+    /// <summary>
+    /// 장착 포켓몬의 성으로 무기 능력 레벨을 맞춘다. 점 발사는 칸마다, 그 외는 가장 높은 성이다.
+    /// </summary>
+    public void ApplyEquippedAbilityLevels(int playerId)
+    {
+        if (playerId != _playerId
+            || Managers.Instance == null
+            || !Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            return;
+        }
+
+        itemManager.CollectEquippedAbilityLevels(playerId, _equippedLevels);
+        RemoveUnequippedCatalogAbilities(playerId, itemManager);
+        var loadout = GetLoadout(playerId);
+        for (var i = 0; i < _equippedLevels.Count; i++)
+        {
+            var equipped = _equippedLevels[i];
+            if (equipped.Ability == null)
+            {
+                continue;
+            }
+
+            var abilityType = equipped.Ability.WeaponAbilityType;
+            if (loadout.Removed.Contains(abilityType))
+            {
+                TryRestoreSlotEvolution(playerId, equipped);
+                continue;
+            }
+
+            var starKey = new StarLevelKey(abilityType, equipped.Slot);
+            var acquired = equipped.Slot == EquippedAbilityLevel.UNSLOTTED
+                ? GetUnslottedAbility(playerId, abilityType)
+                : GetAcquiredAtSlot(playerId, abilityType, equipped.Slot);
+            if (acquired == null)
+            {
+                AddWeaponAbility(playerId, equipped.Ability, equipped.LevelIndex, equipped.Slot);
+                _appliedStarLevels[starKey] = equipped.LevelIndex;
+                continue;
+            }
+
+            if (_appliedStarLevels.TryGetValue(starKey, out var appliedStar) && appliedStar == equipped.LevelIndex)
+            {
+                continue;
+            }
+
+            acquired.ApplyLevel(equipped.LevelIndex);
+            RememberLevel(playerId, abilityType);
+            _appliedStarLevels[starKey] = equipped.LevelIndex;
+        }
+    }
+
+    /// <summary>
+    /// 장착에서 빠진 종 목록 무기 능력만 치운다. 점 발사는 그 칸만 지운다.
+    /// </summary>
+    private void RemoveUnequippedCatalogAbilities(int playerId, ItemManager itemManager)
+    {
+        var loadout = GetLoadout(playerId);
+        _removedAbilityTypes.Clear();
+        for (var i = loadout.Acquired.Count - 1; i >= 0; i--)
+        {
+            var ability = loadout.Acquired[i];
+            if (ability == null)
+            {
+                continue;
+            }
+
+            if (ability is ISlotOriginAbility origin)
+            {
+                var data = ability.WeaponAbilityData;
+                if (data != null && data.IsEvolution)
+                {
+                    if (!SlotFeedsEvolution(origin.OriginSlot, data))
+                    {
+                        RemoveAcquiredAt(playerId, i);
+                    }
+
+                    continue;
+                }
+
+                if (data == null || !itemManager.IsCatalogWeaponAbility(ability.WeaponAbilityType))
+                {
+                    continue;
+                }
+
+                if (!HasEquippedOrigin(origin.OriginSlot, ability.WeaponAbilityType))
+                {
+                    RemoveAcquiredAt(playerId, i);
+                }
+
+                continue;
+            }
+
+            if (!itemManager.IsCatalogWeaponAbility(ability.WeaponAbilityType))
+            {
+                continue;
+            }
+
+            if (HasEquippedAbility(ability.WeaponAbilityType))
+            {
+                continue;
+            }
+
+            if (!_removedAbilityTypes.Contains(ability.WeaponAbilityType))
+            {
+                _removedAbilityTypes.Add(ability.WeaponAbilityType);
+            }
+        }
+
+        for (var i = 0; i < _removedAbilityTypes.Count; i++)
+        {
+            RemoveAbility(playerId, _removedAbilityTypes[i]);
+        }
+    }
+
+    private bool HasEquippedAbility(WeaponAbilityType abilityType)
+    {
+        for (var i = 0; i < _equippedLevels.Count; i++)
+        {
+            if (_equippedLevels[i].Ability != null && _equippedLevels[i].Ability.WeaponAbilityType == abilityType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void RemoveAbility(int playerId, WeaponAbilityType abilityType)
+    {
+        var loadout = GetLoadout(playerId);
+        for (var i = loadout.Acquired.Count - 1; i >= 0; i--)
+        {
+            var ability = loadout.Acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityType)
+            {
+                continue;
+            }
+
+            var slot = ability is ISlotOriginAbility origin ? (int)origin.OriginSlot : EquippedAbilityLevel.UNSLOTTED;
+            _appliedStarLevels.Remove(new StarLevelKey(abilityType, slot));
+            ability.Clear();
+            loadout.Acquired.RemoveAt(i);
+        }
+
+        loadout.Levels.Remove(abilityType);
+    }
+
+    private void HandleEquipmentChanged(EquipmentChanged changed)
+    {
+        if (!_stageRunning)
+        {
+            return;
+        }
+
+        ApplyEquippedAbilityLevels(changed.PlayerId);
+    }
+
     private void GrantStartingWeaponAbility(int playerId)
     {
         var visual = ResolveStartingVisual(playerId);
@@ -315,7 +508,26 @@ public class WeaponAbilityManager : BaseManager
             return;
         }
 
-        AddWeaponAbility(playerId, visual.WeaponAbility, 0);
+        var level = 0;
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            level = itemManager.GetEquippedAbilityLevel(playerId, visual.WeaponAbility);
+        }
+
+        var slot = EquippedAbilityLevel.UNSLOTTED;
+        if (ItemManager.IsSlotOriginAbility(visual.WeaponAbility))
+        {
+            slot = (int)WeaponSlot.Hour3;
+            if (Managers.Instance != null
+                && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager)
+                && playerManager.TryGetPlayer(playerId, out var player)
+                && player.Weapons.TryGetEquippedSlot(out var equippedSlot))
+            {
+                slot = (int)equippedSlot;
+            }
+        }
+
+        AddWeaponAbility(playerId, visual.WeaponAbility, level, slot);
     }
 
     private MonsterVisualData ResolveStartingVisual(int playerId)
@@ -581,7 +793,7 @@ public class WeaponAbilityManager : BaseManager
             return allowEndgame;
         }
 
-        if (GetWeaponAbilityLevel(playerId, abilityData.WeaponAbilityType) >= abilityData.LevelsCount - 1)
+        if (IsAbilityMaxed(playerId, abilityData))
         {
             return false;
         }
@@ -591,12 +803,12 @@ public class WeaponAbilityManager : BaseManager
             return false;
         }
 
-        if (abilityData.IsEvolution)
+        var acquired = IsWeaponAbilityAquired(playerId, abilityData.WeaponAbilityType);
+        if (abilityData.IsEvolution && !acquired)
         {
             return MeetsEvolutionRequirements(playerId, abilityData);
         }
 
-        var acquired = IsWeaponAbilityAquired(playerId, abilityData.WeaponAbilityType);
         if (abilityData.IsWeaponAbility && !acquired)
         {
             return false;
@@ -659,16 +871,16 @@ public class WeaponAbilityManager : BaseManager
                 continue;
             }
 
-            var required = GetAquiredWeaponAbility(playerId, requirement.WeaponAbilityType);
-            if (required == null)
+            if (GetAquiredWeaponAbility(playerId, requirement.WeaponAbilityType) == null)
             {
                 continue;
             }
 
-            required.Clear();
-            loadout.Acquired.Remove(required);
-            loadout.Levels.Remove(requirement.WeaponAbilityType);
-            loadout.Removed.Add(requirement.WeaponAbilityType);
+            RemoveAbility(playerId, requirement.WeaponAbilityType);
+            if (!loadout.Removed.Contains(requirement.WeaponAbilityType))
+            {
+                loadout.Removed.Add(requirement.WeaponAbilityType);
+            }
         }
     }
 
@@ -679,10 +891,17 @@ public class WeaponAbilityManager : BaseManager
         for (var i = 0; i < acquired.Count; i++)
         {
             var ability = acquired[i];
-            if (ability != null && ability.WeaponAbilityData != null && ability.WeaponAbilityData.IsActiveAbility)
+            if (ability == null || ability.WeaponAbilityData == null || !ability.WeaponAbilityData.IsActiveAbility)
             {
-                count++;
+                continue;
             }
+
+            if (WasTypeCounted(acquired, i, ability.WeaponAbilityType))
+            {
+                continue;
+            }
+
+            count++;
         }
 
         return count;
@@ -727,6 +946,352 @@ public class WeaponAbilityManager : BaseManager
                 {
                     return true;
                 }
+            }
+        }
+
+        return false;
+    }
+
+    private void TryRestoreSlotEvolution(int playerId, EquippedAbilityLevel equipped)
+    {
+        if (equipped.Ability == null)
+        {
+            return;
+        }
+
+        var evolution = FindRemovingEvolution(equipped.Ability.WeaponAbilityType);
+        if (evolution == null || !ItemManager.IsSlotOriginAbility(evolution))
+        {
+            return;
+        }
+
+        if (GetAcquiredAtSlot(playerId, evolution.WeaponAbilityType, equipped.Slot) != null)
+        {
+            return;
+        }
+
+        CreateAbility(playerId, evolution, ClampLevel(evolution, equipped.LevelIndex), equipped.Slot);
+    }
+
+    private WeaponAbilityData FindRemovingEvolution(WeaponAbilityType requiredType)
+    {
+        if (_abilitiesDatabase == null)
+        {
+            return null;
+        }
+
+        for (var i = 0; i < _abilitiesDatabase.AbilitiesCount; i++)
+        {
+            var ability = _abilitiesDatabase.GetWeaponAbility(i);
+            if (ability == null || !ability.IsEvolution || ability.EvolutionRequirements == null)
+            {
+                continue;
+            }
+
+            for (var r = 0; r < ability.EvolutionRequirements.Count; r++)
+            {
+                var requirement = ability.EvolutionRequirements[r];
+                if (requirement != null
+                    && requirement.ShouldRemoveAfterEvolution
+                    && requirement.WeaponAbilityType == requiredType)
+                {
+                    return ability;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private void AddSlotOriginEvolution(int playerId, WeaponAbilityData abilityData, int level)
+    {
+        CollectEvolutionSlots(playerId, abilityData);
+        RemoveEvolvedAbilities(playerId, abilityData);
+        if (_evolutionSlots.Count == 0)
+        {
+            CreateAbility(playerId, abilityData, level, EquippedAbilityLevel.UNSLOTTED);
+            return;
+        }
+
+        for (var i = 0; i < _evolutionSlots.Count; i++)
+        {
+            CreateAbility(playerId, abilityData, ClampLevel(abilityData, _evolutionLevels[i]), _evolutionSlots[i]);
+        }
+    }
+
+    private void CollectEvolutionSlots(int playerId, WeaponAbilityData abilityData)
+    {
+        _evolutionSlots.Clear();
+        _evolutionLevels.Clear();
+        if (abilityData.EvolutionRequirements == null)
+        {
+            return;
+        }
+
+        var acquired = GetLoadout(playerId).Acquired;
+        for (var i = 0; i < abilityData.EvolutionRequirements.Count; i++)
+        {
+            var requirement = abilityData.EvolutionRequirements[i];
+            if (requirement == null || !requirement.ShouldRemoveAfterEvolution)
+            {
+                continue;
+            }
+
+            for (var u = 0; u < acquired.Count; u++)
+            {
+                var ability = acquired[u];
+                if (ability == null || ability.WeaponAbilityType != requirement.WeaponAbilityType)
+                {
+                    continue;
+                }
+
+                if (!(ability is ISlotOriginAbility origin))
+                {
+                    continue;
+                }
+
+                var slot = (int)origin.OriginSlot;
+                if (!_evolutionSlots.Contains(slot))
+                {
+                    _evolutionSlots.Add(slot);
+                    _evolutionLevels.Add(ability.LevelId);
+                }
+            }
+        }
+    }
+
+    private static int ClampLevel(WeaponAbilityData abilityData, int level)
+    {
+        if (abilityData == null || abilityData.LevelsCount <= 0 || level < 0)
+        {
+            return 0;
+        }
+
+        if (level >= abilityData.LevelsCount)
+        {
+            return abilityData.LevelsCount - 1;
+        }
+
+        return level;
+    }
+
+    private void CreateAbility(int playerId, WeaponAbilityData abilityData, int level, int slot)
+    {
+        var instance = Instantiate(abilityData.Prefab);
+        var ability = instance.GetComponent<IWeaponAbilityBehavior>();
+        if (ability == null)
+        {
+            Debug.LogError("능력 프리팹에 IWeaponAbilityBehavior가 없습니다. " + abilityData.WeaponAbilityType);
+            Destroy(instance);
+            return;
+        }
+
+        if (slot != EquippedAbilityLevel.UNSLOTTED && ability is ISlotOriginAbility origin)
+        {
+            origin.BindSlot((WeaponSlot)slot);
+        }
+
+        ability.Init(playerId, abilityData, level);
+        GetLoadout(playerId).Acquired.Add(ability);
+        RememberLevel(playerId, abilityData.WeaponAbilityType);
+    }
+
+    private void RaiseAcquiredLevels(int playerId, WeaponAbilityData abilityData)
+    {
+        var acquired = GetLoadout(playerId).Acquired;
+        for (var i = 0; i < acquired.Count; i++)
+        {
+            var ability = acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityData.WeaponAbilityType)
+            {
+                continue;
+            }
+
+            var next = ability.LevelId + 1;
+            if (next >= abilityData.LevelsCount)
+            {
+                continue;
+            }
+
+            ability.ApplyLevel(next);
+        }
+
+        RememberLevel(playerId, abilityData.WeaponAbilityType);
+    }
+
+    private void RememberLevel(int playerId, WeaponAbilityType abilityType)
+    {
+        var loadout = GetLoadout(playerId);
+        var max = MISSING_LEVEL;
+        for (var i = 0; i < loadout.Acquired.Count; i++)
+        {
+            var ability = loadout.Acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityType)
+            {
+                continue;
+            }
+
+            if (ability.LevelId > max)
+            {
+                max = ability.LevelId;
+            }
+        }
+
+        if (max == MISSING_LEVEL)
+        {
+            loadout.Levels.Remove(abilityType);
+            return;
+        }
+
+        loadout.Levels[abilityType] = max;
+    }
+
+    private bool IsAbilityMaxed(int playerId, WeaponAbilityData abilityData)
+    {
+        if (abilityData == null || abilityData.LevelsCount <= 0)
+        {
+            return false;
+        }
+
+        var acquired = GetLoadout(playerId).Acquired;
+        var found = false;
+        for (var i = 0; i < acquired.Count; i++)
+        {
+            var ability = acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityData.WeaponAbilityType)
+            {
+                continue;
+            }
+
+            found = true;
+            if (ability.LevelId < abilityData.LevelsCount - 1)
+            {
+                return false;
+            }
+        }
+
+        return found;
+    }
+
+    private void RemoveAcquiredAt(int playerId, int index)
+    {
+        var loadout = GetLoadout(playerId);
+        if (index < 0 || index >= loadout.Acquired.Count)
+        {
+            return;
+        }
+
+        var ability = loadout.Acquired[index];
+        if (ability == null)
+        {
+            loadout.Acquired.RemoveAt(index);
+            return;
+        }
+
+        var type = ability.WeaponAbilityType;
+        var slot = ability is ISlotOriginAbility origin ? (int)origin.OriginSlot : EquippedAbilityLevel.UNSLOTTED;
+        ability.Clear();
+        loadout.Acquired.RemoveAt(index);
+        _appliedStarLevels.Remove(new StarLevelKey(type, slot));
+        RememberLevel(playerId, type);
+    }
+
+    private IWeaponAbilityBehavior GetAcquiredAtSlot(int playerId, WeaponAbilityType abilityType, int slot)
+    {
+        var acquired = GetLoadout(playerId).Acquired;
+        for (var i = 0; i < acquired.Count; i++)
+        {
+            var ability = acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityType)
+            {
+                continue;
+            }
+
+            if (ability is ISlotOriginAbility origin && (int)origin.OriginSlot == slot)
+            {
+                return ability;
+            }
+        }
+
+        return null;
+    }
+
+    private IWeaponAbilityBehavior GetUnslottedAbility(int playerId, WeaponAbilityType abilityType)
+    {
+        var acquired = GetLoadout(playerId).Acquired;
+        for (var i = 0; i < acquired.Count; i++)
+        {
+            var ability = acquired[i];
+            if (ability == null || ability.WeaponAbilityType != abilityType)
+            {
+                continue;
+            }
+
+            if (ability is ISlotOriginAbility)
+            {
+                continue;
+            }
+
+            return ability;
+        }
+
+        return null;
+    }
+
+    private bool HasEquippedOrigin(WeaponSlot slot, WeaponAbilityType abilityType)
+    {
+        var slotIndex = (int)slot;
+        for (var i = 0; i < _equippedLevels.Count; i++)
+        {
+            var equipped = _equippedLevels[i];
+            if (equipped.Slot == slotIndex
+                && equipped.Ability != null
+                && equipped.Ability.WeaponAbilityType == abilityType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool SlotFeedsEvolution(WeaponSlot slot, WeaponAbilityData evolution)
+    {
+        if (evolution == null || evolution.EvolutionRequirements == null)
+        {
+            return false;
+        }
+
+        var slotIndex = (int)slot;
+        for (var i = 0; i < _equippedLevels.Count; i++)
+        {
+            var equipped = _equippedLevels[i];
+            if (equipped.Slot != slotIndex || equipped.Ability == null)
+            {
+                continue;
+            }
+
+            for (var r = 0; r < evolution.EvolutionRequirements.Count; r++)
+            {
+                var requirement = evolution.EvolutionRequirements[r];
+                if (requirement != null && requirement.WeaponAbilityType == equipped.Ability.WeaponAbilityType)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool WasTypeCounted(List<IWeaponAbilityBehavior> acquired, int index, WeaponAbilityType abilityType)
+    {
+        for (var i = 0; i < index; i++)
+        {
+            var ability = acquired[i];
+            if (ability != null && ability.WeaponAbilityType == abilityType)
+            {
+                return true;
             }
         }
 
@@ -798,6 +1363,34 @@ public class WeaponAbilityManager : BaseManager
     }
 
     #endregion
+
+    private readonly struct StarLevelKey : System.IEquatable<StarLevelKey>
+    {
+        public StarLevelKey(WeaponAbilityType type, int slot)
+        {
+            Type = type;
+            Slot = slot;
+        }
+
+        public WeaponAbilityType Type { get; }
+
+        public int Slot { get; }
+
+        public bool Equals(StarLevelKey other)
+        {
+            return Type == other.Type && Slot == other.Slot;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is StarLevelKey other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return ((int)Type * 397) ^ Slot;
+        }
+    }
 
     private sealed class WeaponAbilityLoadout
     {

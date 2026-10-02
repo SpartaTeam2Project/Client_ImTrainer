@@ -136,6 +136,11 @@ public class StageController : MonoBehaviour
         }
 
         var playerId = playerManager.SpawnLocal();
+        if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            itemManager.BeginRun(playerId);
+        }
+
         playerManager.EquipStarting(playerId);
         if (Managers.Instance.TryGetManager<CurrenciesManager>(out var currenciesManager))
         {
@@ -552,10 +557,14 @@ public class StageController : MonoBehaviour
         if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             playerId = playerManager.LocalPlayerId;
-            // 패배 화면에서는 기절한 포켓몬을 남긴다. 씬을 떠나며 Loading이 될 때 치운다.
-            if (resultState != GameState.Defeat)
+            if (resultState == GameState.Victory)
             {
-                playerManager.ClearEquipped();
+                playerManager.PlayPose(playerId);
+            }
+
+            if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+            {
+                itemManager.EndRun(playerId, true);
             }
         }
 
@@ -611,6 +620,11 @@ public class StageController : MonoBehaviour
 
         if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
+            if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+            {
+                itemManager.EndRun(playerManager.LocalPlayerId);
+            }
+
             playerManager.ClearEquipped();
         }
 

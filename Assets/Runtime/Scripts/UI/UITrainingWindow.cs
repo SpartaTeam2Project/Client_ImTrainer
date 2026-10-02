@@ -131,7 +131,7 @@ public class UITrainingWindow : MonoBehaviour
         for (var i = 0; i < _database.Count; i++)
         {
             var data = _database.GetTraining(i);
-            if (data == null)
+            if (data == null || !data.ShowInUi)
             {
                 continue;
             }

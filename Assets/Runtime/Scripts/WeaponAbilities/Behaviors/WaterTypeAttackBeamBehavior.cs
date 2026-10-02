@@ -24,6 +24,8 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
     private float _timeLeft;
     private MonsterType _attackType;
     private bool _playing;
+    private WeaponSlot _originSlot;
+    private bool _hasOriginSlot;
 
     #region Unity Methods
 
@@ -55,7 +57,7 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
             return;
         }
 
-        transform.position = player.Weapons.FirePosition;
+        transform.position = ResolveOrigin(player);
         _timeLeft -= Time.deltaTime;
         if (_timeLeft <= 0f)
         {
@@ -88,6 +90,15 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
     #endregion
 
     #region Public Methods
+
+    /// <summary>
+    /// 물줄기가 따라갈 장착 칸을 기억한다.
+    /// </summary>
+    public void BindSlot(WeaponSlot slot)
+    {
+        _originSlot = slot;
+        _hasOriginSlot = true;
+    }
 
     /// <summary>
     /// 가까운 적 방향으로 빔을 켜고, 유지 시간이 끝나면 끈다.
@@ -166,15 +177,27 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
         var direction = Vector2.up;
         if (TryGetPlayer(out var player))
         {
-            transform.position = player.Weapons.FirePosition;
-            direction = ResolveDirection(player.Weapons.FirePosition);
+            var origin = ResolveOrigin(player);
+            transform.position = origin;
+            direction = ResolveDirection(origin);
+            if (_hasOriginSlot && Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+            {
+                playerManager.FaceShot(_playerId, _originSlot, direction);
+            }
         }
 
         transform.rotation = Quaternion.FromToRotation(Vector2.up, direction);
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+    }
+
+    private Vector3 ResolveOrigin(Player player)
+    {
+        if (_hasOriginSlot)
         {
-            playerManager.FaceShot(_playerId, direction);
+            player.Weapons.TryGetFirePosition(_originSlot, out var position);
+            return position;
         }
+
+        return player.transform.position;
     }
 
     private Vector2 ResolveDirection(Vector3 origin)

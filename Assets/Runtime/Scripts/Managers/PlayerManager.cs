@@ -126,16 +126,29 @@ public class PlayerManager : BaseManager
     }
 
     /// <summary>
-    /// 그 플레이어의 장착 포켓몬이 발사 방향 걷기를 재생하게 한다.
+    /// 그 플레이어의 해당 칸 포켓몬이 발사 방향 걷기를 재생하게 한다.
     /// </summary>
-    public void FaceShot(int playerId, Vector2 direction)
+    public void FaceShot(int playerId, WeaponSlot slot, Vector2 direction)
     {
         if (!TryGetPlayer(playerId, out var player))
         {
             return;
         }
 
-        player.Weapons.FaceShot(direction);
+        player.Weapons.FaceShot(slot, direction);
+    }
+
+    /// <summary>
+    /// 그 플레이어의 장착 포켓몬이 성공 포즈를 재생하게 한다.
+    /// </summary>
+    public void PlayPose(int playerId)
+    {
+        if (!TryGetPlayer(playerId, out var player))
+        {
+            return;
+        }
+
+        player.Weapons.PlayPose();
     }
 
 

@@ -328,6 +328,8 @@ public class AudioManager : BaseManager
         source.playOnAwake = false;
         source.loop = false;
         source.spatialBlend = 0f;
+        // 일시정지 중 AudioListener.pause가 켜져도 UI 효과음은 나야 한다.
+        source.ignoreListenerPause = true;
         sourceObject.SetActive(false);
         return source;
     }

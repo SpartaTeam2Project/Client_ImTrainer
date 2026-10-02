@@ -28,6 +28,10 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [SerializeField] private Sprite[] _faintLeft = new Sprite[0];
     [SerializeField] private Sprite[] _faintRight = new Sprite[0];
 
+    [Header("Pose")]
+    [SerializeField] private Sprite[] _poseLeft = new Sprite[0];
+    [SerializeField] private Sprite[] _poseRight = new Sprite[0];
+
     [SerializeField, HideInInspector] private Sprite[] _walkDown = new Sprite[0];
     [SerializeField, HideInInspector] private Sprite[] _walkDownRight = new Sprite[0];
     [SerializeField, HideInInspector] private Sprite[] _walkRight = new Sprite[0];
@@ -47,6 +51,9 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [SerializeField] private MonsterType _primaryType = MonsterType.Normal;
     [SerializeField] private bool _hasSecondaryType;
     [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
+
+    [Header("Evolution")]
+    [SerializeField] private MonsterVisualData _evolution;
 
     [Header("Storage")]
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
@@ -86,9 +93,21 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
 
     public Sprite[] FaintRight => _faintRight;
 
+    /// <summary>
+    /// 성공 포즈 그림. 좌우 두 방향만 있다.
+    /// </summary>
+    public Sprite[] PoseLeft => _poseLeft;
+
+    public Sprite[] PoseRight => _poseRight;
+
     public Sprite ProjectileSprite => _projectileSprite;
 
     public WeaponAbilityData WeaponAbility => _ability;
+
+    /// <summary>
+    /// 3성 세 마리를 합성하면 나오는 다음 종. 최종 진화는 비운다.
+    /// </summary>
+    public MonsterVisualData Evolution => _evolution;
 
     public MonsterType PrimaryType => _primaryType;
 
@@ -205,5 +224,7 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
         _hop ??= new EightDirectionFrames();
         _faintLeft ??= new Sprite[0];
         _faintRight ??= new Sprite[0];
+        _poseLeft ??= new Sprite[0];
+        _poseRight ??= new Sprite[0];
     }
 }

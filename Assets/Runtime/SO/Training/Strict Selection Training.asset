@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b22c33d44e5f6789012345abcdef0102, type: 3}
-  m_Name: Armor Training
+  m_Name: Strict Selection Training
   m_EditorClassIdentifier: Assembly-CSharp::TrainingData
-  _trainingType: 0
-  _icon: {fileID: 21300000, guid: defd5000544285c42b4e1ae97fedaa5d, type: 3}
-  _title: "\uBC29\uC5B4"
+  _trainingType: 3
+  _icon: {fileID: 0}
+  _title: "\uC5C4\uACA9\uD55C \uC120\uBCC4"
+  _description: "\uAC01 \uD310\uC744 \uC2DC\uC791\uD560 \uB54C \uBCF4\uB108\uC2A4 \uC81C\uC678 \uD69F\uC218\uAC00 \uCD94\uAC00\uB429\uB2C8\uB2E4."
+  _showInUi: 1
+  _valueDisplay: 2
   _levels:
-  - _value: 0.9
-    _cost: 200
-  - _value: 0.8
-    _cost: 400
-  - _value: 0.7
-    _cost: 1000
-  - _value: 0.6
-    _cost: 2000
+  - _value: 0
+    _cost: 520
+  - _value: 0
+    _cost: 1500
+  - _value: 0
+    _cost: 4200
