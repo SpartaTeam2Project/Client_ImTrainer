@@ -52,15 +52,17 @@ public sealed class UpgradeManager : BaseManager
     {
         public string Id;
         public string Name;
+        public string IconPath;
         [Min(1)] public int MaxLevel;
         [Min(0f)] public float Weight;
         public List<UpgradeEffectData> Effects;
 
-        public UpgradeDefinition(string id, string name, int maxLevel, float weight,
+        public UpgradeDefinition(string id, string name, string iconPath, int maxLevel, float weight,
             List<UpgradeEffectData> effects)
         {
             Id = id;
             Name = name;
+            IconPath=iconPath;
             MaxLevel = maxLevel;
             Weight = weight;
             Effects = effects;
@@ -87,6 +89,34 @@ public sealed class UpgradeManager : BaseManager
             Type = type;
             Value = value;
         }
+    }
+
+
+    /// <summary>
+    /// JSON에서 읽어오는 Upgrade 원본 데이터.
+    /// Runtime에서 사용하는 UpgradeDefinition과 분리한다.
+    /// </summary>
+    [Serializable]
+    private sealed class UpgradeJsonData
+    {
+        public string id;
+        public string name;
+        public string iconPath;
+        public int maxLevel;
+        public float weight;
+        public List<UpgradeEffectJsonData> effects;
+    }
+
+    /// <summary>
+    /// JSON에서는 Target/Type을 사람이 읽기 쉬운 문자열로 저장한다.
+    /// 로딩할 때 Runtime enum으로 변환한다.
+    /// </summary>
+    [Serializable]
+    private sealed class UpgradeEffectJsonData
+    {
+        public string target;
+        public string type;
+        public float value;
     }
     [Header("Upgrade Data")]
     [SerializeField] private TextAsset _upgradeJson;
@@ -175,6 +205,7 @@ public sealed class UpgradeManager : BaseManager
                 new UpgradeDefinition(
                     jsonUpgrade.id,
                     jsonUpgrade.name,
+                    jsonUpgrade.iconPath,
                     jsonUpgrade.maxLevel,
                     jsonUpgrade.weight,
                     effects
@@ -196,37 +227,12 @@ public sealed class UpgradeManager : BaseManager
     {
         public List<UpgradeJsonData> upgrades;
     }
-
-    /// <summary>
-    /// JSON에서 읽어오는 Upgrade 원본 데이터.
-    /// Runtime에서 사용하는 UpgradeDefinition과 분리한다.
-    /// </summary>
-    [Serializable]
-    private sealed class UpgradeJsonData
-    {
-        public string id;
-        public string name;
-        public int maxLevel;
-        public float weight;
-        public List<UpgradeEffectJsonData> effects;
-    }
-
-    /// <summary>
-    /// JSON에서는 Target/Type을 사람이 읽기 쉬운 문자열로 저장한다.
-    /// 로딩할 때 Runtime enum으로 변환한다.
-    /// </summary>
-    [Serializable]
-    private sealed class UpgradeEffectJsonData
-    {
-        public string target;
-        public string type;
-        public float value;
-    }
     #endregion
 
 
     [Header("프로토타입")]
     [SerializeField] private bool _logAppliedValues = true;
+    [SerializeField]private AudioClip _levelUpFanfare;
 
     private readonly Dictionary<string, int> _levels = new Dictionary<string, int>();
     private readonly List<UpgradeDefinition> _choices = new List<UpgradeDefinition>(CHOICE_COUNT);
@@ -352,6 +358,7 @@ public sealed class UpgradeManager : BaseManager
             _active = false;
             return;
         }
+        PlayLevelUpSound();
 
         Time.timeScale = 0f;
         var window = EnsureAugmentWindow();
@@ -585,6 +592,19 @@ public sealed class UpgradeManager : BaseManager
         Managers.Instance.ChangeState(GameState.Playing);
 
         return true;
+    }
+
+    private void PlayLevelUpSound()
+    {
+        if (_levelUpFanfare == null ||
+        Managers.Instance == null ||
+        !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            Debug.LogWarning("[UpgradeManager] levelup audio clip이 연결되어있지 않습니다.\ninspector에서 clip을 할당해주세요.");
+            return;
+        }
+
+        audioManager.PlaySound(_levelUpFanfare);
     }
 
 

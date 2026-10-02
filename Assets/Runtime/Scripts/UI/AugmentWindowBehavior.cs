@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// UpgradeManager가 미리 추첨해 둔 증강 선택지를 최대 3개 표시한다.
+/// UpgradeManager가 미리 추첨해 둔 증강 선택지를 카드 형태로 최대 3개 표시한다.
 /// 실제 증강 적용과 Level 관리는 UpgradeManager가 담당한다.
 /// </summary>
 public sealed class AugmentWindowBehavior : LevelUpChoice
@@ -15,12 +15,11 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
 
     private Canvas _canvas;
     private readonly List<Button> _cards = new List<Button>();
+    private readonly List<Image> _cardIcons = new List<Image>();
+    private readonly List<TextMeshProUGUI> _cardLabels = new List<TextMeshProUGUI>();
 
     private Action _onChosen;
 
-    /// <summary>
-    /// 현재 UpgradeManager.CurrentChoices를 화면에 표시한다.
-    /// </summary>
     public override void Open(int playerId, int level, Action onChosen)
     {
         _onChosen = onChosen;
@@ -31,9 +30,6 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
         _canvas.gameObject.SetActive(true);
     }
 
-    /// <summary>
-    /// 최초 1회만 증강 선택용 Runtime UI를 생성한다.
-    /// </summary>
     private void EnsureUi()
     {
         if (_canvas != null)
@@ -56,38 +52,28 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
 
         var panel = CreateRect("Panel", canvasObject.transform);
         var panelImage = panel.gameObject.AddComponent<Image>();
-        panelImage.color = new Color(0f, 0f, 0f, 0.65f);
+        panelImage.color = new Color(0f, 0f, 0f, 0.72f);
         Stretch(panel);
 
-        var title = CreateText(
-            "Title",
-            panel,
-            "증강 선택",
-            48
-        );
+        var title = CreateText("Title", panel, "증강 선택", 54);
 
         var titleRect = title.rectTransform;
         titleRect.anchorMin = new Vector2(0.5f, 1f);
         titleRect.anchorMax = new Vector2(0.5f, 1f);
         titleRect.pivot = new Vector2(0.5f, 1f);
-        titleRect.anchoredPosition = new Vector2(0f, -40f);
-        titleRect.sizeDelta = new Vector2(800f, 80f);
+        titleRect.anchoredPosition = new Vector2(0f, -45f);
+        titleRect.sizeDelta = new Vector2(900f, 80f);
 
         for (var i = 0; i < MAX_CARDS; i++)
         {
-            _cards.Add(CreateCard(panel, i));
+            CreateCard(panel, i);
         }
     }
 
-    /// <summary>
-    /// UpgradeManager가 추첨해 둔 CurrentChoices를 카드에 채운다.
-    /// 이 클래스에서는 선택지를 다시 추첨하지 않는다.
-    /// </summary>
     private void FillCards()
     {
         if (Managers.Instance == null ||
-            !Managers.Instance.TryGetManager<UpgradeManager>(
-                out var upgradeManager))
+            !Managers.Instance.TryGetManager<UpgradeManager>(out var upgradeManager))
         {
             return;
         }
@@ -111,43 +97,48 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
             }
 
             var choice = choices[i];
+            var currentLevel = upgradeManager.GetLevel(choice.Id);
+            var nextLevel = currentLevel + 1;
 
-            var label =
-                card.GetComponentInChildren<TextMeshProUGUI>();
+            _cardLabels[i].text =
+                $"{choice.Name}\n\n" +
+                $"Lv.{currentLevel} → Lv.{nextLevel}/{choice.MaxLevel}\n\n" +
+                FormatEffects(choice);
 
-            if (label != null)
+
+            var icon = Resources.Load<Sprite>(choice.IconPath);
+
+            if (icon != null)
             {
-                var currentLevel =
-                    upgradeManager.GetLevel(choice.Id);
+                // 회색 ArtBackground 위에 실제 Sprite를 표시한다.
+                _cardIcons[i].sprite = icon;
+                _cardIcons[i].color = Color.white;
+                _cardIcons[i].enabled = true;
+            }
+            else
+            {
+                // 아이콘만 숨긴다.
+                // ArtBackground는 별도 Image라서 그대로 남는다.
+                _cardIcons[i].sprite = null;
+                _cardIcons[i].color = Color.clear;
 
-                var nextLevel =
-                    currentLevel + 1;
-
-                label.text =
-                    $"{choice.Name}\n" +
-                    $"Lv.{currentLevel} → " +
-                    $"Lv.{nextLevel}/{choice.MaxLevel}" +
-                    FormatEffects(choice);
+                Debug.LogWarning(
+                    $"[Augment UI] Sprite를 찾지 못했습니다. " +
+                    $"Upgrade={choice.Id}, Path={choice.IconPath}",
+                    this
+                );
             }
 
             card.onClick.RemoveAllListeners();
 
             var choiceIndex = i;
-
-            card.onClick.AddListener(
-                () => Choose(choiceIndex)
-            );
+            card.onClick.AddListener(() => Choose(choiceIndex));
         }
     }
 
-    /// <summary>
-    /// Upgrade 효과를 UI 표시용 문자열로 변환한다.
-    /// </summary>
-    private static string FormatEffects(
-        UpgradeManager.UpgradeDefinition choice)
+    private static string FormatEffects(UpgradeManager.UpgradeDefinition choice)
     {
-        if (choice.Effects == null ||
-            choice.Effects.Count == 0)
+        if (choice.Effects == null || choice.Effects.Count == 0)
         {
             return string.Empty;
         }
@@ -161,50 +152,35 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
                 continue;
             }
 
-            var value =
-                $"{effect.Value * 100f:+0.#;-0.#;0}%";
+            var value = $"{effect.Value * 100f:+0.#;-0.#;0}%";
 
             switch (effect.Type)
             {
                 case UpgradeManager.UpgradeEffectType.MoveSpeed:
                     lines.Add($"이동 속도 {value}");
                     break;
-
                 case UpgradeManager.UpgradeEffectType.ReceivedDamage:
                     lines.Add($"받는 피해 {value}");
                     break;
-
                 case UpgradeManager.UpgradeEffectType.Experience:
                     lines.Add($"획득 경험치 {value}");
                     break;
-
                 case UpgradeManager.UpgradeEffectType.Damage:
                     lines.Add($"주는 피해 {value}");
                     break;
-
                 default:
-                    lines.Add(
-                        $"{effect.Type} " +
-                        $"{effect.Value:+0.###;-0.###;0}"
-                    );
+                    lines.Add($"{effect.Type} {effect.Value:+0.###;-0.###;0}");
                     break;
             }
         }
 
-        return lines.Count > 0
-            ? "\n" + string.Join("\n", lines)
-            : string.Empty;
+        return string.Join("\n", lines);
     }
 
-    /// <summary>
-    /// 클릭한 카드 index를 UpgradeManager에 전달한다.
-    /// 적용 성공 시 창을 닫고 완료 callback을 호출한다.
-    /// </summary>
     private void Choose(int choiceIndex)
     {
         if (Managers.Instance == null ||
-            !Managers.Instance.TryGetManager<UpgradeManager>(
-                out var upgradeManager))
+            !Managers.Instance.TryGetManager<UpgradeManager>(out var upgradeManager))
         {
             return;
         }
@@ -221,53 +197,115 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
 
         var chosen = _onChosen;
         _onChosen = null;
-
         chosen?.Invoke();
     }
 
-    private Button CreateCard(
-        RectTransform parent,
-        int index)
+    private void CreateCard(RectTransform parent, int index)
     {
-        var rect =
-            CreateRect("Card " + index, parent);
+        var cardRect = CreateRect("Card " + index, parent);
 
-        rect.anchorMin =
-            new Vector2(0.5f, 0.5f);
-        rect.anchorMax =
-            new Vector2(0.5f, 0.5f);
-        rect.pivot =
-            new Vector2(0.5f, 0.5f);
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.pivot = new Vector2(0.5f, 0.5f);
 
-        rect.sizeDelta =
-            new Vector2(420f, 180f);
+        // 세로형 카드
+        cardRect.sizeDelta = new Vector2(320f, 560f);
 
-        rect.anchoredPosition =
-            new Vector2(0f, 80f - index * 200f);
+        // 3장의 카드를 가로로 정렬한다.
+        cardRect.anchoredPosition =
+            new Vector2(-370f + index * 370f, -30f);
 
-        var image =
-            rect.gameObject.AddComponent<Image>();
+        var cardBackground =
+            cardRect.gameObject.AddComponent<Image>();
 
-        image.color =
-            new Color(0.15f, 0.18f, 0.24f, 1f);
+        cardBackground.color =
+            new Color(0.12f, 0.14f, 0.20f, 1f);
 
         var button =
-            rect.gameObject.AddComponent<Button>();
+            cardRect.gameObject.AddComponent<Button>();
 
-        var label =
+
+        // =========================================================
+        // 이미지 영역
+        //
+        // ArtBackground : 고정 회색 배경
+        //     └ Icon     : 실제 증강 Sprite
+        // =========================================================
+
+        var artRect = CreateRect("ArtBackground", cardRect);
+
+        artRect.anchorMin = new Vector2(0.5f, 1f);
+        artRect.anchorMax = new Vector2(0.5f, 1f);
+        artRect.pivot = new Vector2(0.5f, 1f);
+
+        artRect.sizeDelta = new Vector2(240f, 250f);
+
+        artRect.anchoredPosition = new Vector2(0f, -35f);
+
+        // 항상 보이는 회색 더미 이미지 영역
+        var artBackground =
+            artRect.gameObject.AddComponent<Image>();
+
+        artBackground.color =
+            new Color(0.28f, 0.30f, 0.36f, 1f);
+
+
+        // 실제 증강 Sprite는 배경과 별개의 자식 Image로 만든다.
+        var iconRect = CreateRect("Icon", artRect);
+
+        iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+        iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+
+        // 배경을 완전히 덮지 않도록 조금 작게 표시
+        iconRect.sizeDelta = new Vector2(170f, 170f);
+
+        // 이미지 자체도 배경 중앙보다 약간 아래쪽에 위치
+        iconRect.anchoredPosition = new Vector2(0f, -15f);
+
+        var iconImage =
+            iconRect.gameObject.AddComponent<Image>();
+
+        // Sprite의 원래 종횡비 유지
+        iconImage.preserveAspect = true;
+
+        // FillCards에서 Sprite가 들어오기 전에는 투명하게 둔다.
+        iconImage.color = Color.clear;
+
+
+        // =========================================================
+        // 설명 영역
+        // =========================================================
+
+        var description =
             CreateText(
-                "Label",
-                rect,
+                "Description",
+                cardRect,
                 string.Empty,
-                26
+                32
             );
 
-        Stretch(label.rectTransform);
+        var descriptionRect =
+            description.rectTransform;
 
-        label.margin =
-            new Vector4(16f, 12f, 16f, 12f);
+        descriptionRect.anchorMin = new Vector2(0.5f, 0f);
+        descriptionRect.anchorMax = new Vector2(0.5f, 0f);
+        descriptionRect.pivot = new Vector2(0.5f, 0f);
 
-        return button;
+        descriptionRect.sizeDelta = new Vector2(280f, 210f);
+        descriptionRect.anchoredPosition = new Vector2(0f, 20f);
+
+        description.margin =
+            new Vector4(12f, 10f, 12f, 10f);
+
+        description.alignment =
+            TextAlignmentOptions.Center;
+
+
+        // Runtime에서 카드 내용을 갱신할 객체들만 보관한다.
+        _cards.Add(button);
+        _cardIcons.Add(iconImage);
+        _cardLabels.Add(description);
     }
 
     private static TextMeshProUGUI CreateText(
@@ -276,22 +314,17 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
         string value,
         int fontSize)
     {
-        var rect =
-            CreateRect(name, parent);
-
-        var text =
-            rect.gameObject.AddComponent<TextMeshProUGUI>();
+        var rect = CreateRect(name, parent);
+        var text = rect.gameObject.AddComponent<TextMeshProUGUI>();
 
         if (TMP_Settings.defaultFontAsset != null)
         {
-            text.font =
-                TMP_Settings.defaultFontAsset;
+            text.font = TMP_Settings.defaultFontAsset;
         }
 
         text.text = value;
         text.fontSize = fontSize;
-        text.alignment =
-            TextAlignmentOptions.Center;
+        text.alignment = TextAlignmentOptions.Center;
         text.color = Color.white;
 
         return text;
@@ -301,19 +334,12 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
         string name,
         Transform parent)
     {
-        var rectObject =
-            new GameObject(name);
-
-        rectObject.transform.SetParent(
-            parent,
-            false
-        );
-
+        var rectObject = new GameObject(name);
+        rectObject.transform.SetParent(parent, false);
         return rectObject.AddComponent<RectTransform>();
     }
 
-    private static void Stretch(
-        RectTransform rect)
+    private static void Stretch(RectTransform rect)
     {
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
