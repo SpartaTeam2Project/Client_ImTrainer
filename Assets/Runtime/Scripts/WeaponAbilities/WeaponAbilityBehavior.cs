@@ -100,17 +100,13 @@ public abstract class WeaponAbilityBehavior<T, K> : MonoBehaviour, IWeaponAbilit
     }
 
     /// <summary>
-    /// 이번 판 포켓몬의 공격 타입. 없으면 노말.
+    /// 이 공격 능력의 상성 타입. 공격이 아니면 노말.
     /// </summary>
     protected MonsterType ResolveAttackType()
     {
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<AccountManager>(out var account))
+        if (TypeChart.TryGetAttackType(WeaponAbilityType, out var attackType))
         {
-            var monster = account.ResolveRunMonster();
-            if (monster != null)
-            {
-                return monster.PrimaryType;
-            }
+            return attackType;
         }
 
         return MonsterType.Normal;

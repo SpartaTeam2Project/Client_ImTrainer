@@ -247,19 +247,5 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
         return random.normalized;
     }
 
-    private MonsterType ResolveAttackType()
-    {
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<AccountManager>(out var account))
-        {
-            var monster = account.ResolveRunMonster();
-            if (monster != null)
-            {
-                return monster.PrimaryType;
-            }
-        }
-
-        return MonsterType.Normal;
-    }
-
     #endregion
 }
