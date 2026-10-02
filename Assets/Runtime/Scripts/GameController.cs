@@ -113,6 +113,9 @@ public class GameController : MonoBehaviour
             return;
         }
 
+        // 프리팹에 붙은 AudioSource는 timeScale을 무시하므로 리스너 단위로 멈춘다.
+        AudioListener.pause = state == GameState.Paused;
+
         if (state == GameState.Paused)
         {
             audioManager.PauseMusic();
