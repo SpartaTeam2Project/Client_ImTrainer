@@ -11,10 +11,24 @@ public class TrainingItemBehavior : MonoBehaviour, IPointerEnterHandler
 {
     private const string MAX_LEVEL_LABEL = "최대";
     private const string LEVEL_LABEL_FORMAT = "레벨 {0}";
+    private const string PERCENT_BONUS_FORMAT = "보너스 +{0}%";
+    private const string PERCENT_REDUCTION_FORMAT = "필요 경험치 -{0}%";
+    private const string COUNT_FORMAT = "+{0}";
+    private const float HIDDEN_VALUE = 0f;
+    private const float PERCENT_SCALE = 100f;
+
+    private static readonly Color EMPTY_FRAME = new Color(0.28f, 0.3f, 0.34f, 1f);
+    private static readonly Color EMPTY_BACKGROUND = new Color(0.12f, 0.13f, 0.16f, 1f);
+    private static readonly Color FILLED_FRAME = new Color(0.86f, 0.72f, 0.34f, 1f);
+    private static readonly Color FILLED_BACKGROUND = new Color(0.18f, 0.22f, 0.3f, 1f);
 
     [SerializeField] private RectTransform _rect;
+    [SerializeField] private Image _iconBackground;
+    [SerializeField] private Image _iconFrame;
     [SerializeField] private Image _iconImage;
     [SerializeField] private TMP_Text _titleLabel;
+    [SerializeField] private TMP_Text _descriptionLabel;
+    [SerializeField] private TMP_Text _effectLabel;
     [SerializeField] private TMP_Text _levelLabel;
     [SerializeField] private Button _buyButton;
     [SerializeField] private Image _buyButtonImage;
@@ -99,11 +113,13 @@ public class TrainingItemBehavior : MonoBehaviour, IPointerEnterHandler
             _titleLabel.text = Data.Title;
         }
 
-        if (_iconImage != null)
+        if (_descriptionLabel != null)
         {
-            _iconImage.sprite = Data.Icon;
-            _iconImage.enabled = Data.Icon != null;
+            _descriptionLabel.text = Data.Description;
         }
+
+        RedrawIcon();
+        RedrawEffect();
 
         if (_levelLabel != null)
         {
@@ -113,6 +129,59 @@ public class TrainingItemBehavior : MonoBehaviour, IPointerEnterHandler
         }
 
         RedrawButton();
+    }
+
+    private void RedrawIcon()
+    {
+        var hasIcon = Data.Icon != null;
+        if (_iconImage != null)
+        {
+            _iconImage.sprite = Data.Icon;
+            _iconImage.enabled = hasIcon;
+            _iconImage.preserveAspect = true;
+        }
+
+        if (_iconBackground != null)
+        {
+            _iconBackground.enabled = true;
+            _iconBackground.color = hasIcon ? FILLED_BACKGROUND : EMPTY_BACKGROUND;
+        }
+
+        if (_iconFrame != null)
+        {
+            _iconFrame.enabled = true;
+            _iconFrame.color = hasIcon ? FILLED_FRAME : EMPTY_FRAME;
+        }
+    }
+
+    private void RedrawEffect()
+    {
+        if (_effectLabel == null)
+        {
+            return;
+        }
+
+        var level = _levelId >= Data.LevelsCount ? null : Data.GetLevel(_levelId);
+        var value = level == null ? HIDDEN_VALUE : level.Value;
+        _effectLabel.text = value <= HIDDEN_VALUE ? string.Empty : FormatEffect(value);
+    }
+
+    private string FormatEffect(float value)
+    {
+        switch (Data.ValueDisplay)
+        {
+            case TrainingValueDisplay.PercentReduction:
+                return string.Format(PERCENT_REDUCTION_FORMAT, ToPercent(value));
+            case TrainingValueDisplay.Count:
+                return string.Format(COUNT_FORMAT, Mathf.RoundToInt(value));
+            default:
+                return string.Format(PERCENT_BONUS_FORMAT, ToPercent(value));
+        }
+    }
+
+    private static int ToPercent(float value)
+    {
+        return Mathf.RoundToInt(value * PERCENT_SCALE);
     }
 
     /// <summary>

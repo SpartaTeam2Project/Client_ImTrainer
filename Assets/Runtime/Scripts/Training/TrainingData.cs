@@ -11,6 +11,9 @@ public class TrainingData : ScriptableObject
     [SerializeField] private TrainingType _trainingType;
     [SerializeField] private Sprite _icon;
     [SerializeField] private string _title;
+    [SerializeField] private string _description;
+    [SerializeField] private bool _showInUi = true;
+    [SerializeField] private TrainingValueDisplay _valueDisplay;
     [SerializeField] private List<TrainingLevel> _levels = new List<TrainingLevel>();
 
     public TrainingType TrainingType => _trainingType;
@@ -18,6 +21,15 @@ public class TrainingData : ScriptableObject
     public Sprite Icon => _icon;
 
     public string Title => _title ?? string.Empty;
+
+    public string Description => _description ?? string.Empty;
+
+    /// <summary>
+    /// 창에 그릴지. false면 데이터베이스에 있어도 칸을 만들지 않는다.
+    /// </summary>
+    public bool ShowInUi => _showInUi;
+
+    public TrainingValueDisplay ValueDisplay => _valueDisplay;
 
     public int LevelsCount => _levels == null ? 0 : _levels.Count;
 
