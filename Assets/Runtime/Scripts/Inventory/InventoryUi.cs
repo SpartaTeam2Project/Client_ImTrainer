@@ -329,7 +329,7 @@ public class InventoryUi : MonoBehaviour
             }
 
             var visual = itemManager.GetVisual(stack.Item.uid);
-            var portrait = visual != null ? visual.Portrait : null;
+            var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
             slot.ShowPokemon(portrait, stack.Item.name, stack.Item.upgradeLevel, stack.Number, true, selected);
             slot.HidePrice();
         }

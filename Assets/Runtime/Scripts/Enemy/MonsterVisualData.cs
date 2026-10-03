@@ -1,16 +1,18 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// 포켓몬 한 종의 그림, 타입, 크기. 몬스터와 무기가 같은 에셋을 쓴다.
 /// 걷기 외 동작은 비워 둘 수 있다. 추적, 사격, 보스 동작은 필요한 칸만 쓴다.
+/// 아이콘과 정보창 그림은 프레임 배열로 둔다. 재생 전에는 첫 장만 보여 준다.
+/// 인스펙터는 MonsterVisualDataEditor가 그린다.
 /// </summary>
 [CreateAssetMenu(fileName = "MonsterVisual", menuName = "Monster/Monster Visual")]
-public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceiver
+public class MonsterVisualData : ScriptableObject
 {
     public const float DEFAULT_SCALE = 2.7f;
     private const int MIN_GENERATION = 1;
 
-    [Header("Size")]
     [SerializeField, Min(0.01f)] private float _scale = DEFAULT_SCALE;
 
     [SerializeField] private EightDirectionFrames _walk = new EightDirectionFrames();
@@ -24,45 +26,28 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     [SerializeField] private EightDirectionFrames _rotate = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _hop = new EightDirectionFrames();
 
-    [Header("Faint")]
     [SerializeField] private Sprite[] _faintLeft = new Sprite[0];
     [SerializeField] private Sprite[] _faintRight = new Sprite[0];
 
-    [Header("Pose")]
     [SerializeField] private Sprite[] _poseLeft = new Sprite[0];
     [SerializeField] private Sprite[] _poseRight = new Sprite[0];
 
-    [SerializeField, HideInInspector] private Sprite[] _walkDown = new Sprite[0];
-    [SerializeField, HideInInspector] private Sprite[] _walkDownRight = new Sprite[0];
-    [SerializeField, HideInInspector] private Sprite[] _walkRight = new Sprite[0];
-    [SerializeField, HideInInspector] private Sprite[] _walkUpRight = new Sprite[0];
-    [SerializeField, HideInInspector] private Sprite[] _walkUp = new Sprite[0];
-    [SerializeField, HideInInspector] private Sprite[] _walkUpLeft = new Sprite[0];
-    [SerializeField, HideInInspector] private Sprite[] _walkLeft = new Sprite[0];
-    [SerializeField, HideInInspector] private Sprite[] _walkDownLeft = new Sprite[0];
-
-    [Header("Projectile")]
-    [SerializeField] private Sprite _projectileSprite;
-
-    [Header("WeaponAbility")]
     [SerializeField] private WeaponAbilityData _ability;
 
-    [Header("Type")]
     [SerializeField] private MonsterType _primaryType = MonsterType.Normal;
     [SerializeField] private bool _hasSecondaryType;
     [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
 
-    [Header("Evolution")]
     [SerializeField] private MonsterVisualData _evolution;
 
-    [Header("Storage")]
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
     [SerializeField] private string _monsterName = string.Empty;
     [SerializeField, Min(0)] private int _dexNumber;
     [SerializeField] private string _unlockCondition = string.Empty;
-    [SerializeField] private Sprite _portrait;
-    [SerializeField] private Vector2 _portraitSize;
-    [SerializeField] private Sprite _animationThumbnail;
+
+    [SerializeField] private Sprite[] _icon = new Sprite[0];
+    [SerializeField, FormerlySerializedAs("_portraitSize")] private Vector2 _iconSize;
+    [SerializeField] private Sprite[] _infoAnimation = new Sprite[0];
 
     public float Scale => _scale > 0f ? _scale : DEFAULT_SCALE;
 
@@ -100,8 +85,6 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
 
     public Sprite[] PoseRight => _poseRight;
 
-    public Sprite ProjectileSprite => _projectileSprite;
-
     public WeaponAbilityData WeaponAbility => _ability;
 
     /// <summary>
@@ -123,11 +106,17 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
 
     public string UnlockCondition => _unlockCondition ?? string.Empty;
 
-    public Sprite Portrait => _portrait;
+    /// <summary>
+    /// 스토리지 칸, 엔트리, 상점, 인벤토리에 쓰는 아이콘 애니메이션 프레임.
+    /// </summary>
+    public Sprite[] Icon => _icon;
 
-    public Vector2 PortraitSize => _portraitSize;
+    public Vector2 IconSize => _iconSize;
 
-    public Sprite AnimationThumbnail => _animationThumbnail;
+    /// <summary>
+    /// 스토리지 정보창에 쓰는 애니메이션 프레임.
+    /// </summary>
+    public Sprite[] InfoAnimation => _infoAnimation;
 
     /// <summary>
     /// 방어 타입 목록. 서브가 없거나 메인과 같으면 길이 1이다.
@@ -146,68 +135,29 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
     }
 
     /// <summary>
-    /// 예전 평탄 필드에 그림이 있을 때만 걷기 칸으로 옮긴다.
-    /// 빈 칸까지 덮어쓰면 인스펙터에서 추가한 슬롯이 바로 사라진다.
+    /// 프레임 중 비어 있지 않은 첫 장. 없으면 null이다.
     /// </summary>
-    public void OnAfterDeserialize()
+    public static Sprite FirstFrame(Sprite[] frames)
     {
-        EnsureFrames();
-        if (_walk.HasFrames() || !HasLegacyWalkFrames())
+        if (frames == null)
         {
-            return;
-        }
-
-        _walk.Assign(
-            _walkDown,
-            _walkDownRight,
-            _walkRight,
-            _walkUpRight,
-            _walkUp,
-            _walkUpLeft,
-            _walkLeft,
-            _walkDownLeft);
-    }
-
-    /// <summary>
-    /// 직렬화 전에 추가 작업은 없다.
-    /// </summary>
-    public void OnBeforeSerialize()
-    {
-    }
-
-    private void OnEnable()
-    {
-        EnsureFrames();
-    }
-
-    private bool HasLegacyWalkFrames()
-    {
-        return HasSprites(_walkDown)
-            || HasSprites(_walkDownRight)
-            || HasSprites(_walkRight)
-            || HasSprites(_walkUpRight)
-            || HasSprites(_walkUp)
-            || HasSprites(_walkUpLeft)
-            || HasSprites(_walkLeft)
-            || HasSprites(_walkDownLeft);
-    }
-
-    private static bool HasSprites(Sprite[] frames)
-    {
-        if (frames == null || frames.Length == 0)
-        {
-            return false;
+            return null;
         }
 
         for (var i = 0; i < frames.Length; i++)
         {
             if (frames[i] != null)
             {
-                return true;
+                return frames[i];
             }
         }
 
-        return false;
+        return null;
+    }
+
+    private void OnEnable()
+    {
+        EnsureFrames();
     }
 
     private void EnsureFrames()
@@ -226,5 +176,7 @@ public class MonsterVisualData : ScriptableObject, ISerializationCallbackReceive
         _faintRight ??= new Sprite[0];
         _poseLeft ??= new Sprite[0];
         _poseRight ??= new Sprite[0];
+        _icon ??= new Sprite[0];
+        _infoAnimation ??= new Sprite[0];
     }
 }

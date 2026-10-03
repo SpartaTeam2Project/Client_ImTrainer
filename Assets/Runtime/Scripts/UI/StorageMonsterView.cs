@@ -81,13 +81,13 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
         if (_lockSilhouette != null)
         {
             _lockSilhouette.gameObject.SetActive(!IsUnlocked);
-            _lockSilhouette.sprite = Data != null ? Data.Portrait : null;
+            _lockSilhouette.sprite = Data != null ? MonsterVisualData.FirstFrame(Data.Icon) : null;
         }
 
         if (_unlockAnimation != null)
         {
             _unlockAnimation.gameObject.SetActive(IsUnlocked);
-            _unlockAnimation.sprite = Data != null ? Data.Portrait : null;
+            _unlockAnimation.sprite = Data != null ? MonsterVisualData.FirstFrame(Data.Icon) : null;
         }
 
         ApplySlotSize();
@@ -100,7 +100,7 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
             return;
         }
 
-        var portrait = Data.PortraitSize;
+        var portrait = Data.IconSize;
         var width = portrait.x * PORTRAIT_TO_SLOT_SCALE;
         var height = portrait.y * PORTRAIT_TO_SLOT_SCALE;
         if (width <= 0f || height <= 0f)

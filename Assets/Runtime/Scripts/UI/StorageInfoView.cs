@@ -55,7 +55,7 @@ public class StorageInfoView : MonoBehaviour
         }
 
         var data = slot.Data;
-        ApplyPortrait(data.AnimationThumbnail, !slot.IsUnlocked);
+        ApplyPortrait(MonsterVisualData.FirstFrame(data.InfoAnimation), !slot.IsUnlocked);
         if (_generation != null)
         {
             _generation.text = data.Generation + GENERATION_SUFFIX;

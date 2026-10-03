@@ -48,41 +48,6 @@ public class EightDirectionFrames
             || HasSprites(_downLeft);
     }
 
-    /// <summary>
-    /// 평탄하게 저장돼 있던 방향 그림을 이 칸으로 옮긴다.
-    /// </summary>
-    public void Assign(
-        Sprite[] down,
-        Sprite[] downRight,
-        Sprite[] right,
-        Sprite[] upRight,
-        Sprite[] up,
-        Sprite[] upLeft,
-        Sprite[] left,
-        Sprite[] downLeft)
-    {
-        _down = CopySprites(down);
-        _downRight = CopySprites(downRight);
-        _right = CopySprites(right);
-        _upRight = CopySprites(upRight);
-        _up = CopySprites(up);
-        _upLeft = CopySprites(upLeft);
-        _left = CopySprites(left);
-        _downLeft = CopySprites(downLeft);
-    }
-
-    private static Sprite[] CopySprites(Sprite[] frames)
-    {
-        if (frames == null || frames.Length == 0)
-        {
-            return new Sprite[0];
-        }
-
-        var copy = new Sprite[frames.Length];
-        Array.Copy(frames, copy, frames.Length);
-        return copy;
-    }
-
     private static bool HasSprites(Sprite[] frames)
     {
         if (frames == null || frames.Length == 0)
