@@ -1034,6 +1034,10 @@ public class UIStorageWindow : MonoBehaviour
         ApplyEntry(slot.Data);
         PlaySelect();
         EnterMonsterScroll();
+        if (IsEntryFull())
+        {
+            FocusGameStart();
+        }
     }
 
     private void ClearEntry()
@@ -1452,10 +1456,53 @@ public class UIStorageWindow : MonoBehaviour
             _entryVisuals[i] = data;
             ApplyEntrySprite(i, data != null ? data.Portrait : null);
             PlaySelect();
+            if (IsEntryFull())
+            {
+                FocusGameStart();
+            }
+
             return;
         }
 
         PlayEntryLocked();
+    }
+
+    // 트레이너가 골라져 있고 잠기지 않은 엔트리 칸이 모두 찼는지 본다.
+    private bool IsEntryFull()
+    {
+        if (_entryCharacterData == null)
+        {
+            return false;
+        }
+
+        EnsureEntryState();
+        for (var i = 0; i < _entryVisuals.Length; i++)
+        {
+            if (!IsEntryLocked(i) && _entryVisuals[i] == null)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // 확정 소리가 이미 나므로 커서 소리는 내지 않는다.
+    private void FocusGameStart()
+    {
+        if (_gameStartButton == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _sideItems.Count; i++)
+        {
+            if (_sideItems[i].Button == _gameStartButton)
+            {
+                FocusSide(i, false);
+                return;
+            }
+        }
     }
 
     private void ApplyEntrySprite(int index, Sprite portrait)
