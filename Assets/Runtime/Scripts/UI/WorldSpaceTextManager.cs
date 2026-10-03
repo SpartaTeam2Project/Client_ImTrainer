@@ -23,8 +23,8 @@ public class WorldSpaceTextManager : MonoBehaviour
     private const float VERY_SUPER_SCALE = 1.45f;
     private const float SUPER_SCALE = 1.2f;
     private const float NEUTRAL_SCALE = 1f;
-    private const float RESISTED_SCALE = 0.85f;
-    private const float VERY_RESISTED_SCALE = 0.75f;
+    private const float RESISTED_SCALE = 0.95f;
+    private const float VERY_RESISTED_SCALE = 0.85f;
     private const float NUMBER_FONT_SIZE = 56f;
     private const float NUMBER_WIDTH = 200f;
     private const float IMMUNE_FONT_SIZE = 28f;
@@ -32,7 +32,8 @@ public class WorldSpaceTextManager : MonoBehaviour
 
     private static readonly Color VERY_SUPER_COLOR = new Color(1f, 0.72f, 0.05f);
     private static readonly Color SUPER_COLOR = new Color(1f, 0.92f, 0.35f);
-    private static readonly Color NEUTRAL_COLOR = Color.white;
+    private static readonly Color NEUTRAL_COLOR = new Color(0.98f, 0.98f, 0.98f);
+    private static readonly Color IMMUNE_COLOR = Color.white;
     private static readonly Color RESISTED_COLOR = new Color(0.62f, 0.62f, 0.62f);
     private static readonly Color VERY_RESISTED_COLOR = new Color(0.35f, 0.35f, 0.35f);
 
@@ -230,7 +231,7 @@ public class WorldSpaceTextManager : MonoBehaviour
                 color = VERY_RESISTED_COLOR;
                 return VERY_RESISTED_SCALE;
             case DamageTextKind.Immune:
-                color = NEUTRAL_COLOR;
+                color = IMMUNE_COLOR;
                 fontSize = IMMUNE_FONT_SIZE;
                 width = IMMUNE_WIDTH;
                 return NEUTRAL_SCALE;
