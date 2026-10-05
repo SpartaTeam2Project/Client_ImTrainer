@@ -95,15 +95,7 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
 
     private void ApplySlotSize()
     {
-        if (Data == null)
-        {
-            return;
-        }
-
-        var portrait = Data.IconSize;
-        var width = portrait.x * PORTRAIT_TO_SLOT_SCALE;
-        var height = portrait.y * PORTRAIT_TO_SLOT_SCALE;
-        if (width <= 0f || height <= 0f)
+        if (Data == null || !Data.TryGetIconSize(PORTRAIT_TO_SLOT_SCALE, out var size))
         {
             return;
         }
@@ -112,6 +104,6 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
-        rect.sizeDelta = new Vector2(width, height);
+        rect.sizeDelta = size;
     }
 }

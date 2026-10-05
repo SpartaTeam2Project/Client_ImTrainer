@@ -126,6 +126,15 @@ public class MonsterVisualData : ScriptableObject
     public Vector2 IconSize => _iconSize;
 
     /// <summary>
+    /// 아이콘 크기에 배율을 곱한 UI 크기. 크기가 0이면 false라서 프리팹 크기를 그대로 둔다.
+    /// </summary>
+    public bool TryGetIconSize(float scale, out Vector2 size)
+    {
+        size = _iconSize * scale;
+        return size.x > 0f && size.y > 0f;
+    }
+
+    /// <summary>
     /// 스토리지 정보창에 쓰는 애니메이션 프레임.
     /// </summary>
     public Sprite[] InfoAnimation => _infoAnimation;

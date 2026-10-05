@@ -10,6 +10,7 @@ using UnityEngine.UI;
 public class HoverInformation : MonoBehaviour
 {
     private const string DAMAGE_PREFIX = "공격력: ";
+    private const float EVOLUTION_ICON_SCALE = 2f;
 
     [SerializeField] private GameObject _content;
     [SerializeField] private GameObject _emptyLabel;
@@ -36,6 +37,8 @@ public class HoverInformation : MonoBehaviour
         public Image Highlight;
         public TMP_Text Stage;
         public TMP_Text Name;
+
+        [NonSerialized] public Vector2 DefaultIconSize;
     }
 
     [Header("Evolution")]
@@ -49,6 +52,15 @@ public class HoverInformation : MonoBehaviour
         if (_abilityTitle != null)
         {
             _defaultTitleColor = _abilityTitle.color;
+        }
+
+        for (var i = 0; i < _evolutionViews.Length; i++)
+        {
+            var view = _evolutionViews[i];
+            if (view != null && view.Icon != null)
+            {
+                view.DefaultIconSize = view.Icon.rectTransform.sizeDelta;
+            }
         }
 
         Clear();
@@ -67,7 +79,7 @@ public class HoverInformation : MonoBehaviour
 
         var visual = itemManager.GetVisual(item.uid);
         SetVisible(true);
-        var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
+        var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.InfoAnimation) : null;
         SetImage(_portrait, portrait);
         SetText(_monsterName, item.name);
         if (_typeView != null)
@@ -157,6 +169,7 @@ public class HoverInformation : MonoBehaviour
 
             var visual = itemManager.GetVisual(target.uid);
             SetImage(view.Icon, visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null);
+            SetEvolutionIconSize(view, visual);
             SetText(view.Stage, StageName(stage));
             SetText(view.Name, target.name);
             if (view.Highlight != null)
@@ -164,6 +177,21 @@ public class HoverInformation : MonoBehaviour
                 view.Highlight.enabled = line.IsSelected(stage);
             }
         }
+    }
+
+    /// <summary>
+    /// 아이콘 크기에 맞춰 진화 칸 그림 크기를 정한다. 크기가 없으면 프리팹 크기로 되돌린다.
+    /// </summary>
+    private static void SetEvolutionIconSize(EvolutionView view, MonsterVisualData visual)
+    {
+        if (view.Icon == null)
+        {
+            return;
+        }
+
+        view.Icon.rectTransform.sizeDelta = visual != null && visual.TryGetIconSize(EVOLUTION_ICON_SCALE, out var size)
+            ? size
+            : view.DefaultIconSize;
     }
 
     private static string StageName(EvolutionStage stage)

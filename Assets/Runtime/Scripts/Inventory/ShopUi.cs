@@ -10,7 +10,7 @@ public class ShopUi : MonoBehaviour
 {
     private const string SOLD_LABEL = "매진";
 
-    private static readonly Color LOCKED_COLOR = new Color(1f, 0.82f, 0.3f, 1f);
+    private static readonly Color LOCKED_COLOR = Color.white;
     private static readonly Color UNLOCKED_COLOR = new Color(0.6f, 0.6f, 0.6f, 1f);
 
     [Serializable]

@@ -7,8 +7,8 @@ using UnityEngine.UI;
 /// </summary>
 public class InventoryItem : MonoBehaviour
 {
-    private static readonly Color EMPTY_FRAME = new Color(0.28f, 0.3f, 0.34f, 1f);
-    private static readonly Color EMPTY_BACKGROUND = new Color(0.12f, 0.13f, 0.16f, 1f);
+    private static readonly Color EMPTY_FRAME = new Color32(100, 100, 100, 255);
+    private static readonly Color EMPTY_BACKGROUND = new Color32(100, 100, 100, 255);
     private static readonly Color FILLED_FRAME = Color.white;
     private static readonly Color FILLED_BACKGROUND = Color.white;
 
@@ -78,11 +78,6 @@ public class InventoryItem : MonoBehaviour
             _icon.color = Color.white;
         }
 
-        if (_state != null)
-        {
-            _state.SetActive(true);
-        }
-
         if (_starText != null)
         {
             var label = string.IsNullOrEmpty(pokemonName) ? string.Empty : pokemonName;
@@ -91,7 +86,6 @@ public class InventoryItem : MonoBehaviour
 
         if (_countText != null)
         {
-            _countText.gameObject.SetActive(showCount);
             _countText.text = "x" + count;
         }
 
