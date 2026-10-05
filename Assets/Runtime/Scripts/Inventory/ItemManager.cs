@@ -360,7 +360,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 상점 칸의 1성 한 마리를 몬스터볼로 사서 가방에 넣는다. 산 칸은 비운다.
+    /// 상점 칸의 1성 한 마리를 몬스터볼로 사서 가방에 넣는다. 산 칸은 Purchased로 표시한다.
     /// </summary>
     public bool TryPurchase(int playerId, int offerIndex)
     {
@@ -394,7 +394,7 @@ public class ItemManager : BaseManager
 
         run.Bag.AddItem(created, 1);
         RecordObtained(playerId, created.uid);
-        offer.Uid = ShopOffer.SOLD_UID;
+        offer.Purchased = true;
         offer.Locked = false;
         LastMessage = created.name + "을 가방에 넣었습니다.";
         FinishBag(playerId);
@@ -745,6 +745,7 @@ public class ItemManager : BaseManager
             }
 
             offer.Uid = _shopPool.Count > 0 ? _shopPool[Random.Range(0, _shopPool.Count)] : ShopOffer.SOLD_UID;
+            offer.Purchased = false;
         }
     }
 
@@ -990,7 +991,7 @@ public class ShopOffer
     public const int SOLD_UID = -1;
 
     /// <summary>
-    /// 파는 종의 uid. 팔렸으면 SOLD_UID.
+    /// 파는 종의 uid. 진열할 포켓몬이 없으면 SOLD_UID. 산 뒤에도 산 포켓몬을 가리킨다.
     /// </summary>
     public int Uid = SOLD_UID;
 
@@ -999,7 +1000,12 @@ public class ShopOffer
     /// </summary>
     public bool Locked;
 
-    public bool Sold => Uid < 0;
+    /// <summary>
+    /// 이번 진열에서 이미 산 칸. 새로 뽑으면 false로 돌아간다.
+    /// </summary>
+    public bool Purchased;
+
+    public bool Sold => Purchased || Uid < 0;
 }
 
 /// <summary>
