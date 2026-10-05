@@ -279,6 +279,7 @@ public class ItemManager : BaseManager
 
         var created = CreateItem(uid, Item.STAR_MIN);
         run.Bag.AddItem(created, 1);
+        RecordObtained(playerId, uid);
         var index = run.Bag.FindIndex(uid, Item.STAR_MIN);
         if (!TryMoveToSlot(run, index, (int)WeaponSlot.Hour3))
         {
@@ -392,6 +393,7 @@ public class ItemManager : BaseManager
         }
 
         run.Bag.AddItem(created, 1);
+        RecordObtained(playerId, created.uid);
         offer.Uid = ShopOffer.SOLD_UID;
         offer.Locked = false;
         LastMessage = created.name + "을 가방에 넣었습니다.";
@@ -449,6 +451,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
+        RecordObtained(playerId, result.uid);
         LastMessage = result.name + " " + result.upgradeLevel + "성이 되었습니다.";
         FinishBag(playerId);
         return true;
@@ -780,6 +783,22 @@ public class ItemManager : BaseManager
         }
 
         return EMPTY_UID;
+    }
+
+    /// <summary>
+    /// 가방에 들어온 포켓몬을 계정 획득 기록에 남긴다. 계정은 로컬 플레이어 것만 있다.
+    /// </summary>
+    private void RecordObtained(int playerId, int uid)
+    {
+        if (Managers.Instance == null
+            || !Managers.Instance.TryGetManager<AccountManager>(out var account)
+            || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager)
+            || playerId != playerManager.LocalPlayerId)
+        {
+            return;
+        }
+
+        account.MarkMonsterObtained(GetVisual(uid));
     }
 
     private MonsterVisualData ResolveStartingVisual()

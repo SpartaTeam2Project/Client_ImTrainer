@@ -11,6 +11,10 @@ public class HoverInformation : MonoBehaviour
 {
     private const string DAMAGE_PREFIX = "공격력: ";
     private const float EVOLUTION_ICON_SCALE = 2f;
+    private const string UNKNOWN_NAME = "???";
+
+    // 스토리지 정보창의 잠금 실루엣과 같은 색.
+    private static readonly Color LOCKED_ICON_COLOR = new Color32(0, 0, 0, 237);
 
     [SerializeField] private GameObject _content;
     [SerializeField] private GameObject _emptyLabel;
@@ -147,6 +151,8 @@ public class HoverInformation : MonoBehaviour
     private void ShowEvolution(ItemManager itemManager, int uid)
     {
         var line = itemManager.GetEvolutionLine(uid);
+        // 계정이 없는 테스트 씬에서는 모두 획득한 것으로 보여 준다.
+        Managers.Instance.TryGetManager<AccountManager>(out var account);
         for (var i = 0; i < _evolutionViews.Length; i++)
         {
             var view = _evolutionViews[i];
@@ -168,10 +174,16 @@ public class HoverInformation : MonoBehaviour
             }
 
             var visual = itemManager.GetVisual(target.uid);
+            var obtained = account == null || account.HasObtainedMonster(visual);
             SetImage(view.Icon, visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null);
+            if (view.Icon != null)
+            {
+                view.Icon.color = obtained ? Color.white : LOCKED_ICON_COLOR;
+            }
+
             SetEvolutionIconSize(view, visual);
             SetText(view.Stage, StageName(stage));
-            SetText(view.Name, target.name);
+            SetText(view.Name, obtained ? target.name : UNKNOWN_NAME);
             if (view.Highlight != null)
             {
                 view.Highlight.enabled = line.IsSelected(stage);

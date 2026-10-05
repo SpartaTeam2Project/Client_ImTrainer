@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -11,7 +12,7 @@ public enum TrainerGender
 }
 
 /// <summary>
-/// 계정 프로필을 로컬에 보관한다. 인트로 완료, 성별, 스타터, 세대, 선택한 플레이어블을 플레이어 식별자와 함께 둔다.
+/// 계정 프로필을 로컬에 보관한다. 인트로 완료, 성별, 스타터, 세대, 선택한 플레이어블, 포켓몬 획득 기록을 플레이어 식별자와 함께 둔다.
 /// </summary>
 public class AccountManager : BaseManager
 {
@@ -21,6 +22,8 @@ public class AccountManager : BaseManager
     private const string STARTER_SUFFIX = "_starter";
     private const string GENERATION_SUFFIX = "_generation";
     private const string PLAYABLE_SUFFIX = "_playable";
+    private const string OBTAINED_SUFFIX = "_obtained";
+    private const char OBTAINED_SEPARATOR = '|';
     private const int LOCAL_PLAYER_ID_FALLBACK = 1;
     private const int INTRO_COMPLETED_VALUE = 1;
     private const int DEFAULT_GENERATION = 1;
@@ -36,6 +39,7 @@ public class AccountManager : BaseManager
     private int _generation = DEFAULT_GENERATION;
     private string _selectedPlayableName = string.Empty;
     private MonsterVisualData _runMonster;
+    private readonly HashSet<string> _obtainedMonsterNames = new HashSet<string>();
 
     private bool _alwaysShowIntro;
 
@@ -155,7 +159,29 @@ public class AccountManager : BaseManager
         _introCompleted = false;
         _starterVisualName = string.Empty;
         _selectedPlayableName = string.Empty;
+        _obtainedMonsterNames.Clear();
         Save(ResolvePlayerId());
+    }
+
+    /// <summary>
+    /// 가방에 들어온 포켓몬을 획득 기록에 남긴다. 스토리지 해금과는 따로다.
+    /// </summary>
+    public void MarkMonsterObtained(MonsterVisualData data)
+    {
+        if (data == null || !_obtainedMonsterNames.Add(data.name))
+        {
+            return;
+        }
+
+        Save(ResolvePlayerId());
+    }
+
+    /// <summary>
+    /// 스타터이거나 한 번이라도 가방에 들어온 적 있으면 true.
+    /// </summary>
+    public bool HasObtainedMonster(MonsterVisualData data)
+    {
+        return data != null && (IsMonsterUnlocked(data) || _obtainedMonsterNames.Contains(data.name));
     }
 
     /// <summary>
@@ -287,6 +313,16 @@ public class AccountManager : BaseManager
         }
 
         _selectedPlayableName = PlayerPrefs.GetString(Key(playerId, PLAYABLE_SUFFIX), string.Empty);
+        _obtainedMonsterNames.Clear();
+        var obtained = PlayerPrefs.GetString(Key(playerId, OBTAINED_SUFFIX), string.Empty);
+        var names = obtained.Split(OBTAINED_SEPARATOR);
+        for (var i = 0; i < names.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(names[i]))
+            {
+                _obtainedMonsterNames.Add(names[i]);
+            }
+        }
     }
 
     private void Save(int playerId)
@@ -296,6 +332,7 @@ public class AccountManager : BaseManager
         PlayerPrefs.SetString(Key(playerId, STARTER_SUFFIX), _starterVisualName ?? string.Empty);
         PlayerPrefs.SetInt(Key(playerId, GENERATION_SUFFIX), _generation);
         PlayerPrefs.SetString(Key(playerId, PLAYABLE_SUFFIX), _selectedPlayableName ?? string.Empty);
+        PlayerPrefs.SetString(Key(playerId, OBTAINED_SUFFIX), string.Join(OBTAINED_SEPARATOR.ToString(), _obtainedMonsterNames));
         PlayerPrefs.Save();
     }
 
