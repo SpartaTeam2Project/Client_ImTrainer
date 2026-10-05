@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -17,6 +18,7 @@ public class InventoryUi : MonoBehaviour
     }
 
     [SerializeField] private Canvas _canvas;
+    [SerializeField] private ScreenBackdrop _backdrop;
     [SerializeField] private EquipmentUi _equipmentUi;
     [SerializeField] private ShopUi _shopUi;
     [SerializeField] private HoverInformation _information;
@@ -41,6 +43,7 @@ public class InventoryUi : MonoBehaviour
     private bool _open;
     private bool _holdTime;
     private bool _subscribed;
+    private Coroutine _showRoutine;
 
     private void Awake()
     {
@@ -76,6 +79,11 @@ public class InventoryUi : MonoBehaviour
 
         _holdTime = false;
         _open = false;
+        _showRoutine = null;
+        if (_backdrop != null)
+        {
+            _backdrop.Release();
+        }
     }
 
     private void Update()
@@ -125,19 +133,43 @@ public class InventoryUi : MonoBehaviour
         }
 
         _open = true;
-        _canvas.gameObject.SetActive(true);
         _holdTime = Managers.Instance.CurrentState == GameState.Playing;
         if (_holdTime)
         {
             Time.timeScale = 0f;
         }
 
+        _showRoutine = StartCoroutine(ShowAfterCapture());
+    }
+
+    // 창이 그려지기 전 화면을 배경으로 담아야 해서 캡처한 뒤에 창을 켠다.
+    private IEnumerator ShowAfterCapture()
+    {
+        if (_backdrop != null)
+        {
+            yield return new WaitForEndOfFrame();
+            _backdrop.Capture();
+        }
+
+        _showRoutine = null;
+        _canvas.gameObject.SetActive(true);
         Refresh();
     }
 
     private void Close()
     {
         _open = false;
+        if (_showRoutine != null)
+        {
+            StopCoroutine(_showRoutine);
+            _showRoutine = null;
+        }
+
+        if (_backdrop != null)
+        {
+            _backdrop.Release();
+        }
+
         if (_canvas != null)
         {
             _canvas.gameObject.SetActive(false);
