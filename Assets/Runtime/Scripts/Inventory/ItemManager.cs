@@ -8,7 +8,10 @@ using UnityEngine;
 public class ItemManager : BaseManager
 {
     public const int INVENTORY_SIZE = 20;
-    public const int MAX_STACK = 99;
+    /// <summary>
+    /// 가방 한 칸에 들어가는 마릿수. 한 마리당 한 칸을 차지한다.
+    /// </summary>
+    public const int MAX_STACK = 1;
     public const int SYNTHESIS_COUNT = 3;
 
     /// <summary>
