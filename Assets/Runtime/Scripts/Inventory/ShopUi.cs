@@ -18,6 +18,7 @@ public class ShopUi : MonoBehaviour
     {
         public InventoryItem Slot;
         public TMP_Text Name;
+        public MonsterTypeView Types;
         public Button Lock;
         public Image LockIcon;
         public Button Buy;
@@ -98,6 +99,7 @@ public class ShopUi : MonoBehaviour
                 row.Slot.ShowEmpty();
                 SetPrice(row, null, 0, false);
                 SetName(row, SOLD_LABEL);
+                SetTypes(row, null);
                 SetLock(row, false, false);
                 continue;
             }
@@ -107,6 +109,7 @@ public class ShopUi : MonoBehaviour
             row.Slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, false);
             SetPrice(row, icon, item.price, true);
             SetName(row, item.name);
+            SetTypes(row, visual);
             SetLock(row, true, offer.Locked);
         }
     }
@@ -152,6 +155,14 @@ public class ShopUi : MonoBehaviour
         if (row.Name != null)
         {
             row.Name.text = value;
+        }
+    }
+
+    private void SetTypes(OfferRow row, MonsterVisualData visual)
+    {
+        if (row.Types != null)
+        {
+            row.Types.Show(visual);
         }
     }
 

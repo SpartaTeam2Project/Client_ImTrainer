@@ -11,7 +11,6 @@ public class HoverInformation : MonoBehaviour
 {
     private const string STAR_SUFFIX = "성";
     private const string DAMAGE_PREFIX = "데미지 ";
-    private const string TYPE_SEPARATOR = " / ";
 
     [SerializeField] private GameObject _content;
     [SerializeField] private GameObject _emptyLabel;
@@ -19,7 +18,7 @@ public class HoverInformation : MonoBehaviour
     [Header("Pokemon")]
     [SerializeField] private Image _portrait;
     [SerializeField] private TMP_Text _monsterName;
-    [SerializeField] private TMP_Text _types;
+    [SerializeField] private MonsterTypeView _typeView;
     [SerializeField] private TMP_Text _star;
 
     [Header("Ability")]
@@ -63,7 +62,11 @@ public class HoverInformation : MonoBehaviour
         var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
         SetImage(_portrait, portrait);
         SetText(_monsterName, item.name);
-        SetText(_types, visual != null ? TypeLabel(visual) : string.Empty);
+        if (_typeView != null)
+        {
+            _typeView.Show(visual);
+        }
+
         SetText(_star, item.upgradeLevel + STAR_SUFFIX);
         ShowAbility(visual != null ? visual.WeaponAbility : null, item.upgradeLevel);
         ShowEvolution(itemManager, item.uid);
@@ -160,60 +163,6 @@ public class HoverInformation : MonoBehaviour
         if (_emptyLabel != null)
         {
             _emptyLabel.SetActive(!visible);
-        }
-    }
-
-    private static string TypeLabel(MonsterVisualData visual)
-    {
-        var label = TypeName(visual.PrimaryType);
-        if (visual.HasSecondaryType)
-        {
-            label += TYPE_SEPARATOR + TypeName(visual.SecondaryType);
-        }
-
-        return label;
-    }
-
-    private static string TypeName(MonsterType type)
-    {
-        switch (type)
-        {
-            case MonsterType.Fire:
-                return "불꽃";
-            case MonsterType.Water:
-                return "물";
-            case MonsterType.Grass:
-                return "풀";
-            case MonsterType.Electric:
-                return "전기";
-            case MonsterType.Ice:
-                return "얼음";
-            case MonsterType.Fighting:
-                return "격투";
-            case MonsterType.Poison:
-                return "독";
-            case MonsterType.Ground:
-                return "땅";
-            case MonsterType.Flying:
-                return "비행";
-            case MonsterType.Psychic:
-                return "에스퍼";
-            case MonsterType.Bug:
-                return "벌레";
-            case MonsterType.Rock:
-                return "바위";
-            case MonsterType.Ghost:
-                return "고스트";
-            case MonsterType.Dragon:
-                return "드래곤";
-            case MonsterType.Dark:
-                return "악";
-            case MonsterType.Steel:
-                return "강철";
-            case MonsterType.Fairy:
-                return "페어리";
-            default:
-                return "노말";
         }
     }
 
