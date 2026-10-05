@@ -90,6 +90,13 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
+        // 창이 열려 있으면 ESC를 먼저 가져가서 일시정지 대신 창을 닫는다.
+        if (_open && inputManager.ConsumePausePressed())
+        {
+            Close();
+            return;
+        }
+
         if (_open && _shopUi != null && inputManager.ConsumeShopRefreshPressed())
         {
             _shopUi.RefreshOffers();
