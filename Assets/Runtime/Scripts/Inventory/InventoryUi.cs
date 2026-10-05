@@ -12,7 +12,8 @@ public class InventoryUi : MonoBehaviour
     {
         None,
         Bag,
-        Equipment
+        Equipment,
+        Shop
     }
 
     [SerializeField] private Canvas _canvas;
@@ -51,7 +52,7 @@ public class InventoryUi : MonoBehaviour
         AddAction(_closeButton, Close);
         if (_shopUi != null)
         {
-            _shopUi.Bind(Refresh);
+            _shopUi.Bind(Refresh, SelectShop);
         }
 
         if (_canvas != null)
@@ -195,9 +196,10 @@ public class InventoryUi : MonoBehaviour
         }
 
         RebuildBag(itemManager, playerId);
+        ResolveShopSelection(itemManager, playerId);
         if (_shopUi != null)
         {
-            _shopUi.Refresh(playerId);
+            _shopUi.Refresh(playerId, _selection == SelectionKind.Shop ? _selectedIndex : -1);
         }
         if (_equipmentUi != null)
         {
@@ -212,6 +214,20 @@ public class InventoryUi : MonoBehaviour
     {
         if (_information == null)
         {
+            return;
+        }
+
+        if (_selection == SelectionKind.Shop)
+        {
+            var offer = GetShopOffer(itemManager, playerId, _selectedIndex);
+            var item = offer != null && !offer.Sold ? itemManager.TryGetItem(offer.Uid) : null;
+            if (item == null)
+            {
+                _information.Clear();
+                return;
+            }
+
+            _information.Show(item);
             return;
         }
 
@@ -320,6 +336,65 @@ public class InventoryUi : MonoBehaviour
         _selection = SelectionKind.Equipment;
         _selectedIndex = slot;
         Refresh();
+    }
+
+    /// <summary>
+    /// 상점 칸을 고른다. 정보 창만 보여 주고 장착, 판매 같은 동작은 하지 않는다.
+    /// </summary>
+    private void SelectShop(int index)
+    {
+        if (!TryGetContext(out var itemManager, out var playerId))
+        {
+            return;
+        }
+
+        var offer = GetShopOffer(itemManager, playerId, index);
+        if (offer == null || offer.Sold)
+        {
+            ClearSelection();
+            Refresh();
+            return;
+        }
+
+        _selection = SelectionKind.Shop;
+        _selectedIndex = index;
+        _selectedUid = offer.Uid;
+        Refresh();
+    }
+
+    /// <summary>
+    /// 고른 상점 칸이 팔렸거나 새로고침으로 다른 포켓몬이 되면 선택을 푼다.
+    /// </summary>
+    private void ResolveShopSelection(ItemManager itemManager, int playerId)
+    {
+        if (_selection != SelectionKind.Shop)
+        {
+            return;
+        }
+
+        var offer = GetShopOffer(itemManager, playerId, _selectedIndex);
+        if (offer == null || offer.Sold || offer.Uid != _selectedUid)
+        {
+            ClearSelection();
+        }
+    }
+
+    private static ShopOffer GetShopOffer(ItemManager itemManager, int playerId, int index)
+    {
+        var offers = itemManager.GetShopOffers(playerId);
+        if (offers == null || index < 0 || index >= offers.Count)
+        {
+            return null;
+        }
+
+        return offers[index];
+    }
+
+    private void ClearSelection()
+    {
+        _selection = SelectionKind.None;
+        _selectedIndex = -1;
+        _selectedUid = -1;
     }
 
     private void SynthesizeSelected()

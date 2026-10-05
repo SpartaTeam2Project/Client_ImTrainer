@@ -33,6 +33,7 @@ public class ShopUi : MonoBehaviour
     [SerializeField] private Sprite _unlockedSprite;
 
     private Action _onChanged;
+    private Action<int> _onSelect;
 
     private void Awake()
     {
@@ -46,6 +47,7 @@ public class ShopUi : MonoBehaviour
             }
 
             var index = i;
+            row.Slot.Button.onClick.AddListener(() => _onSelect?.Invoke(index));
             row.Buy.onClick.AddListener(() => Purchase(index));
             if (row.Lock != null)
             {
@@ -65,17 +67,18 @@ public class ShopUi : MonoBehaviour
     }
 
     /// <summary>
-    /// 구매나 새로고침이 끝나면 onChanged를 호출한다.
+    /// 구매나 새로고침이 끝나면 onChanged를, 포켓몬 칸을 누르면 onSelect(칸 번호)를 호출한다.
     /// </summary>
-    public void Bind(Action onChanged)
+    public void Bind(Action onChanged, Action<int> onSelect)
     {
         _onChanged = onChanged;
+        _onSelect = onSelect;
     }
 
     /// <summary>
-    /// 상점 칸과 잠금 상태를 다시 그린다.
+    /// 상점 칸과 잠금 상태를 다시 그린다. selectedIndex 칸에 선택 표시를 켠다. 없으면 -1.
     /// </summary>
-    public void Refresh(int playerId)
+    public void Refresh(int playerId, int selectedIndex)
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
         {
@@ -106,7 +109,7 @@ public class ShopUi : MonoBehaviour
 
             var visual = itemManager.GetVisual(item.uid);
             var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
-            row.Slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, false);
+            row.Slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, i == selectedIndex);
             SetPrice(row, icon, item.price, true);
             SetName(row, item.name);
             SetTypes(row, visual);
