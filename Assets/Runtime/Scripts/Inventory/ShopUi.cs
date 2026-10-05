@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 인벤토리 창 왼쪽의 구매 목록. 칸을 누르면 몬스터볼로 사고, 잠근 칸은 새로고침에서 빠진다.
+/// 인벤토리 창 왼쪽의 구매 목록. 가격 버튼을 누르면 몬스터볼로 사고, 잠근 칸은 새로고침에서 빠진다.
 /// </summary>
 public class ShopUi : MonoBehaviour
 {
@@ -20,6 +20,9 @@ public class ShopUi : MonoBehaviour
         public TMP_Text Name;
         public Button Lock;
         public Image LockIcon;
+        public Button Buy;
+        public Image PriceIcon;
+        public TMP_Text PriceCount;
     }
 
     [SerializeField] private OfferRow[] _rows = new OfferRow[ItemManager.SHOP_OFFER_COUNT];
@@ -35,14 +38,14 @@ public class ShopUi : MonoBehaviour
         for (var i = 0; i < _rows.Length; i++)
         {
             var row = _rows[i];
-            if (row == null || row.Slot == null)
+            if (row == null || row.Slot == null || row.Buy == null)
             {
-                Debug.LogError("상점 칸이 비어 있습니다: " + i);
+                Debug.LogError("상점 칸이나 가격 버튼이 비어 있습니다: " + i);
                 continue;
             }
 
             var index = i;
-            row.Slot.Button.onClick.AddListener(() => Purchase(index));
+            row.Buy.onClick.AddListener(() => Purchase(index));
             if (row.Lock != null)
             {
                 row.Lock.onClick.AddListener(() => ToggleLock(index));
@@ -93,7 +96,7 @@ public class ShopUi : MonoBehaviour
             if (item == null)
             {
                 row.Slot.ShowEmpty();
-                row.Slot.HidePrice();
+                SetPrice(row, null, 0, false);
                 SetName(row, SOLD_LABEL);
                 SetLock(row, false, false);
                 continue;
@@ -102,7 +105,7 @@ public class ShopUi : MonoBehaviour
             var visual = itemManager.GetVisual(item.uid);
             var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
             row.Slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, false);
-            row.Slot.ShowPrice(icon, item.price);
+            SetPrice(row, icon, item.price, true);
             SetName(row, item.name);
             SetLock(row, true, offer.Locked);
         }
@@ -149,6 +152,29 @@ public class ShopUi : MonoBehaviour
         if (row.Name != null)
         {
             row.Name.text = value;
+        }
+    }
+
+    /// <summary>
+    /// 가격 버튼에 몬스터볼 그림과 가격을 넣는다. 매진이면 버튼을 끈다.
+    /// </summary>
+    private void SetPrice(OfferRow row, Sprite icon, int amount, bool available)
+    {
+        if (row.Buy != null)
+        {
+            row.Buy.gameObject.SetActive(available);
+        }
+
+        if (row.PriceIcon != null)
+        {
+            row.PriceIcon.sprite = icon;
+            row.PriceIcon.enabled = icon != null;
+            row.PriceIcon.preserveAspect = true;
+        }
+
+        if (row.PriceCount != null)
+        {
+            row.PriceCount.text = available ? amount.ToString() : string.Empty;
         }
     }
 

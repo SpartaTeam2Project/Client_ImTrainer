@@ -245,7 +245,6 @@ public class InventoryUi : MonoBehaviour
             if (stack.Empty || stack.Item == null)
             {
                 slot.ShowEmpty();
-                slot.HidePrice();
                 slot.SetSelected(false);
                 continue;
             }
@@ -253,7 +252,6 @@ public class InventoryUi : MonoBehaviour
             var visual = itemManager.GetVisual(stack.Item.uid);
             var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
             slot.ShowPokemon(portrait, stack.Item.name, stack.Item.upgradeLevel, stack.Number, true, selected);
-            slot.HidePrice();
         }
     }
 

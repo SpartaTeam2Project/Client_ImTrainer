@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 가방, 장착, 상점이 같이 쓰는 칸. 그림과 가격 자리가 여기 있다.
+/// 가방, 장착, 상점이 같이 쓰는 칸. 포켓몬 그림, 이름, 성, 개수만 그린다.
 /// </summary>
 public class InventoryItem : MonoBehaviour
 {
@@ -20,11 +20,6 @@ public class InventoryItem : MonoBehaviour
     [SerializeField] private GameObject _state;
     [SerializeField] private TextMeshProUGUI _starText;
     [SerializeField] private TextMeshProUGUI _countText;
-    [SerializeField] private GameObject _priceRoot;
-    [SerializeField] private Image _priceFrame;
-    [SerializeField] private Image _priceBackground;
-    [SerializeField] private Image _priceIcon;
-    [SerializeField] private TextMeshProUGUI _priceCount;
     [SerializeField] private Button _button;
 
     public Button Button => _button;
@@ -38,8 +33,6 @@ public class InventoryItem : MonoBehaviour
 
         ApplyFont(_starText);
         ApplyFont(_countText);
-        ApplyFont(_priceCount);
-        HidePrice();
         ShowEmpty();
     }
 
@@ -123,40 +116,6 @@ public class InventoryItem : MonoBehaviour
         if (_select != null)
         {
             _select.enabled = selected;
-        }
-    }
-
-    /// <summary>
-    /// 상점 가격 자리를 켜고 몬스터볼 그림과 개수를 넣는다.
-    /// </summary>
-    public void ShowPrice(Sprite icon, int amount)
-    {
-        if (_priceRoot != null)
-        {
-            _priceRoot.SetActive(true);
-        }
-
-        if (_priceIcon != null)
-        {
-            _priceIcon.sprite = icon;
-            _priceIcon.enabled = icon != null;
-            _priceIcon.preserveAspect = true;
-        }
-
-        if (_priceCount != null)
-        {
-            _priceCount.text = amount.ToString();
-        }
-    }
-
-    /// <summary>
-    /// 가격 자리를 끈다.
-    /// </summary>
-    public void HidePrice()
-    {
-        if (_priceRoot != null)
-        {
-            _priceRoot.SetActive(false);
         }
     }
 

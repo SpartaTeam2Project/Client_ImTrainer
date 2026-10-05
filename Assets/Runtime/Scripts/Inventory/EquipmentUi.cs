@@ -48,7 +48,6 @@ public class EquipmentUi : MonoBehaviour
                 continue;
             }
 
-            slot.HidePrice();
             var selected = i == selectedSlot;
             if (equipment == null || i >= equipment.Stacks.Count || equipment.Stacks[i].Empty || equipment.Stacks[i].Item == null)
             {
