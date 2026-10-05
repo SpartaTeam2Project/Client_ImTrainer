@@ -19,10 +19,6 @@ public class ShopUi : MonoBehaviour
     private const float STAMP_DROP_DURATION = 0.22f;
     private const float STAMP_FADE_DURATION = 0.12f;
     private const float DIM_FADE_DURATION = 0.2f;
-    private const float STAMP_PUNCH_SCALE = 0.12f;
-    private const float STAMP_PUNCH_DURATION = 0.25f;
-    private const int STAMP_PUNCH_VIBRATO = 8;
-    private const float STAMP_PUNCH_ELASTICITY = 0.6f;
 
     [Serializable]
     private class OfferRow
@@ -140,7 +136,7 @@ public class ShopUi : MonoBehaviour
             }
 
             var offer = offers != null && i < offers.Count ? offers[i] : null;
-            var item = offer != null && offer.Uid >= 0 ? itemManager.TryGetItem(offer.Uid) : null;
+            var item = itemManager.CreateOfferItem(offer);
             if (item == null)
             {
                 row.Slot.ShowEmpty();
@@ -154,7 +150,7 @@ public class ShopUi : MonoBehaviour
 
             var visual = itemManager.GetVisual(item.uid);
             var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
-            row.Slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, !offer.Purchased && i == selectedIndex);
+            row.Slot.ShowPokemon(portrait, item.name, item.upgradeLevel, 1, false, !offer.Purchased && i == selectedIndex);
             SetName(row, item.name);
             SetTypes(row, visual);
             if (offer.Purchased)
@@ -231,7 +227,7 @@ public class ShopUi : MonoBehaviour
     }
 
     /// <summary>
-    /// 도장이 크게 떠 있다가 내려와 쾅 찍히고 칸이 한 번 튄다.
+    /// Dim이 서서히 어두워지고, 도장이 크게 떠 있다가 내려와 쾅 찍힌다.
     /// </summary>
     private void PlayStamp(int index)
     {
@@ -244,7 +240,6 @@ public class ShopUi : MonoBehaviour
         KillStamp(index);
         var pose = _poses[index];
         row.Captured.SetActive(true);
-        row.Captured.transform.localScale = Vector3.one;
 
         var sequence = DOTween.Sequence();
         if (row.Dim != null)
@@ -264,8 +259,6 @@ public class ShopUi : MonoBehaviour
             sequence.Join(row.Stamp.DOFade(1f, STAMP_FADE_DURATION));
         }
 
-        sequence.Append(row.Captured.transform.DOPunchScale(
-            Vector3.one * STAMP_PUNCH_SCALE, STAMP_PUNCH_DURATION, STAMP_PUNCH_VIBRATO, STAMP_PUNCH_ELASTICITY));
         sequence.SetUpdate(true).SetLink(gameObject).OnComplete(() => _stampTweens[index] = null);
         _stampTweens[index] = sequence;
     }
@@ -281,7 +274,6 @@ public class ShopUi : MonoBehaviour
 
         var pose = _poses[index];
         row.Captured.SetActive(true);
-        row.Captured.transform.localScale = Vector3.one;
         if (row.Dim != null)
         {
             SetAlpha(row.Dim, pose.DimAlpha);

@@ -11,7 +11,9 @@ using UnityEngine.Serialization;
 public class MonsterVisualData : ScriptableObject
 {
     public const float DEFAULT_SCALE = 2.7f;
+    public const int DEFAULT_SHOP_PRICE = 10;
     private const int MIN_GENERATION = 1;
+    private const int MIN_SHOP_PRICE = 1;
 
     [SerializeField, Min(0.01f)] private float _scale = DEFAULT_SCALE;
 
@@ -46,6 +48,8 @@ public class MonsterVisualData : ScriptableObject
     [SerializeField] private string _monsterName = string.Empty;
     [SerializeField, Min(0)] private int _dexNumber;
     [SerializeField] private string _unlockCondition = string.Empty;
+
+    [SerializeField, Min(MIN_SHOP_PRICE)] private int _shopPrice = DEFAULT_SHOP_PRICE;
 
     [SerializeField] private Sprite[] _icon = new Sprite[0];
     [SerializeField, FormerlySerializedAs("_portraitSize")] private Vector2 _iconSize;
@@ -117,6 +121,11 @@ public class MonsterVisualData : ScriptableObject
     public int DexNumber => _dexNumber < 0 ? 0 : _dexNumber;
 
     public string UnlockCondition => _unlockCondition ?? string.Empty;
+
+    /// <summary>
+    /// 상점 1성 구매가(몬스터볼). 높은 성은 ItemManager가 이 값으로 계산한다.
+    /// </summary>
+    public int ShopPrice => _shopPrice < MIN_SHOP_PRICE ? MIN_SHOP_PRICE : _shopPrice;
 
     /// <summary>
     /// 스토리지 칸, 엔트리, 상점, 인벤토리에 쓰는 아이콘 애니메이션 프레임.

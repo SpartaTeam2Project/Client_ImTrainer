@@ -37,7 +37,7 @@ public class MonsterVisualDataEditor : Editor
     private static GUIStyle _textAreaStyle;
 
     /// <summary>
-    /// 크기, 필드 애니메이션, 무기 능력, 타입, 진화, 도감 정보, UI 애니메이션 순으로 그린다.
+    /// 크기, 필드 애니메이션, 무기 능력, 타입, 진화, 도감 정보, 상점, UI 애니메이션 순으로 그린다.
     /// </summary>
     public override void OnInspectorGUI()
     {
@@ -57,6 +57,7 @@ public class MonsterVisualDataEditor : Editor
         DrawType();
         DrawEvolution();
         DrawStorage();
+        DrawShop();
         DrawUiAnimation();
 
         EditorGUIUtility.labelWidth = previousLabelWidth;
@@ -143,6 +144,17 @@ public class MonsterVisualDataEditor : Editor
             DrawField("_monsterName", "이름 (Name)");
             DrawField("_dexNumber", "도감 번호 (Dex No.)");
             DrawTextArea("_unlockCondition", "해금 조건 (Unlock Condition)");
+        }
+
+        EndCategory(expanded);
+    }
+
+    private void DrawShop()
+    {
+        var expanded = BeginCategory("Shop", "상점 (Shop)");
+        if (expanded)
+        {
+            DrawField("_shopPrice", "1성 구매가 (Price)", "상점 1성 몬스터볼 가격. 2성은 3배, 3성은 9배. 판매가는 구매가에 판매 배율을 곱한다");
         }
 
         EndCategory(expanded);

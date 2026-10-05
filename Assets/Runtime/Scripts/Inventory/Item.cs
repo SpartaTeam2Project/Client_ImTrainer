@@ -28,7 +28,7 @@ public class Item
     public int maxiumStack = 99;
 
     /// <summary>
-    /// 구매와 판매에 쓰는 몬스터볼 가격.
+    /// 이 성의 몬스터볼 구매가. 판매가는 ItemManager.GetSellPrice가 계산한다.
     /// </summary>
     public int price;
 

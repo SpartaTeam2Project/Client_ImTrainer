@@ -227,7 +227,7 @@ public class InventoryUi : MonoBehaviour
         if (_selection == SelectionKind.Shop)
         {
             var offer = GetShopOffer(itemManager, playerId, _selectedIndex);
-            var item = offer != null && !offer.Sold ? itemManager.TryGetItem(offer.Uid) : null;
+            var item = offer != null && !offer.Sold ? itemManager.CreateOfferItem(offer) : null;
             if (item == null)
             {
                 _information.Clear();

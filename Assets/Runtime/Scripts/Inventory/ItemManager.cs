@@ -9,8 +9,13 @@ public class ItemManager : BaseManager
 {
     public const int INVENTORY_SIZE = 20;
     public const int MAX_STACK = 99;
-    public const int BUY_PRICE = 10;
     public const int SYNTHESIS_COUNT = 3;
+
+    /// <summary>
+    /// 판매 때 돌려주는 몬스터볼 비율. 구매가에 곱하고 내린다. 최소 1개.
+    /// </summary>
+    public const float SELL_PRICE_RATE = 0.5f;
+    public const int MIN_SELL_PRICE = 1;
     public const int MIN_EQUIPPED = 1;
     public const int SHOP_OFFER_COUNT = 4;
     public const int SHOP_REFRESH_PRICE = 1;
@@ -76,7 +81,7 @@ public class ItemManager : BaseManager
                 name = string.IsNullOrEmpty(visual.MonsterName) ? visual.name : visual.MonsterName,
                 upgradeLevel = Item.STAR_MIN,
                 maxiumStack = MAX_STACK,
-                price = BUY_PRICE,
+                price = visual.ShopPrice,
                 evolutionUid = Item.NO_EVOLUTION
             });
         }
@@ -320,6 +325,28 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
+    /// 상점 칸에 진열된 포켓몬을 칸의 성과 가격으로 만든다. 진열이 없으면 null.
+    /// </summary>
+    public Item CreateOfferItem(ShopOffer offer)
+    {
+        return offer != null && offer.Uid >= 0 ? CreateItem(offer.Uid, offer.Star) : null;
+    }
+
+    /// <summary>
+    /// 한 마리를 팔 때 돌려받는 몬스터볼.
+    /// </summary>
+    public static int GetSellPrice(Item item)
+    {
+        if (item == null)
+        {
+            return 0;
+        }
+
+        var price = Mathf.FloorToInt(item.price * SELL_PRICE_RATE);
+        return price < MIN_SELL_PRICE ? MIN_SELL_PRICE : price;
+    }
+
+    /// <summary>
     /// 몬스터볼을 내고 잠기지 않은 상점 칸을 다시 뽑는다.
     /// </summary>
     public bool TryRefreshShop(int playerId)
@@ -360,7 +387,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 상점 칸의 1성 한 마리를 몬스터볼로 사서 가방에 넣는다. 산 칸은 Purchased로 표시한다.
+    /// 상점 칸의 포켓몬 한 마리를 몬스터볼로 사서 가방에 넣는다. 산 칸은 Purchased로 표시한다.
     /// </summary>
     public bool TryPurchase(int playerId, int offerIndex)
     {
@@ -372,7 +399,7 @@ public class ItemManager : BaseManager
         }
 
         var offer = run.Offers[offerIndex];
-        var created = CreateItem(offer.Uid, Item.STAR_MIN);
+        var created = CreateItem(offer.Uid, offer.Star);
         if (created == null)
         {
             LastMessage = "살 수 없는 포켓몬입니다.";
@@ -525,7 +552,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        Refund(playerId, item.price * number);
+        Refund(playerId, GetSellPrice(item) * number);
         LastMessage = "판매했습니다.";
         FinishBag(playerId);
         return true;
@@ -560,7 +587,7 @@ public class ItemManager : BaseManager
         }
 
         run.Equipment.ClearSlot(slot);
-        Refund(playerId, item.price);
+        Refund(playerId, GetSellPrice(item));
         LastMessage = "판매했습니다.";
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
@@ -745,6 +772,7 @@ public class ItemManager : BaseManager
             }
 
             offer.Uid = _shopPool.Count > 0 ? _shopPool[Random.Range(0, _shopPool.Count)] : ShopOffer.SOLD_UID;
+            offer.Star = Item.STAR_MIN;
             offer.Purchased = false;
         }
     }
@@ -765,7 +793,22 @@ public class ItemManager : BaseManager
 
         var copy = source.Copy();
         copy.upgradeLevel = star;
+        copy.price = GetStarPrice(source.price, star);
         return copy;
+    }
+
+    /// <summary>
+    /// 1성 가격에서 star성 구매가를 낸다. 한 성 오를 때마다 합성에 드는 마릿수만큼 곱한다.
+    /// </summary>
+    private static int GetStarPrice(int basePrice, int star)
+    {
+        var price = basePrice;
+        for (var i = Item.STAR_MIN; i < star; i++)
+        {
+            price *= SYNTHESIS_COUNT;
+        }
+
+        return price;
     }
 
     private int FindUid(MonsterVisualData visual)
@@ -999,6 +1042,11 @@ public class ShopOffer
     /// true면 새로고침해도 바뀌지 않는다.
     /// </summary>
     public bool Locked;
+
+    /// <summary>
+    /// 파는 성. 지금은 늘 1성이고, 높은 성 진열 규칙은 RollOffers에서 정한다.
+    /// </summary>
+    public int Star = Item.STAR_MIN;
 
     /// <summary>
     /// 이번 진열에서 이미 산 칸. 새로 뽑으면 false로 돌아간다.
