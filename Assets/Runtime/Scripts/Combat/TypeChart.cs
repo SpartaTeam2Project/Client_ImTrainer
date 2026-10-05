@@ -1,5 +1,6 @@
 /// <summary>
-/// 포켓몬 6세대 이후 18타입. 값이 상성표의 행·열 인덱스이므로 순서를 바꾸지 않는다.
+/// 포켓몬 6세대 이후 18타입과 표시용 타입. 0~17은 상성표의 행·열 인덱스이므로 순서를 바꾸지 않는다.
+/// 18 이후는 상성표 밖이라 배율이 항상 1이다.
 /// </summary>
 public enum MonsterType
 {
@@ -20,7 +21,9 @@ public enum MonsterType
     Dragon = 14,
     Dark = 15,
     Steel = 16,
-    Fairy = 17
+    Fairy = 17,
+    Unknown = 18,
+    Stellar = 19
 }
 
 /// <summary>
@@ -56,57 +59,19 @@ public static class TypeChart
         /*페어리*/ { 1, HALF, 1, 1, 1, 1, 2, HALF, 1, 1, 1, 1, 1, 1, 2, 2, HALF, 1 },
     };
 
-    // WeaponAbilityType 공격(0~17) 순서. MonsterType 값 순서와 다르다.
-    private static readonly MonsterType[] ABILITY_ATTACK_TYPES =
-    {
-        MonsterType.Normal,
-        MonsterType.Fighting,
-        MonsterType.Flying,
-        MonsterType.Poison,
-        MonsterType.Ground,
-        MonsterType.Rock,
-        MonsterType.Bug,
-        MonsterType.Ghost,
-        MonsterType.Steel,
-        MonsterType.Fire,
-        MonsterType.Water,
-        MonsterType.Grass,
-        MonsterType.Electric,
-        MonsterType.Psychic,
-        MonsterType.Ice,
-        MonsterType.Dragon,
-        MonsterType.Dark,
-        MonsterType.Fairy
-    };
-
     /// <summary>
-    /// 공격 능력과 그 진화의 상성 타입. 패시브면 false.
-    /// </summary>
-    public static bool TryGetAttackType(WeaponAbilityType abilityType, out MonsterType attackType)
-    {
-        var index = (int)abilityType;
-        var evolutionStart = (int)WeaponAbilityType.NormalAttackEvolution;
-        if (index >= evolutionStart && index <= (int)WeaponAbilityType.FairyAttackEvolution)
-        {
-            index -= evolutionStart;
-        }
-
-        if (index < 0 || index >= ABILITY_ATTACK_TYPES.Length)
-        {
-            attackType = MonsterType.Normal;
-            return false;
-        }
-
-        attackType = ABILITY_ATTACK_TYPES[index];
-        return true;
-    }
-
-    /// <summary>
-    /// 공격 타입 하나가 방어 타입 하나에 주는 배율을 돌려준다.
+    /// 공격 타입 하나가 방어 타입 하나에 주는 배율을 돌려준다. 상성표 밖 타입은 1이다.
     /// </summary>
     public static float GetMultiplier(MonsterType attack, MonsterType defense)
     {
-        return CHART[(int)attack, (int)defense];
+        var row = (int)attack;
+        var column = (int)defense;
+        if (row < 0 || row >= CHART.GetLength(0) || column < 0 || column >= CHART.GetLength(1))
+        {
+            return NEUTRAL_MULTIPLIER;
+        }
+
+        return CHART[row, column];
     }
 
     /// <summary>

@@ -13,9 +13,10 @@ MonoBehaviour:
   m_Name: Fire Attack WeaponAbility Data
   m_EditorClassIdentifier: Assembly-CSharp::FireAttackWeaponAbilityData
   type: 9
-  title: 
-  description: 
-  icon: {fileID: 0}
+  elementType: 1
+  title: "\uBD88\uAF43 \uC138\uB840"
+  description: "\uC791\uC740 \uBD88\uAF43\uC744 \uC0C1\uB300\uC5D0\uAC8C \uBC1C\uC0AC\uD558\uC5EC \uACF5\uACA9\uD55C\uB2E4. \uD654\uC0C1 \uC0C1\uD0DC\uB85C \uB9CC\uB4E4 \uB54C\uAC00 \uC788\uB2E4."
+  icon: {fileID: 8334651344603559088, guid: 069421ddac38af94c93d590bf5bfb31b, type: 3}
   prefab: {fileID: 8666185439850298685, guid: 9baadb2220f82de488e6d4d5eb4ba662, type: 3}
   isActiveAbility: 1
   isWeaponAbility: 0
@@ -23,6 +24,22 @@ MonoBehaviour:
   isEvolution: 0
   evolutionRequirements: []
   levels:
+  - projectilesCount: 1
+    timeBetweenFireballs: 0
+    abilityCooldown: 2
+    fireballLifetime: 5
+    speed: 3
+    damage: 15
+    projectileSize: 0.5
+    explosionRadius: 1
+  - projectilesCount: 1
+    timeBetweenFireballs: 0
+    abilityCooldown: 2
+    fireballLifetime: 5
+    speed: 3
+    damage: 15
+    projectileSize: 0.5
+    explosionRadius: 1
   - projectilesCount: 1
     timeBetweenFireballs: 0
     abilityCooldown: 2

@@ -9,8 +9,8 @@ public class InventoryItem : MonoBehaviour
 {
     private static readonly Color EMPTY_FRAME = new Color(0.28f, 0.3f, 0.34f, 1f);
     private static readonly Color EMPTY_BACKGROUND = new Color(0.12f, 0.13f, 0.16f, 1f);
-    private static readonly Color FILLED_FRAME = new Color(0.86f, 0.72f, 0.34f, 1f);
-    private static readonly Color FILLED_BACKGROUND = new Color(0.18f, 0.22f, 0.3f, 1f);
+    private static readonly Color FILLED_FRAME = Color.white;
+    private static readonly Color FILLED_BACKGROUND = Color.white;
 
     [SerializeField] private Image _frame;
     [SerializeField] private Image[] _starImages = new Image[Item.STAR_MAX];
@@ -119,24 +119,29 @@ public class InventoryItem : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 프레임 아래 별 이미지를 성 수만큼 켠다.
-    /// </summary>
     private void ShowStars(int star)
     {
-        if (_starImages == null)
+        ShowStars(_starImages, star);
+    }
+
+    /// <summary>
+    /// 별 이미지를 성 수만큼 켠다. 정보 창도 같이 쓴다.
+    /// </summary>
+    public static void ShowStars(Image[] starImages, int star)
+    {
+        if (starImages == null)
         {
             return;
         }
 
-        for (var i = 0; i < _starImages.Length; i++)
+        for (var i = 0; i < starImages.Length; i++)
         {
-            if (_starImages[i] == null)
+            if (starImages[i] == null)
             {
                 continue;
             }
 
-            _starImages[i].gameObject.SetActive(i < star);
+            starImages[i].gameObject.SetActive(i < star);
         }
     }
 

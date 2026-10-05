@@ -7,6 +7,8 @@ using UnityEngine;
 public abstract class WeaponAbilityData : ScriptableObject
 {
     [SerializeField] protected WeaponAbilityType type;
+    [Tooltip("공격 능력의 속성. 상성, 자속 보정, 정보 창 제목 색에 쓴다. 패시브는 쓰지 않는다.")]
+    [SerializeField] private MonsterType elementType = MonsterType.Normal;
     [SerializeField] private string title;
     [SerializeField] private string description;
     [SerializeField] private Sprite icon;
@@ -18,6 +20,20 @@ public abstract class WeaponAbilityData : ScriptableObject
     [SerializeField] private List<EvolutionRequirement> evolutionRequirements = new List<EvolutionRequirement>();
 
     public WeaponAbilityType WeaponAbilityType => type;
+
+    /// <summary>
+    /// 공격 능력의 속성. 패시브면 의미가 없으니 TryGetElementType을 쓴다.
+    /// </summary>
+    public MonsterType ElementType => elementType;
+
+    /// <summary>
+    /// 속성이 있는 공격 능력이면 true. 패시브면 false.
+    /// </summary>
+    public bool TryGetElementType(out MonsterType element)
+    {
+        element = elementType;
+        return isActiveAbility;
+    }
 
     public string Title => title ?? string.Empty;
 

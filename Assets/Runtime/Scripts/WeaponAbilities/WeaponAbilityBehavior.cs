@@ -100,11 +100,11 @@ public abstract class WeaponAbilityBehavior<T, K> : MonoBehaviour, IWeaponAbilit
     }
 
     /// <summary>
-    /// 이 공격 능력의 상성 타입. 공격이 아니면 노말.
+    /// 이 공격 능력의 상성 타입. 능력 SO의 속성을 쓰고, 공격이 아니면 노말.
     /// </summary>
     protected MonsterType ResolveAttackType()
     {
-        if (TypeChart.TryGetAttackType(WeaponAbilityType, out var attackType))
+        if (Data != null && Data.TryGetElementType(out var attackType))
         {
             return attackType;
         }

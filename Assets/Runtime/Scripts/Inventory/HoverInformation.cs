@@ -9,8 +9,7 @@ using UnityEngine.UI;
 /// </summary>
 public class HoverInformation : MonoBehaviour
 {
-    private const string STAR_SUFFIX = "성";
-    private const string DAMAGE_PREFIX = "데미지 ";
+    private const string DAMAGE_PREFIX = "공격력: ";
 
     [SerializeField] private GameObject _content;
     [SerializeField] private GameObject _emptyLabel;
@@ -19,13 +18,15 @@ public class HoverInformation : MonoBehaviour
     [SerializeField] private Image _portrait;
     [SerializeField] private TMP_Text _monsterName;
     [SerializeField] private MonsterTypeView _typeView;
-    [SerializeField] private TMP_Text _star;
+    [SerializeField] private Image[] _starImages = new Image[Item.STAR_MAX];
 
     [Header("Ability")]
     [SerializeField] private Image _abilityIcon;
     [SerializeField] private TMP_Text _abilityTitle;
     [SerializeField] private TMP_Text _abilityDescription;
     [SerializeField] private TMP_Text _damage;
+    [Tooltip("공격 능력 제목을 타입 색으로 칠한다")]
+    [SerializeField] private MonsterTypeDatabase _typeDatabase;
 
     [Serializable]
     private class EvolutionView
@@ -41,8 +42,15 @@ public class HoverInformation : MonoBehaviour
     [Tooltip("Basic, Stage1, Stage2, Mega, VMax 순서")]
     [SerializeField] private EvolutionView[] _evolutionViews = new EvolutionView[EvolutionLine.STAGE_COUNT];
 
+    private Color _defaultTitleColor = Color.white;
+
     private void Awake()
     {
+        if (_abilityTitle != null)
+        {
+            _defaultTitleColor = _abilityTitle.color;
+        }
+
         Clear();
     }
 
@@ -67,7 +75,7 @@ public class HoverInformation : MonoBehaviour
             _typeView.Show(visual);
         }
 
-        SetText(_star, item.upgradeLevel + STAR_SUFFIX);
+        InventoryItem.ShowStars(_starImages, item.upgradeLevel);
         ShowAbility(visual != null ? visual.WeaponAbility : null, item.upgradeLevel);
         ShowEvolution(itemManager, item.uid);
     }
@@ -93,6 +101,7 @@ public class HoverInformation : MonoBehaviour
 
         SetImage(_abilityIcon, ability.Icon);
         SetText(_abilityTitle, ability.Title);
+        SetTitleColor(ability);
         SetText(_abilityDescription, ability.Description);
         var level = ability.GetLevel(ItemManager.ToAbilityLevel(star, ability)) as IWeaponAbilityDamage;
         SetActive(_damage, level != null);
@@ -100,6 +109,27 @@ public class HoverInformation : MonoBehaviour
         {
             SetText(_damage, DAMAGE_PREFIX + level.Damage.ToString("0.##"));
         }
+    }
+
+    /// <summary>
+    /// 공격 능력이면 그 타입 색으로, 패시브면 프리팹 기본 색으로 둔다.
+    /// </summary>
+    private void SetTitleColor(WeaponAbilityData ability)
+    {
+        if (_abilityTitle == null)
+        {
+            return;
+        }
+
+        var color = _defaultTitleColor;
+        if (_typeDatabase != null
+            && ability.TryGetElementType(out var attackType)
+            && _typeDatabase.TryGetColor(attackType, out var typeColor))
+        {
+            color = typeColor;
+        }
+
+        _abilityTitle.color = color;
     }
 
     private void ShowEvolution(ItemManager itemManager, int uid)
