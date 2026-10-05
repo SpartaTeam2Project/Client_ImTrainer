@@ -17,7 +17,7 @@ public class FireAttackWeaponAbilityData : GenericWeaponAbilityData<FireAttackWe
 /// 파이어볼 한 레벨의 발사 수치.
 /// </summary>
 [System.Serializable]
-public class FireAttackWeaponAbilityLevel : WeaponAbilityLevel
+public class FireAttackWeaponAbilityLevel : WeaponAbilityLevel, IWeaponAbilityDamage
 {
     [SerializeField] private int projectilesCount = 1;
     [SerializeField] private float timeBetweenFireballs;

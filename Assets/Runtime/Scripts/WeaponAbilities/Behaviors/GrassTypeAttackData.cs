@@ -17,7 +17,7 @@ public class GrassTypeAttackData : GenericWeaponAbilityData<GrassTypeAttackLevel
 /// 도는 별 한 레벨의 수치.
 /// </summary>
 [System.Serializable]
-public class GrassTypeAttackLevel : WeaponAbilityLevel
+public class GrassTypeAttackLevel : WeaponAbilityLevel, IWeaponAbilityDamage
 {
     [SerializeField, Min(0.1f)] private float damage = 1f;
     [SerializeField, Min(0f)] private float abilityCooldown = 6f;

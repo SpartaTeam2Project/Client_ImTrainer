@@ -17,7 +17,7 @@ public class GrassTypeAttackEvolutionData : GenericWeaponAbilityData<GrassTypeAt
 /// 계속 도는 별의 수치.
 /// </summary>
 [System.Serializable]
-public class GrassTypeAttackEvolutionLevel : WeaponAbilityLevel
+public class GrassTypeAttackEvolutionLevel : WeaponAbilityLevel, IWeaponAbilityDamage
 {
     [SerializeField, Min(0.1f)] private float damage = 1f;
     [SerializeField, Min(1)] private int projectilesCount = 6;

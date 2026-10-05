@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// 인게임 장착 칸 여섯 개. 칸을 누르면 선택한다.
@@ -7,6 +8,7 @@ using UnityEngine;
 public class EquipmentUi : MonoBehaviour
 {
     [SerializeField] private InventoryItem[] _slots = new InventoryItem[WeaponSlots.MAX_COUNT];
+    [SerializeField] private Image _trainer;
 
     private Action<int> _onSelect;
 
@@ -36,6 +38,7 @@ public class EquipmentUi : MonoBehaviour
             return;
         }
 
+        RefreshTrainer();
         var equipment = itemManager.GetEquipment(playerId);
         for (var i = 0; i < _slots.Length; i++)
         {
@@ -59,5 +62,24 @@ public class EquipmentUi : MonoBehaviour
             var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
             slot.ShowPokemon(portrait, item.name, item.upgradeLevel, equipment.Stacks[i].Number, false, selected);
         }
+    }
+
+    private void RefreshTrainer()
+    {
+        if (_trainer == null)
+        {
+            return;
+        }
+
+        PlayableCharacterData character = null;
+        if (Managers.Instance.TryGetManager<AccountManager>(out var account))
+        {
+            character = account.ResolveSelectedPlayable();
+        }
+
+        var portrait = character != null ? character.Portrait : null;
+        _trainer.sprite = portrait;
+        _trainer.enabled = portrait != null;
+        _trainer.preserveAspect = true;
     }
 }

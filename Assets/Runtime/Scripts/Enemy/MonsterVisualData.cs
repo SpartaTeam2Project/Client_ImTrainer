@@ -39,6 +39,8 @@ public class MonsterVisualData : ScriptableObject
     [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
 
     [SerializeField] private MonsterVisualData _evolution;
+    [SerializeField] private MonsterVisualData _megaEvolution;
+    [SerializeField] private MonsterVisualData _vmaxEvolution;
 
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
     [SerializeField] private string _monsterName = string.Empty;
@@ -91,6 +93,16 @@ public class MonsterVisualData : ScriptableObject
     /// 3성 세 마리를 합성하면 나오는 다음 종. 최종 진화는 비운다.
     /// </summary>
     public MonsterVisualData Evolution => _evolution;
+
+    /// <summary>
+    /// 메가진화한 종. 없으면 비운다. 정보창 표시 전용이며 획득 규칙은 아직 없다.
+    /// </summary>
+    public MonsterVisualData MegaEvolution => _megaEvolution;
+
+    /// <summary>
+    /// 거다이맥스한 종. 없으면 비운다. 정보창 표시 전용이며 획득 규칙은 아직 없다.
+    /// </summary>
+    public MonsterVisualData VMaxEvolution => _vmaxEvolution;
 
     public MonsterType PrimaryType => _primaryType;
 

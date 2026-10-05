@@ -127,6 +127,8 @@ public class MonsterVisualDataEditor : Editor
         if (expanded)
         {
             DrawField("_evolution", "다음 진화 (Evolution)", "3성 세 마리를 합성하면 나오는 다음 종. 최종 진화는 비운다");
+            DrawField("_megaEvolution", "메가진화 (Mega)", "이 종의 메가진화. 없으면 비운다. 지금은 정보창 표시에만 쓴다");
+            DrawField("_vmaxEvolution", "거다이맥스 (V-Max)", "이 종의 거다이맥스. 없으면 비운다. 지금은 정보창 표시에만 쓴다");
         }
 
         EndCategory(expanded);

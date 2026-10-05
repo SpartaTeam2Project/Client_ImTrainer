@@ -17,7 +17,7 @@ public class WaterTypeAttackData : GenericWeaponAbilityData<WaterTypeAttackLevel
 /// 관통 빔 한 레벨의 수치.
 /// </summary>
 [System.Serializable]
-public class WaterTypeAttackLevel : WeaponAbilityLevel
+public class WaterTypeAttackLevel : WeaponAbilityLevel, IWeaponAbilityDamage
 {
     [SerializeField, Min(0.1f)] private float damage = 8f;
     [SerializeField, Min(0f)] private float abilityCooldown = 2.2f;

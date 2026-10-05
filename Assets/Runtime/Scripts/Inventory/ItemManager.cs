@@ -12,8 +12,11 @@ public class ItemManager : BaseManager
     public const int BUY_PRICE = 10;
     public const int SYNTHESIS_COUNT = 3;
     public const int MIN_EQUIPPED = 1;
+    public const int SHOP_OFFER_COUNT = 4;
+    public const int SHOP_REFRESH_PRICE = 1;
 
     private const int EMPTY_UID = -1;
+    private const int EVOLUTION_SEARCH_DEPTH = 8;
 
     [SerializeField] private MonsterDatabase _monsters;
     [SerializeField] private InventoryUi _inventoryWindow;
@@ -21,6 +24,7 @@ public class ItemManager : BaseManager
     private InventoryUi _window;
     private readonly List<Item> _items = new List<Item>();
     private readonly List<MonsterVisualData> _visuals = new List<MonsterVisualData>();
+    private readonly List<int> _shopPool = new List<int>();
     private readonly Dictionary<int, RunInventory> _runs = new Dictionary<int, RunInventory>();
 
     public string LastMessage { get; private set; } = string.Empty;
@@ -53,6 +57,7 @@ public class ItemManager : BaseManager
     {
         _items.Clear();
         _visuals.Clear();
+        _shopPool.Clear();
         var monsters = _monsters != null ? _monsters.Monsters : System.Array.Empty<MonsterVisualData>();
         for (var i = 0; i < monsters.Length; i++)
         {
@@ -86,6 +91,99 @@ public class ItemManager : BaseManager
 
             _items[i].evolutionUid = FindUid(visual.Evolution);
         }
+
+        for (var i = 0; i < _items.Count; i++)
+        {
+            if (_items[i] != null && FindPreEvolutionUid(i) < 0)
+            {
+                _shopPool.Add(i);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 일반 진화, 메가진화, 거다이맥스 중 하나로 이 종이 되는 이전 종. 없으면 -1.
+    /// </summary>
+    public int FindPreEvolutionUid(int uid)
+    {
+        if (uid < 0)
+        {
+            return EMPTY_UID;
+        }
+
+        for (var i = 0; i < _items.Count; i++)
+        {
+            if (_items[i] == null)
+            {
+                continue;
+            }
+
+            if (_items[i].evolutionUid == uid || FindMegaUid(i) == uid || FindVMaxUid(i) == uid)
+            {
+                return i;
+            }
+        }
+
+        return EMPTY_UID;
+    }
+
+    /// <summary>
+    /// 이 종이 속한 진화 계통을 단계 칸으로 나눈다. 정의가 없으면 모든 칸이 -1이다.
+    /// </summary>
+    public EvolutionLine GetEvolutionLine(int uid)
+    {
+        var line = new EvolutionLine(uid);
+        if (TryGetItem(uid) == null)
+        {
+            return line;
+        }
+
+        var basic = uid;
+        for (var depth = 0; depth < EVOLUTION_SEARCH_DEPTH; depth++)
+        {
+            var previous = FindPreEvolutionUid(basic);
+            if (previous < 0)
+            {
+                break;
+            }
+
+            basic = previous;
+        }
+
+        line.Set(EvolutionStage.Basic, basic);
+        var stage1 = TryGetItem(basic) != null ? TryGetItem(basic).evolutionUid : EMPTY_UID;
+        line.Set(EvolutionStage.Stage1, stage1);
+        var stage2 = TryGetItem(stage1) != null ? TryGetItem(stage1).evolutionUid : EMPTY_UID;
+        line.Set(EvolutionStage.Stage2, stage2);
+        line.Set(EvolutionStage.Mega, FindLastBranch(line, FindMegaUid));
+        line.Set(EvolutionStage.VMax, FindLastBranch(line, FindVMaxUid));
+        return line;
+    }
+
+    private static int FindLastBranch(EvolutionLine line, System.Func<int, int> branch)
+    {
+        for (var stage = EvolutionStage.Stage2; stage >= EvolutionStage.Basic; stage--)
+        {
+            var target = branch(line.Get(stage));
+            if (target >= 0)
+            {
+                return target;
+            }
+        }
+
+        return EMPTY_UID;
+    }
+
+    private int FindMegaUid(int uid)
+    {
+        var visual = GetVisual(uid);
+        return visual != null ? FindUid(visual.MegaEvolution) : EMPTY_UID;
+    }
+
+    private int FindVMaxUid(int uid)
+    {
+        var visual = GetVisual(uid);
+        return visual != null ? FindUid(visual.VMaxEvolution) : EMPTY_UID;
     }
 
     /// <summary>
@@ -167,6 +265,7 @@ public class ItemManager : BaseManager
 
         var run = CreateRun();
         _runs[playerId] = run;
+        RollOffers(run);
         var visual = ResolveStartingVisual();
         var uid = FindUid(visual);
         if (uid < 0)
@@ -212,13 +311,68 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 몬스터볼로 1성 한 마리를 가방에 넣는다.
+    /// 상점 칸. 판이 없으면 null.
     /// </summary>
-    public bool TryPurchase(int playerId, int uid)
+    public IReadOnlyList<ShopOffer> GetShopOffers(int playerId)
+    {
+        return _runs.TryGetValue(playerId, out var run) ? run.Offers : null;
+    }
+
+    /// <summary>
+    /// 몬스터볼을 내고 잠기지 않은 상점 칸을 다시 뽑는다.
+    /// </summary>
+    public bool TryRefreshShop(int playerId)
     {
         var run = GetRun(playerId);
-        var created = CreateItem(uid, Item.STAR_MIN);
-        if (run == null || created == null)
+        if (run == null)
+        {
+            return false;
+        }
+
+        if (!Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies)
+            || !currencies.TryWithdraw(playerId, CurrenciesManager.MONSTER_BALL_ID, SHOP_REFRESH_PRICE, false))
+        {
+            LastMessage = "몬스터볼이 부족합니다.";
+            PublishInventory(playerId);
+            return false;
+        }
+
+        RollOffers(run);
+        LastMessage = "상점을 새로 고쳤습니다.";
+        PublishInventory(playerId);
+        return true;
+    }
+
+    /// <summary>
+    /// 상점 칸 잠금을 바꾼다. 잠긴 칸은 새로고침에서 빠진다.
+    /// </summary>
+    public void ToggleShopLock(int playerId, int offerIndex)
+    {
+        var run = GetRun(playerId);
+        if (run == null || offerIndex < 0 || offerIndex >= run.Offers.Length || run.Offers[offerIndex].Sold)
+        {
+            return;
+        }
+
+        run.Offers[offerIndex].Locked = !run.Offers[offerIndex].Locked;
+        PublishInventory(playerId);
+    }
+
+    /// <summary>
+    /// 상점 칸의 1성 한 마리를 몬스터볼로 사서 가방에 넣는다. 산 칸은 비운다.
+    /// </summary>
+    public bool TryPurchase(int playerId, int offerIndex)
+    {
+        var run = GetRun(playerId);
+        if (run == null || offerIndex < 0 || offerIndex >= run.Offers.Length || run.Offers[offerIndex].Sold)
+        {
+            LastMessage = "살 수 없는 포켓몬입니다.";
+            return false;
+        }
+
+        var offer = run.Offers[offerIndex];
+        var created = CreateItem(offer.Uid, Item.STAR_MIN);
+        if (created == null)
         {
             LastMessage = "살 수 없는 포켓몬입니다.";
             return false;
@@ -238,6 +392,8 @@ public class ItemManager : BaseManager
         }
 
         run.Bag.AddItem(created, 1);
+        offer.Uid = ShopOffer.SOLD_UID;
+        offer.Locked = false;
         LastMessage = created.name + "을 가방에 넣었습니다.";
         FinishBag(playerId);
         return true;
@@ -561,11 +717,32 @@ public class ItemManager : BaseManager
             InventorySize = WeaponSlots.MAX_COUNT
         };
         equipment.EnsureSize();
+        var offers = new ShopOffer[SHOP_OFFER_COUNT];
+        for (var i = 0; i < offers.Length; i++)
+        {
+            offers[i] = new ShopOffer();
+        }
+
         return new RunInventory
         {
             Bag = bag,
-            Equipment = equipment
+            Equipment = equipment,
+            Offers = offers
         };
+    }
+
+    private void RollOffers(RunInventory run)
+    {
+        for (var i = 0; i < run.Offers.Length; i++)
+        {
+            var offer = run.Offers[i];
+            if (offer.Locked)
+            {
+                continue;
+            }
+
+            offer.Uid = _shopPool.Count > 0 ? _shopPool[Random.Range(0, _shopPool.Count)] : ShopOffer.SOLD_UID;
+        }
     }
 
     private RunInventory GetRun(int playerId)
@@ -782,6 +959,91 @@ public class ItemManager : BaseManager
     {
         public InventoryHolder Bag;
         public InventoryHolder Equipment;
+        public ShopOffer[] Offers;
+    }
+}
+
+/// <summary>
+/// 상점 한 칸. 판 동안 플레이어마다 유지된다.
+/// </summary>
+public class ShopOffer
+{
+    public const int SOLD_UID = -1;
+
+    /// <summary>
+    /// 파는 종의 uid. 팔렸으면 SOLD_UID.
+    /// </summary>
+    public int Uid = SOLD_UID;
+
+    /// <summary>
+    /// true면 새로고침해도 바뀌지 않는다.
+    /// </summary>
+    public bool Locked;
+
+    public bool Sold => Uid < 0;
+}
+
+/// <summary>
+/// 진화 계통의 단계 칸. 일반 진화는 최대 3단이고 메가진화와 거다이맥스는 따로 둔다.
+/// </summary>
+public enum EvolutionStage
+{
+    Basic = 0,
+    Stage1 = 1,
+    Stage2 = 2,
+    Mega = 3,
+    VMax = 4
+}
+
+/// <summary>
+/// 한 진화 계통의 단계별 uid와 고른 종의 단계. 없는 칸은 -1이다.
+/// </summary>
+public struct EvolutionLine
+{
+    public const int STAGE_COUNT = 5;
+    public const int NONE = -1;
+
+    private readonly int[] _uids;
+
+    /// <summary>
+    /// 고른 종의 uid.
+    /// </summary>
+    public int SelectedUid { get; }
+
+    public EvolutionLine(int selectedUid)
+    {
+        SelectedUid = selectedUid;
+        _uids = new int[STAGE_COUNT];
+        for (var i = 0; i < _uids.Length; i++)
+        {
+            _uids[i] = NONE;
+        }
+    }
+
+    /// <summary>
+    /// 단계 칸의 uid. 없으면 -1.
+    /// </summary>
+    public int Get(EvolutionStage stage)
+    {
+        var index = (int)stage;
+        return _uids != null && index >= 0 && index < _uids.Length ? _uids[index] : NONE;
+    }
+
+    public void Set(EvolutionStage stage, int uid)
+    {
+        var index = (int)stage;
+        if (_uids != null && index >= 0 && index < _uids.Length)
+        {
+            _uids[index] = uid < 0 ? NONE : uid;
+        }
+    }
+
+    /// <summary>
+    /// 고른 종이 들어간 칸이면 true.
+    /// </summary>
+    public bool IsSelected(EvolutionStage stage)
+    {
+        return SelectedUid >= 0 && Get(stage) == SelectedUid;
     }
 }
 

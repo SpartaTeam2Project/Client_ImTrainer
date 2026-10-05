@@ -64,6 +64,14 @@ public abstract class WeaponAbilityLevel
 }
 
 /// <summary>
+/// 한 번 맞힐 때의 데미지가 있는 레벨. 정보 창이 읽는다.
+/// </summary>
+public interface IWeaponAbilityDamage
+{
+    float Damage { get; }
+}
+
+/// <summary>
 /// 진화에 필요한 능력과 레벨.
 /// </summary>
 [System.Serializable]

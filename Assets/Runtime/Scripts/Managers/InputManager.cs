@@ -15,6 +15,7 @@ public class InputManager : BaseManager
     private bool _storageFilter;
     private bool _actionPressed;
     private bool _inventoryPressed;
+    private bool _shopRefreshPressed;
 
     public Vector2 MovementValue => _movementValue;
 
@@ -126,6 +127,20 @@ public class InputManager : BaseManager
     }
 
     /// <summary>
+    /// 이번 프레임에 상점 새로고침 키가 눌렸으면 true를 반환하고 소비한다. F키다.
+    /// </summary>
+    public bool ConsumeShopRefreshPressed()
+    {
+        if (!_shopRefreshPressed)
+        {
+            return false;
+        }
+
+        _shopRefreshPressed = false;
+        return true;
+    }
+
+    /// <summary>
     /// 자리표시. 입력 담당이 장치 바인딩으로 이 읽기만 교체한다.
     /// </summary>
     private void ReadKeyboardPlaceholder()
@@ -137,6 +152,7 @@ public class InputManager : BaseManager
         _storageFilter = false;
         _actionPressed = false;
         _inventoryPressed = false;
+        _shopRefreshPressed = false;
         var keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -242,6 +258,11 @@ public class InputManager : BaseManager
         if (keyboard.iKey.wasPressedThisFrame)
         {
             _inventoryPressed = true;
+        }
+
+        if (keyboard.fKey.wasPressedThisFrame)
+        {
+            _shopRefreshPressed = true;
         }
     }
 }

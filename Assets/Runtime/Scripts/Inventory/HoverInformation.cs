@@ -1,0 +1,247 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// 인벤토리 창 오른쪽에 고른 포켓몬의 이름, 타입, 성, 무기 능력, 진화 계통을 보여 준다.
+/// 진화 계통은 기본, 1진화, 2진화, 메가진화, 거다이맥스 칸에 고정해서 그린다.
+/// </summary>
+public class HoverInformation : MonoBehaviour
+{
+    private const string STAR_SUFFIX = "성";
+    private const string DAMAGE_PREFIX = "데미지 ";
+    private const string TYPE_SEPARATOR = " / ";
+
+    [SerializeField] private GameObject _content;
+    [SerializeField] private GameObject _emptyLabel;
+
+    [Header("Pokemon")]
+    [SerializeField] private Image _portrait;
+    [SerializeField] private TMP_Text _monsterName;
+    [SerializeField] private TMP_Text _types;
+    [SerializeField] private TMP_Text _star;
+
+    [Header("Ability")]
+    [SerializeField] private Image _abilityIcon;
+    [SerializeField] private TMP_Text _abilityTitle;
+    [SerializeField] private TMP_Text _abilityDescription;
+    [SerializeField] private TMP_Text _damage;
+
+    [Serializable]
+    private class EvolutionView
+    {
+        public GameObject Root;
+        public Image Icon;
+        public Image Highlight;
+        public TMP_Text Stage;
+        public TMP_Text Name;
+    }
+
+    [Header("Evolution")]
+    [Tooltip("Basic, Stage1, Stage2, Mega, VMax 순서")]
+    [SerializeField] private EvolutionView[] _evolutionViews = new EvolutionView[EvolutionLine.STAGE_COUNT];
+
+    private void Awake()
+    {
+        Clear();
+    }
+
+    /// <summary>
+    /// 한 마리의 정보를 채운다. 정의가 없으면 비운다.
+    /// </summary>
+    public void Show(Item item)
+    {
+        if (item == null || Managers.Instance == null || !Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            Clear();
+            return;
+        }
+
+        var visual = itemManager.GetVisual(item.uid);
+        SetVisible(true);
+        var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
+        SetImage(_portrait, portrait);
+        SetText(_monsterName, item.name);
+        SetText(_types, visual != null ? TypeLabel(visual) : string.Empty);
+        SetText(_star, item.upgradeLevel + STAR_SUFFIX);
+        ShowAbility(visual != null ? visual.WeaponAbility : null, item.upgradeLevel);
+        ShowEvolution(itemManager, item.uid);
+    }
+
+    /// <summary>
+    /// 고른 칸이 없을 때의 빈 상태로 둔다.
+    /// </summary>
+    public void Clear()
+    {
+        SetVisible(false);
+    }
+
+    private void ShowAbility(WeaponAbilityData ability, int star)
+    {
+        if (ability == null)
+        {
+            SetImage(_abilityIcon, null);
+            SetText(_abilityTitle, string.Empty);
+            SetText(_abilityDescription, string.Empty);
+            SetActive(_damage, false);
+            return;
+        }
+
+        SetImage(_abilityIcon, ability.Icon);
+        SetText(_abilityTitle, ability.Title);
+        SetText(_abilityDescription, ability.Description);
+        var level = ability.GetLevel(ItemManager.ToAbilityLevel(star, ability)) as IWeaponAbilityDamage;
+        SetActive(_damage, level != null);
+        if (level != null)
+        {
+            SetText(_damage, DAMAGE_PREFIX + level.Damage.ToString("0.##"));
+        }
+    }
+
+    private void ShowEvolution(ItemManager itemManager, int uid)
+    {
+        var line = itemManager.GetEvolutionLine(uid);
+        for (var i = 0; i < _evolutionViews.Length; i++)
+        {
+            var view = _evolutionViews[i];
+            if (view == null)
+            {
+                continue;
+            }
+
+            var stage = (EvolutionStage)i;
+            var target = itemManager.TryGetItem(line.Get(stage));
+            if (view.Root != null)
+            {
+                view.Root.SetActive(target != null);
+            }
+
+            if (target == null)
+            {
+                continue;
+            }
+
+            var visual = itemManager.GetVisual(target.uid);
+            SetImage(view.Icon, visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null);
+            SetText(view.Stage, StageName(stage));
+            SetText(view.Name, target.name);
+            if (view.Highlight != null)
+            {
+                view.Highlight.enabled = line.IsSelected(stage);
+            }
+        }
+    }
+
+    private static string StageName(EvolutionStage stage)
+    {
+        switch (stage)
+        {
+            case EvolutionStage.Stage1:
+                return "1진화";
+            case EvolutionStage.Stage2:
+                return "2진화";
+            case EvolutionStage.Mega:
+                return "메가진화";
+            case EvolutionStage.VMax:
+                return "거다이맥스";
+            default:
+                return "기본";
+        }
+    }
+
+    private void SetVisible(bool visible)
+    {
+        if (_content != null)
+        {
+            _content.SetActive(visible);
+        }
+
+        if (_emptyLabel != null)
+        {
+            _emptyLabel.SetActive(!visible);
+        }
+    }
+
+    private static string TypeLabel(MonsterVisualData visual)
+    {
+        var label = TypeName(visual.PrimaryType);
+        if (visual.HasSecondaryType)
+        {
+            label += TYPE_SEPARATOR + TypeName(visual.SecondaryType);
+        }
+
+        return label;
+    }
+
+    private static string TypeName(MonsterType type)
+    {
+        switch (type)
+        {
+            case MonsterType.Fire:
+                return "불꽃";
+            case MonsterType.Water:
+                return "물";
+            case MonsterType.Grass:
+                return "풀";
+            case MonsterType.Electric:
+                return "전기";
+            case MonsterType.Ice:
+                return "얼음";
+            case MonsterType.Fighting:
+                return "격투";
+            case MonsterType.Poison:
+                return "독";
+            case MonsterType.Ground:
+                return "땅";
+            case MonsterType.Flying:
+                return "비행";
+            case MonsterType.Psychic:
+                return "에스퍼";
+            case MonsterType.Bug:
+                return "벌레";
+            case MonsterType.Rock:
+                return "바위";
+            case MonsterType.Ghost:
+                return "고스트";
+            case MonsterType.Dragon:
+                return "드래곤";
+            case MonsterType.Dark:
+                return "악";
+            case MonsterType.Steel:
+                return "강철";
+            case MonsterType.Fairy:
+                return "페어리";
+            default:
+                return "노말";
+        }
+    }
+
+    private static void SetImage(Image image, Sprite sprite)
+    {
+        if (image == null)
+        {
+            return;
+        }
+
+        image.sprite = sprite;
+        image.enabled = sprite != null;
+        image.preserveAspect = true;
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+        {
+            text.text = value;
+        }
+    }
+
+    private static void SetActive(Component component, bool active)
+    {
+        if (component != null)
+        {
+            component.gameObject.SetActive(active);
+        }
+    }
+}

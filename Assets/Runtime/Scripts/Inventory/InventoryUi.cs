@@ -18,6 +18,7 @@ public class InventoryUi : MonoBehaviour
     [SerializeField] private Canvas _canvas;
     [SerializeField] private EquipmentUi _equipmentUi;
     [SerializeField] private ShopUi _shopUi;
+    [SerializeField] private HoverInformation _information;
     [SerializeField] private InventoryItem _slotPrefab;
     [SerializeField] private InventoryItem _balanceSlot;
     [SerializeField] private TextMeshProUGUI _status;
@@ -83,7 +84,17 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        if (!Managers.Instance.TryGetManager<InputManager>(out var inputManager) || !inputManager.ConsumeInventoryPressed())
+        if (!Managers.Instance.TryGetManager<InputManager>(out var inputManager))
+        {
+            return;
+        }
+
+        if (_open && _shopUi != null && inputManager.ConsumeShopRefreshPressed())
+        {
+            _shopUi.RefreshOffers();
+        }
+
+        if (!inputManager.ConsumeInventoryPressed())
         {
             return;
         }
@@ -189,6 +200,27 @@ public class InventoryUi : MonoBehaviour
             var selectedSlot = _selection == SelectionKind.Equipment ? _selectedIndex : -1;
             _equipmentUi.Refresh(playerId, selectedSlot, SelectEquipment);
         }
+
+        RefreshInformation(itemManager, playerId);
+    }
+
+    private void RefreshInformation(ItemManager itemManager, int playerId)
+    {
+        if (_information == null)
+        {
+            return;
+        }
+
+        var holder = _selection == SelectionKind.Bag ? itemManager.GetInventory(playerId)
+            : _selection == SelectionKind.Equipment ? itemManager.GetEquipment(playerId)
+            : null;
+        if (holder == null || _selectedIndex < 0 || _selectedIndex >= holder.Stacks.Count || holder.Stacks[_selectedIndex].Empty)
+        {
+            _information.Clear();
+            return;
+        }
+
+        _information.Show(holder.Stacks[_selectedIndex].Item);
     }
 
     private void RefreshBalls(int playerId)
