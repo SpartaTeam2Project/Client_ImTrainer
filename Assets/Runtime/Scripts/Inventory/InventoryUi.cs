@@ -20,7 +20,7 @@ public class InventoryUi : MonoBehaviour
     [SerializeField] private ShopUi _shopUi;
     [SerializeField] private HoverInformation _information;
     [SerializeField] private InventoryItem _slotPrefab;
-    [SerializeField] private InventoryItem _balanceSlot;
+    [SerializeField] private ResourceBar _resourceBar;
     [SerializeField] private TextMeshProUGUI _status;
     [SerializeField] private RectTransform _bagContent;
 
@@ -184,7 +184,11 @@ public class InventoryUi : MonoBehaviour
         }
 
         var playerId = playerManager.LocalPlayerId;
-        RefreshBalls(playerId);
+        if (_resourceBar != null)
+        {
+            _resourceBar.Refresh(playerId);
+        }
+
         if (_status != null)
         {
             _status.text = itemManager.LastMessage;
@@ -221,25 +225,6 @@ public class InventoryUi : MonoBehaviour
         }
 
         _information.Show(holder.Stacks[_selectedIndex].Item);
-    }
-
-    private void RefreshBalls(int playerId)
-    {
-        if (_balanceSlot == null)
-        {
-            return;
-        }
-
-        Sprite icon = null;
-        var amount = 0;
-        if (Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
-        {
-            icon = currencies.GetIcon(CurrenciesManager.MONSTER_BALL_ID);
-            var save = currencies.GetCurrency(playerId, CurrenciesManager.MONSTER_BALL_ID, false);
-            amount = save != null ? save.Amount : 0;
-        }
-
-        _balanceSlot.ShowBalance(icon, amount);
     }
 
     private void RebuildBag(ItemManager itemManager, int playerId)
@@ -455,16 +440,6 @@ public class InventoryUi : MonoBehaviour
         Refresh();
     }
 
-    private void HandleCurrencyChanged(CurrencyAmountChanged changed)
-    {
-        if (!_open || !TryGetContext(out _, out var playerId) || changed.PlayerId != playerId)
-        {
-            return;
-        }
-
-        RefreshBalls(playerId);
-    }
-
     private void HandleStateChanged(GameStateChanged changed)
     {
         if (changed.Next == GameState.Playing)
@@ -498,7 +473,6 @@ public class InventoryUi : MonoBehaviour
         }
 
         eventManager.Subscribe<InventoryChanged>(HandleInventoryChanged);
-        eventManager.Subscribe<CurrencyAmountChanged>(HandleCurrencyChanged);
         eventManager.Subscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = true;
     }
@@ -512,7 +486,6 @@ public class InventoryUi : MonoBehaviour
         }
 
         eventManager.Unsubscribe<InventoryChanged>(HandleInventoryChanged);
-        eventManager.Unsubscribe<CurrencyAmountChanged>(HandleCurrencyChanged);
         eventManager.Unsubscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = false;
     }

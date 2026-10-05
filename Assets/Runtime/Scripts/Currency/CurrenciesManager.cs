@@ -8,6 +8,9 @@ using UnityEngine;
 public class CurrenciesManager : BaseManager
 {
     public const string MONSTER_BALL_ID = "monster_ball";
+    public const string SUPER_BALL_ID = "super_ball";
+    public const string HYPER_BALL_ID = "hyper_ball";
+    public const string MASTER_BALL_ID = "master_ball";
     public const string POCKET_DOLLAR_ID = "pocket_dollar";
 
     private const string META_PREFS_PREFIX = "currency_meta_";

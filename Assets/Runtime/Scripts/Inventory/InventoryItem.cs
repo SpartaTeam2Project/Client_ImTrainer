@@ -48,7 +48,6 @@ public class InventoryItem : MonoBehaviour
     /// </summary>
     public void ShowEmpty()
     {
-        SetPokemonVisual(true);
         if (_icon != null)
         {
             _icon.sprite = null;
@@ -78,7 +77,6 @@ public class InventoryItem : MonoBehaviour
     /// </summary>
     public void ShowPokemon(Sprite portrait, string pokemonName, int star, int count, bool showCount, bool selected)
     {
-        SetPokemonVisual(true);
         if (_icon != null)
         {
             _icon.sprite = portrait;
@@ -163,39 +161,6 @@ public class InventoryItem : MonoBehaviour
     }
 
     /// <summary>
-    /// 보유 수량만 가격 자리로 보여 준다.
-    /// </summary>
-    public void ShowBalance(Sprite icon, int amount)
-    {
-        ShowEmpty();
-        SetPokemonVisual(false);
-        ShowPrice(icon, amount);
-        StretchPrice();
-        if (_button != null)
-        {
-            _button.interactable = false;
-        }
-    }
-
-    private void SetPokemonVisual(bool visible)
-    {
-        if (_frame != null)
-        {
-            _frame.gameObject.SetActive(visible);
-        }
-
-        if (_background != null)
-        {
-            _background.gameObject.SetActive(visible);
-        }
-
-        if (_icon != null)
-        {
-            _icon.gameObject.SetActive(visible);
-        }
-    }
-
-    /// <summary>
     /// 프레임 아래 별 이미지를 성 수만큼 켠다.
     /// </summary>
     private void ShowStars(int star)
@@ -214,25 +179,6 @@ public class InventoryItem : MonoBehaviour
 
             _starImages[i].gameObject.SetActive(i < star);
         }
-    }
-
-    private void StretchPrice()
-    {
-        if (_priceRoot == null)
-        {
-            return;
-        }
-
-        var rect = _priceRoot.transform as RectTransform;
-        if (rect == null)
-        {
-            return;
-        }
-
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
     }
 
     private static void ApplyFont(TextMeshProUGUI text)
