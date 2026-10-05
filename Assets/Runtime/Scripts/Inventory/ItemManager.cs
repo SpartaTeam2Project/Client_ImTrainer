@@ -16,10 +16,9 @@ public class ItemManager : BaseManager
     private const int EMPTY_UID = -1;
 
     [SerializeField] private MonsterDatabase _monsters;
-    [SerializeField] private InventoryItem _slotPrefab;
+    [SerializeField] private InventoryUi _inventoryWindow;
 
-    public InventoryItem SlotPrefab => _slotPrefab;
-
+    private InventoryUi _window;
     private readonly List<Item> _items = new List<Item>();
     private readonly List<MonsterVisualData> _visuals = new List<MonsterVisualData>();
     private readonly Dictionary<int, RunInventory> _runs = new Dictionary<int, RunInventory>();
@@ -532,15 +531,18 @@ public class ItemManager : BaseManager
 
     private void EnsureWindow()
     {
-        if (GetComponent<InventoryUi>() != null)
+        if (_window != null)
         {
             return;
         }
 
-        var window = gameObject.AddComponent<InventoryUi>();
-        var equipment = gameObject.AddComponent<EquipmentUi>();
-        var shop = gameObject.AddComponent<ShopUi>();
-        window.Bind(equipment, shop, _slotPrefab);
+        if (_inventoryWindow == null)
+        {
+            Debug.LogError("인벤토리 창 프리팹이 없습니다.");
+            return;
+        }
+
+        _window = Instantiate(_inventoryWindow, transform);
     }
 
     private RunInventory CreateRun()

@@ -8,10 +8,6 @@ using UnityEngine.UI;
 /// </summary>
 public class InventoryUi : MonoBehaviour
 {
-    private const int CANVAS_SORT_ORDER = 600;
-    private const int GRID_COLUMNS = 3;
-    private static readonly Vector2 CELL_SIZE = new Vector2(108f, 132f);
-
     private enum SelectionKind
     {
         None,
@@ -19,13 +15,22 @@ public class InventoryUi : MonoBehaviour
         Equipment
     }
 
-    private Canvas _canvas;
-    private EquipmentUi _equipmentUi;
-    private ShopUi _shopUi;
-    private InventoryItem _slotPrefab;
-    private InventoryItem _balanceSlot;
-    private TextMeshProUGUI _status;
-    private RectTransform _bagContent;
+    [SerializeField] private Canvas _canvas;
+    [SerializeField] private EquipmentUi _equipmentUi;
+    [SerializeField] private ShopUi _shopUi;
+    [SerializeField] private InventoryItem _slotPrefab;
+    [SerializeField] private InventoryItem _balanceSlot;
+    [SerializeField] private TextMeshProUGUI _status;
+    [SerializeField] private RectTransform _bagContent;
+
+    [Header("Actions")]
+    [SerializeField] private Button _synthesizeButton;
+    [SerializeField] private Button _equipButton;
+    [SerializeField] private Button _unequipButton;
+    [SerializeField] private Button _sellButton;
+    [SerializeField] private Button _discardButton;
+    [SerializeField] private Button _closeButton;
+
     private readonly List<InventoryItem> _bagSlots = new List<InventoryItem>();
     private SelectionKind _selection = SelectionKind.None;
     private int _selectedIndex = -1;
@@ -35,14 +40,23 @@ public class InventoryUi : MonoBehaviour
     private bool _holdTime;
     private bool _subscribed;
 
-    /// <summary>
-    /// 장착 칸과 상점을 연결한다.
-    /// </summary>
-    public void Bind(EquipmentUi equipmentUi, ShopUi shopUi, InventoryItem slotPrefab)
+    private void Awake()
     {
-        _equipmentUi = equipmentUi;
-        _shopUi = shopUi;
-        _slotPrefab = slotPrefab;
+        AddAction(_synthesizeButton, SynthesizeSelected);
+        AddAction(_equipButton, EquipSelected);
+        AddAction(_unequipButton, UnequipSelected);
+        AddAction(_sellButton, SellSelected);
+        AddAction(_discardButton, DiscardSelected);
+        AddAction(_closeButton, Close);
+        if (_shopUi != null)
+        {
+            _shopUi.Bind(Refresh);
+        }
+
+        if (_canvas != null)
+        {
+            _canvas.gameObject.SetActive(false);
+        }
     }
 
     private void OnEnable()
@@ -83,49 +97,14 @@ public class InventoryUi : MonoBehaviour
         Open();
     }
 
-    /// <summary>
-    /// 가로로 꽉 채운 사각형을 만든다.
-    /// </summary>
-    public static RectTransform CreateRect(string name, Transform parent)
-    {
-        var rectObject = new GameObject(name);
-        rectObject.transform.SetParent(parent, false);
-        return rectObject.AddComponent<RectTransform>();
-    }
-
-    /// <summary>
-    /// 기본 글꼴로 글자를 만든다.
-    /// </summary>
-    public static TextMeshProUGUI CreateText(string name, RectTransform parent, string value, int fontSize)
-    {
-        var rect = CreateRect(name, parent);
-        var text = rect.gameObject.AddComponent<TextMeshProUGUI>();
-        if (TMP_Settings.defaultFontAsset != null)
-        {
-            text.font = TMP_Settings.defaultFontAsset;
-        }
-
-        text.text = value;
-        text.fontSize = fontSize;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        return text;
-    }
-
-    /// <summary>
-    /// 부모 칸에 맞춘다.
-    /// </summary>
-    public static void Stretch(RectTransform rect)
-    {
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-    }
-
     private void Open()
     {
-        EnsureUi();
+        if (_canvas == null)
+        {
+            Debug.LogError("인벤토리 창 캔버스가 없습니다.");
+            return;
+        }
+
         _open = true;
         _canvas.gameObject.SetActive(true);
         _holdTime = Managers.Instance.CurrentState == GameState.Playing;
@@ -183,80 +162,6 @@ public class InventoryUi : MonoBehaviour
         }
 
         return itemManager.HasRun(playerManager.LocalPlayerId);
-    }
-
-    private void EnsureUi()
-    {
-        if (_canvas != null)
-        {
-            return;
-        }
-
-        var canvasObject = new GameObject("Inventory Window");
-        canvasObject.transform.SetParent(transform, false);
-        _canvas = canvasObject.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = CANVAS_SORT_ORDER;
-        canvasObject.AddComponent<GraphicRaycaster>();
-        var scaler = canvasObject.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        var panel = CreateRect("Panel", canvasObject.transform);
-        Stretch(panel);
-        var panelImage = panel.gameObject.AddComponent<Image>();
-        panelImage.color = new Color(0f, 0f, 0f, 0.72f);
-
-        var title = CreateText("Title", panel, "포켓몬", 36);
-        title.rectTransform.anchorMin = new Vector2(0.5f, 1f);
-        title.rectTransform.anchorMax = new Vector2(0.5f, 1f);
-        title.rectTransform.pivot = new Vector2(0.5f, 1f);
-        title.rectTransform.anchoredPosition = new Vector2(0f, -16f);
-        title.rectTransform.sizeDelta = new Vector2(400f, 48f);
-
-        if (_slotPrefab != null)
-        {
-            _balanceSlot = Instantiate(_slotPrefab, panel);
-            var balanceRect = _balanceSlot.transform as RectTransform;
-            if (balanceRect != null)
-            {
-                balanceRect.anchorMin = new Vector2(0f, 1f);
-                balanceRect.anchorMax = new Vector2(0f, 1f);
-                balanceRect.pivot = new Vector2(0f, 1f);
-                balanceRect.anchoredPosition = new Vector2(24f, -16f);
-                balanceRect.sizeDelta = new Vector2(220f, 44f);
-            }
-        }
-        else
-        {
-            Debug.LogError("인벤토리 칸 프리팹이 없습니다.");
-        }
-
-        _status = CreateText("Status", panel, string.Empty, 20);
-        _status.rectTransform.anchorMin = new Vector2(0.5f, 0f);
-        _status.rectTransform.anchorMax = new Vector2(0.5f, 0f);
-        _status.rectTransform.pivot = new Vector2(0.5f, 0f);
-        _status.rectTransform.anchoredPosition = new Vector2(0f, 78f);
-        _status.rectTransform.sizeDelta = new Vector2(1200f, 32f);
-
-        _bagContent = CreateScroll("Bag", panel, new Vector2(0.36f, 0.18f), new Vector2(0.7f, 0.84f));
-        if (_shopUi != null)
-        {
-            _shopUi.Build(panel, _slotPrefab, Refresh);
-        }
-
-        if (_equipmentUi != null)
-        {
-            _equipmentUi.Build(panel, _slotPrefab);
-        }
-
-        CreateAction(panel, "합성", 0, SynthesizeSelected);
-        CreateAction(panel, "장착", 1, EquipSelected);
-        CreateAction(panel, "해제", 2, UnequipSelected);
-        CreateAction(panel, "판매", 3, SellSelected);
-        CreateAction(panel, "버리기", 4, DiscardSelected);
-        CreateAction(panel, "닫기", 5, Close);
     }
 
     private void Refresh()
@@ -580,57 +485,15 @@ public class InventoryUi : MonoBehaviour
         _subscribed = false;
     }
 
-    private RectTransform CreateScroll(string name, RectTransform parent, Vector2 anchorMin, Vector2 anchorMax)
+    private static void AddAction(Button button, UnityEngine.Events.UnityAction action)
     {
-        var root = CreateRect(name, parent);
-        root.anchorMin = anchorMin;
-        root.anchorMax = anchorMax;
-        root.offsetMin = Vector2.zero;
-        root.offsetMax = Vector2.zero;
-        var scroll = root.gameObject.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        var viewport = CreateRect("Viewport", root);
-        Stretch(viewport);
-        viewport.gameObject.AddComponent<RectMask2D>();
-        var viewportImage = viewport.gameObject.AddComponent<Image>();
-        viewportImage.color = new Color(0.08f, 0.09f, 0.12f, 0.9f);
-        scroll.viewport = viewport;
-        var content = CreateRect("Content", viewport);
-        content.anchorMin = new Vector2(0f, 1f);
-        content.anchorMax = new Vector2(1f, 1f);
-        content.pivot = new Vector2(0.5f, 1f);
-        content.anchoredPosition = Vector2.zero;
-        content.sizeDelta = new Vector2(0f, 0f);
-        var layout = content.gameObject.AddComponent<GridLayoutGroup>();
-        layout.cellSize = CELL_SIZE;
-        layout.spacing = new Vector2(8f, 8f);
-        layout.padding = new RectOffset(8, 8, 8, 8);
-        layout.startCorner = GridLayoutGroup.Corner.UpperLeft;
-        layout.startAxis = GridLayoutGroup.Axis.Horizontal;
-        layout.childAlignment = TextAnchor.UpperLeft;
-        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        layout.constraintCount = GRID_COLUMNS;
-        var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        scroll.content = content;
-        return content;
-    }
+        if (button == null)
+        {
+            Debug.LogError("인벤토리 창 버튼이 없습니다.");
+            return;
+        }
 
-    private void CreateAction(RectTransform parent, string label, int index, UnityEngine.Events.UnityAction action)
-    {
-        var rect = CreateRect(label, parent);
-        rect.anchorMin = new Vector2(0.5f, 0f);
-        rect.anchorMax = new Vector2(0.5f, 0f);
-        rect.pivot = new Vector2(0.5f, 0f);
-        rect.sizeDelta = new Vector2(140f, 42f);
-        rect.anchoredPosition = new Vector2(-380f + index * 152f, 18f);
-        var image = rect.gameObject.AddComponent<Image>();
-        image.color = new Color(0.2f, 0.28f, 0.38f, 1f);
-        var button = rect.gameObject.AddComponent<Button>();
         button.onClick.AddListener(action);
-        var text = CreateText("Label", rect, label, 22);
-        Stretch(text.rectTransform);
     }
 
     private static void ClearSlots(List<InventoryItem> slots)
