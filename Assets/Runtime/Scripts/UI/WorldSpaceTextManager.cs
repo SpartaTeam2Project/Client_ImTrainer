@@ -30,7 +30,7 @@ public class WorldSpaceTextManager : MonoBehaviour
     private const float IMMUNE_FONT_SIZE = 28f;
     private const float IMMUNE_WIDTH = 720f;
 
-    private static readonly Color VERY_SUPER_COLOR = new Color(1f, 0.72f, 0.05f);
+    private static readonly Color VERY_SUPER_COLOR = new Color(1f, 0.15f, 0.1f);
     private static readonly Color SUPER_COLOR = new Color(1f, 0.92f, 0.35f);
     private static readonly Color NEUTRAL_COLOR = new Color(0.98f, 0.98f, 0.98f);
     private static readonly Color IMMUNE_COLOR = Color.white;

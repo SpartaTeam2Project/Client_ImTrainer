@@ -268,7 +268,7 @@ public class PlayerWeapon : MonoBehaviour
         weapon.transform.localRotation = Quaternion.identity;
         weapon.Bind(_owner);
         weapon.ApplyVisual(visual);
-        weapon.Initialize(_playerId);
+        weapon.Initialize(_playerId, slot);
         _slotVisuals[index] = visual;
         return true;
     }

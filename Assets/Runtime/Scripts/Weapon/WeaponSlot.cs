@@ -42,6 +42,14 @@ public static class WeaponSlots
         }
     }
 
+    /// <summary>
+    /// 플레이어 아래쪽(5시, 7시) 칸인지 알려준다. 이 칸은 플레이어 앞에 그린다.
+    /// </summary>
+    public static bool IsBelowOwner(WeaponSlot slot)
+    {
+        return slot == WeaponSlot.Hour5 || slot == WeaponSlot.Hour7;
+    }
+
     private static Vector2 Direction(float degreesClockwiseFromTwelve)
     {
         var radians = degreesClockwiseFromTwelve * Mathf.Deg2Rad;

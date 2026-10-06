@@ -6,7 +6,8 @@ using UnityEngine;
 public class Weapon : MonoBehaviour
 {
     private const float LOOK_AXIS_EPSILON = 0.01f;
-    private const int SORTING_ORDER = 11;
+    private const int BACK_SORTING_ORDER = 9;
+    private const int FRONT_SORTING_ORDER = 11;
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
     private const float ATTACK_POSE_SECONDS = 0.6f;
     private const float SECTOR_DEGREES = 45f;
@@ -52,6 +53,7 @@ public class Weapon : MonoBehaviour
     private bool _fainting;
     private bool _posing;
     private float _resultDelay;
+    private bool _inFrontOfOwner;
     private bool _lastSideRight = true;
 
     public int PlayerId => _playerId;
@@ -148,9 +150,9 @@ public class Weapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 시계 칸에 두고 그림 재생을 시작한다.
+    /// 시계 칸에 두고 그림 재생을 시작한다. 플레이어 아래쪽 칸은 플레이어 앞에 그린다.
     /// </summary>
-    public void Initialize(int playerId)
+    public void Initialize(int playerId, WeaponSlot slot)
     {
         _playerId = playerId;
         if (_stats == null)
@@ -168,7 +170,13 @@ public class Weapon : MonoBehaviour
         _eightWay = EightWay.Right;
         _frameIndex = 0;
         _frameTimer = 0f;
+        _inFrontOfOwner = WeaponSlots.IsBelowOwner(slot);
         CacheRenderer();
+        if (_renderer != null)
+        {
+            _renderer.sortingOrder = _inFrontOfOwner ? FRONT_SORTING_ORDER : BACK_SORTING_ORDER;
+        }
+
         if (HasFrames(CurrentFrames()))
         {
             ShowCurrentFrame();
@@ -260,7 +268,7 @@ public class Weapon : MonoBehaviour
         if (_renderer == null)
         {
             _renderer = gameObject.AddComponent<SpriteRenderer>();
-            _renderer.sortingOrder = SORTING_ORDER;
+            _renderer.sortingOrder = BACK_SORTING_ORDER;
         }
     }
 
@@ -394,7 +402,9 @@ public class Weapon : MonoBehaviour
         CacheRenderer();
         if (_fainting && _renderer != null)
         {
-            _renderer.sortingOrder = PlayerView.DEATH_SORTING_ORDER;
+            _renderer.sortingOrder = _inFrontOfOwner
+                ? PlayerView.WEAPON_FRONT_DEATH_SORTING_ORDER
+                : PlayerView.WEAPON_BACK_DEATH_SORTING_ORDER;
         }
 
         ShowCurrentFrame();
