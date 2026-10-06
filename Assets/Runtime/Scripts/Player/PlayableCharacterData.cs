@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 고를 수 있는 트레이너 한 명. 세대와 성별이 같으면 인트로에서 획득한다.
+/// 고를 수 있는 트레이너 한 명. 인트로 획득 대상이고 세대와 성별이 같으면 인트로에서 획득한다.
 /// </summary>
 [CreateAssetMenu(fileName = "PlayableCharacter", menuName = "Player/Playable Character")]
 public class PlayableCharacterData : ScriptableObject
@@ -12,6 +12,7 @@ public class PlayableCharacterData : ScriptableObject
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
     [SerializeField] private TrainerGender _gender = TrainerGender.Boy;
     [SerializeField] private string _unlockCondition = string.Empty;
+    [SerializeField] private bool _unlockedByIntro;
     [SerializeField] private Sprite _inGameSprite;
     [SerializeField] private Sprite _portrait;
     [SerializeField] private Vector2 _portraitSize;
@@ -35,6 +36,11 @@ public class PlayableCharacterData : ScriptableObject
     public TrainerGender Gender => _gender;
 
     public string UnlockCondition => _unlockCondition ?? string.Empty;
+
+    /// <summary>
+    /// 인트로에서 세대와 성별을 고르면 바로 얻는 캐릭터면 true.
+    /// </summary>
+    public bool UnlockedByIntro => _unlockedByIntro;
 
     public Sprite InGameSprite => _inGameSprite;
 

@@ -196,12 +196,13 @@ public class AccountManager : BaseManager
     }
 
     /// <summary>
-    /// 인트로를 끝낸 뒤, 저장된 세대와 성별이 같은 플레이어블이면 획득이다.
+    /// 인트로를 끝낸 뒤, 인트로 획득 대상이고 저장된 세대와 성별이 같은 플레이어블이면 획득이다.
     /// </summary>
     public bool IsPlayableUnlocked(PlayableCharacterData data)
     {
         return _introCompleted
             && data != null
+            && data.UnlockedByIntro
             && data.Generation == _generation
             && data.Gender == _gender;
     }
@@ -342,7 +343,7 @@ public class AccountManager : BaseManager
         for (var i = 0; i < characters.Length; i++)
         {
             var character = characters[i];
-            if (character != null && character.Generation == generation && character.Gender == gender)
+            if (character != null && character.UnlockedByIntro && character.Generation == generation && character.Gender == gender)
             {
                 return character.name;
             }
