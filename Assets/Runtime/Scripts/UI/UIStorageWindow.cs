@@ -1220,7 +1220,7 @@ public class UIStorageWindow : MonoBehaviour
         for (var i = 0; i < monsters.Length; i++)
         {
             var monster = monsters[i];
-            if (monster == null || !PassesGeneration(monster.Generation))
+            if (monster == null || !monster.Startable || !PassesGeneration(monster.Generation))
             {
                 continue;
             }

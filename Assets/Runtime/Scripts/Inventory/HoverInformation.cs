@@ -182,7 +182,7 @@ public class HoverInformation : MonoBehaviour
             }
 
             SetEvolutionIconSize(view, visual);
-            SetText(view.Stage, StageName(stage));
+            SetText(view.Stage, obtained || stage == EvolutionStage.Basic ? StageName(stage) : UNKNOWN_NAME);
             SetText(view.Name, obtained ? target.name : UNKNOWN_NAME);
             if (view.Highlight != null)
             {

@@ -48,6 +48,7 @@ public class MonsterVisualData : ScriptableObject
     [SerializeField] private string _monsterName = string.Empty;
     [SerializeField, Min(0)] private int _dexNumber;
     [SerializeField] private string _unlockCondition = string.Empty;
+    [SerializeField] private bool _startable;
 
     [SerializeField, Min(MIN_SHOP_PRICE)] private int _shopPrice = DEFAULT_SHOP_PRICE;
 
@@ -121,6 +122,11 @@ public class MonsterVisualData : ScriptableObject
     public int DexNumber => _dexNumber < 0 ? 0 : _dexNumber;
 
     public string UnlockCondition => _unlockCondition ?? string.Empty;
+
+    /// <summary>
+    /// 스토리지에 나와 이번 판 시작 포켓몬으로 고를 수 있으면 true. 데이터베이스에 있어도 꺼져 있으면 스토리지에 없다.
+    /// </summary>
+    public bool Startable => _startable;
 
     /// <summary>
     /// 상점 1성 구매가(몬스터볼). 높은 성은 ItemManager가 이 값으로 계산한다.

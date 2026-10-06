@@ -140,6 +140,7 @@ public class MonsterVisualDataEditor : Editor
         var expanded = BeginCategory("Storage", "도감 정보 (Storage)");
         if (expanded)
         {
+            DrawField("_startable", "시작 가능 (Startable)", "켜면 스토리지에 나오고 시작 포켓몬으로 고를 수 있다");
             DrawField("_generation", "세대 (Generation)");
             DrawField("_monsterName", "이름 (Name)");
             DrawField("_dexNumber", "도감 번호 (Dex No.)");
