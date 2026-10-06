@@ -274,6 +274,196 @@ MonoBehaviour:
     _disableOffscreenTeleport: 0
   _circularSpawn: 0
   _continuousSpawnPerSecond: 1
+--- !u!114 &-2707185418244136181
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4e8a1b27d3f4e6a9c0b1d2e3f405162, type: 3}
+  m_Name: BossEncounter
+  m_EditorClassIdentifier: Assembly-CSharp::BossEncounter
+  _boss: {fileID: 11400000, guid: efefbe1ce2025814fbc84f976330dad0, type: 2}
+  _partyStats:
+  - _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skillCooldown: 4
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
+  _fixedBoss:
+    _monster: {fileID: 0}
+    _id: 0
+    _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skill: 0
+    _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
+  _candidates:
+  - _monster: {fileID: 0}
+    _id: 0
+    _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skill: 0
+    _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
+  - _monster: {fileID: 0}
+    _id: 0
+    _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skill: 0
+    _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
+  - _monster: {fileID: 0}
+    _id: 0
+    _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skill: 0
+    _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
+  - _monster: {fileID: 0}
+    _id: 0
+    _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skill: 0
+    _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
+  - _monster: {fileID: 0}
+    _id: 0
+    _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skill: 0
+    _skillCooldown: 4
+    _projectileSprite: {fileID: 0}
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
+  _spawnCount: 1
+  _fence:
+    _width: 19
+    _height: 11
+    _left: {fileID: 4288094497685832703, guid: 28d7bd304495ffd43aa2446a694a06ea, type: 3}
+    _leftScale: 3
+    _right: {fileID: 4288094497685832703, guid: 28d7bd304495ffd43aa2446a694a06ea, type: 3}
+    _rightScale: 3
+    _edge: {fileID: 8463127396020215398, guid: 28d7bd304495ffd43aa2446a694a06ea, type: 3}
+    _bottomScale: 4
+    _topScale: 4
+    _gap: 0
+  _versus:
+    _view: {fileID: 100005, guid: c4a81e7b2d9f4a6e8b0c1d3f5a7e9b24, type: 3}
+    _bar: {fileID: 3325770947599347893, guid: add66a62d55f0414e821ea3017afbd53, type: 3}
+    _playerBack: {fileID: 2082519854218924424, guid: b89eaa9fdac06f2468c31034dea5cd0e, type: 3}
+    _slashFrames:
+    - {fileID: -3540493305216186781, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 7295544397716448799, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -4359212648857293278, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 8368116867219356975, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 3369856475691337903, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 848044966800087072, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -1751479018588303131, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -1059070245868772214, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 5018519123758382568, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -1013173336762365904, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -214862732663840098, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -3022407057890715843, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 9135972236687946346, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -2245280504238101990, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 2919065589398955830, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -4388483414469389901, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 7707646834697982216, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -3140990400715828157, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -6999100499530565139, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 6565827094397597195, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -5461547200032000654, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -2043029699240144087, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -2902566073173241304, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 7822168316514531359, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 8540927681857582863, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 6153372961262967747, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 2109096182139980169, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -1883355641272328176, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -6303249907740865887, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 1130967159156164044, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -1399600036234413340, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 1806541854844600213, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 5551514790808779939, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -8149648308325859895, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -1298615344772661809, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 8019166389062361155, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 6028465150065452591, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 8833338301486421476, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 7878670810959649079, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -4844221371018124, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -5131592159610070427, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -8709611757888834532, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -4891669654734578856, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 9188154325426409202, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 6708547937280965960, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -5883303458110724576, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: 5935606333061284031, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    - {fileID: -3885263697670205063, guid: e7f7676635773ee4fb95e6dc912bc733, type: 3}
+    _mark: {fileID: 4311642777761890676, guid: 77ee166f82008884fa7ebee5ac4cc92f, type: 3}
 --- !u!114 &-1898154346288799072
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -369,7 +559,8 @@ MonoBehaviour:
   - {fileID: 4423064944439259008}
   - {fileID: 2946396655952594613}
   - {fileID: 3383902437049378550}
-  m_FixedDuration: 600
+  - {fileID: 571434451752570868}
+  m_FixedDuration: 360
   m_EditorSettings:
     m_Framerate: 60
     m_ScenePreview: 1
@@ -400,7 +591,7 @@ MonoBehaviour:
     m_Start: 0
     m_ClipIn: 0
     m_Asset: {fileID: -3025200602204491224}
-    m_Duration: 600
+    m_Duration: 359.999999999999
     m_TimeScale: 1
     m_ParentTrack: {fileID: 830000001}
     m_EaseInDuration: 0
@@ -480,6 +671,98 @@ MonoBehaviour:
   _attackDistance: 0.45
   _overrideScale: 0
   _scale: 2.7
+--- !u!114 &571434451752570868
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d27d6587d5a1b5841961da61b5110cbb, type: 3}
+  m_Name: "\uBCF4\uC2A4_\uBE44\uC8FC\uAE30"
+  m_EditorClassIdentifier: Assembly-CSharp::BossEncounterTrack
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 30
+    m_ClipIn: 0
+    m_Asset: {fileID: -2707185418244136181}
+    m_Duration: 5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 571434451752570868}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: BossEncounter
+  m_Markers:
+    m_Objects: []
 --- !u!114 &1622896086405781825
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -637,7 +920,7 @@ MonoBehaviour:
     m_Start: 15
     m_ClipIn: 0
     m_Asset: {fileID: -1478610277143491141}
-    m_Duration: 585
+    m_Duration: 344.999999999999
     m_TimeScale: 1
     m_ParentTrack: {fileID: 1798795371173154110}
     m_EaseInDuration: 0
@@ -742,7 +1025,7 @@ MonoBehaviour:
     m_Start: 15
     m_ClipIn: 0
     m_Asset: {fileID: -3516795452157970342}
-    m_Duration: 585
+    m_Duration: 344.999999999999
     m_TimeScale: 1
     m_ParentTrack: {fileID: 1896935147936480905}
     m_EaseInDuration: 0
@@ -1021,7 +1304,7 @@ MonoBehaviour:
     m_Start: 30
     m_ClipIn: 0
     m_Asset: {fileID: 8451467175314029903}
-    m_Duration: 570
+    m_Duration: 329.999999999999
     m_TimeScale: 1
     m_ParentTrack: {fileID: 2946396655952594613}
     m_EaseInDuration: 0
@@ -1114,6 +1397,31 @@ MonoBehaviour:
   m_Name: BossEncounter
   m_EditorClassIdentifier: Assembly-CSharp::BossEncounter
   _boss: {fileID: 11400000, guid: 9a4f2c8e1b6d4a0f8e3c5b7d9a1e0f26, type: 2}
+  _partyStats:
+  - _maxHealth: 180
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skillCooldown: 3
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 10
+  - _maxHealth: 30
+    _contactDamage: 4
+    _moveSpeed: 1.2
+    _attackKind: 0
+    _skillCooldown: 4
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 2.7
   _fixedBoss:
     _monster: {fileID: 11400000, guid: 08d59cce9609425dbee57361332d7038, type: 2}
     _id: 3
@@ -1288,7 +1596,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d27d6587d5a1b5841961da61b5110cbb, type: 3}
-  m_Name: Boss Encounter Track
+  m_Name: "\uBCF4\uC2A4_\uADF8\uB9B0"
   m_EditorClassIdentifier: Assembly-CSharp::BossEncounterTrack
   m_Version: 3
   m_AnimClip: {fileID: 0}
@@ -1300,7 +1608,7 @@ MonoBehaviour:
   m_Children: []
   m_Clips:
   - m_Version: 1
-    m_Start: 20
+    m_Start: 120
     m_ClipIn: 0
     m_Asset: {fileID: 3185281340309028865}
     m_Duration: 5
@@ -1395,7 +1703,7 @@ MonoBehaviour:
     m_Start: 30
     m_ClipIn: 0
     m_Asset: {fileID: -1898154346288799072}
-    m_Duration: 570
+    m_Duration: 329.999999999999
     m_TimeScale: 1
     m_ParentTrack: {fileID: 4423064944439259008}
     m_EaseInDuration: 0

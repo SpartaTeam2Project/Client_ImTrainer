@@ -52,7 +52,9 @@ public class BossEncounter : PlayableAsset
             DownFrames = ResolveDownFrames(),
             SideFrame = ResolveSideFrame(),
             StandingFrame = ResolveStandingFrame(),
+            RevealFrame = ResolveRevealFrame(),
             Exclamation = _boss != null ? _boss.Exclamation : null,
+            Kind = _boss != null ? _boss.EntranceKind : BossEntranceKind.WalkIn,
             Versus = CreateVersusCast()
         };
     }
@@ -243,6 +245,17 @@ public class BossEncounter : PlayableAsset
         if (HasFrames(idleLeft))
         {
             return idleLeft[0];
+        }
+
+        return null;
+    }
+
+    private Sprite ResolveRevealFrame()
+    {
+        var idleRight = _boss != null ? _boss.IdleRight : null;
+        if (HasFrames(idleRight))
+        {
+            return idleRight[0];
         }
 
         return null;

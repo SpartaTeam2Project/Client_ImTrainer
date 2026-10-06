@@ -24,6 +24,8 @@ public static class BossTrainerVersus
     private const float SCROLL_WIDTHS_PER_SECOND = 0.75f;
     private const float SLIDE_SECONDS = 0.55f;
     private const float FRAME_SECONDS = 0.16f;
+    private const int SHORT_RIVAL_FRAME_COUNT = 3;
+    private const float SHORT_RIVAL_FRAME_SCALE = 2f;
     private const float SLASH_FRAME_SECONDS = 0.06f;
     private const float SLASH_SWEEP_SECONDS = 0.4f;
     private const float SLASH_STAGGER_SECONDS = 0.06f;
@@ -354,7 +356,10 @@ public static class BossTrainerVersus
                 _rivalImage.rectTransform.sizeDelta = frames[i].rect.size * _rivalPixelScale;
             }
 
-            if (!await WaitSecondsAsync(token, FRAME_SECONDS))
+            var frameSeconds = frames.Length <= SHORT_RIVAL_FRAME_COUNT
+                ? FRAME_SECONDS * SHORT_RIVAL_FRAME_SCALE
+                : FRAME_SECONDS;
+            if (!await WaitSecondsAsync(token, frameSeconds))
             {
                 return false;
             }
