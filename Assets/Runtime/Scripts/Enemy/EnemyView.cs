@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 적 걷기 프레임을 재생한다. 발사 중이고 사격 그림이 있으면 그 프레임을 쓴다.
-/// 8방향 그림은 스폰 때 받은 ScriptableObject만 쓴다.
+/// 8방향 그림은 스폰 때 받은 종의 MonsterAnimationSet만 쓴다.
 /// </summary>
 public class EnemyView : MonoBehaviour
 {
@@ -48,6 +48,7 @@ public class EnemyView : MonoBehaviour
     [SerializeField] private Sprite[] _walkSprites;
 
     private MonsterVisualData _visual;
+    private MonsterAnimationSet _animations;
     private bool _isMoving;
     private bool _isShooting;
     private bool _isAttacking;
@@ -94,23 +95,24 @@ public class EnemyView : MonoBehaviour
     {
         CancelHurt();
         _visual = visual;
+        _animations = MonsterAnimationLoader.Get(visual);
         _frameIndex = 0;
         _frameTimer = 0f;
         _hasVisual = false;
-        FitHitCollider(FindLargestSprite(visual));
+        FitHitCollider(FindLargestSprite(_animations));
     }
 
     /// <summary>
     /// hurt 칸에 스프라이트가 있으면 true.
     /// </summary>
-    public bool HasHurtSprite => _visual != null && _visual.Hurt != null && _visual.Hurt.HasFrames();
+    public bool HasHurtSprite => _animations != null && _animations.Hurt != null && _animations.Hurt.HasFrames();
 
     /// <summary>
     /// 지금 방향의 hurt 프레임을 한 번 재생하고 마지막 장을 잠시 유지한다.
     /// </summary>
     public async UniTask PlayHurtAsync()
     {
-        var frames = GetDirectionFrames(_visual != null ? _visual.Hurt : null, _eightWay);
+        var frames = GetDirectionFrames(_animations != null ? _animations.Hurt : null, _eightWay);
         if (!HasFrames(frames))
         {
             return;
@@ -290,7 +292,8 @@ public class EnemyView : MonoBehaviour
     }
 
     /// <summary>
-    /// 맞는 판정을 종 그림 중 가장 큰 장에 한 번만 맞춘다. 프레임마다 바꾸면 겹침이 끊긴다.
+    /// 맞는 판정을 걷기 그림 중 가장 큰 장에 한 번만 맞춘다. 걷기가 비면 공격, 피격, 사격 그림을 본다.
+    /// 프레임마다 바꾸면 겹침이 끊긴다.
     /// </summary>
     private void FitHitCollider(Sprite sprite)
     {
@@ -299,12 +302,26 @@ public class EnemyView : MonoBehaviour
             return;
         }
 
-        var bounds = sprite.bounds;
+        var bounds = BodyBounds(sprite);
         _hitCollider.offset = bounds.center;
         _hitCollider.radius = Mathf.Max(bounds.extents.x, bounds.extents.y);
     }
 
-    private static Sprite FindLargestSprite(MonsterVisualData visual)
+    // 칸 크기 격자로 자른 시트는 sprite.bounds가 빈 여백까지 포함한 칸 전체다.
+    // Tight 메시가 잘라 낸 그림 영역(textureRect)으로 몸 크기를 잰다. 아틀라스에 Tight로 묶이면 textureRect를 못 써서 bounds를 쓴다.
+    private static Bounds BodyBounds(Sprite sprite)
+    {
+        if (sprite.packed && sprite.packingMode == SpritePackingMode.Tight)
+        {
+            return sprite.bounds;
+        }
+
+        var size = sprite.textureRect.size;
+        var center = sprite.textureRectOffset + size * 0.5f - sprite.pivot;
+        return new Bounds(center / sprite.pixelsPerUnit, size / sprite.pixelsPerUnit);
+    }
+
+    private static Sprite FindLargestSprite(MonsterAnimationSet visual)
     {
         if (visual == null)
         {
@@ -313,7 +330,13 @@ public class EnemyView : MonoBehaviour
 
         Sprite largest = null;
         var largestSize = 0f;
+        // 걷기 그림이 몸 크기 기준이다. 격자로 자른 시트는 공격, 피격 장에서 몸이 칸 안을 움직여서 판정이 한쪽으로 쏠린다.
         Consider(visual.Walk, ref largest, ref largestSize);
+        if (largest != null)
+        {
+            return largest;
+        }
+
         Consider(visual.Attack, ref largest, ref largestSize);
         Consider(visual.Hurt, ref largest, ref largestSize);
         Consider(visual.Shoot, ref largest, ref largestSize);
@@ -352,7 +375,8 @@ public class EnemyView : MonoBehaviour
                 continue;
             }
 
-            var size = Mathf.Max(sprite.bounds.extents.x, sprite.bounds.extents.y);
+            var extents = BodyBounds(sprite).extents;
+            var size = Mathf.Max(extents.x, extents.y);
             if (size <= largestSize)
             {
                 continue;
@@ -401,7 +425,7 @@ public class EnemyView : MonoBehaviour
     {
         if (_isAttacking)
         {
-            var attack = GetDirectionFrames(_visual != null ? _visual.Attack : null, _eightWay);
+            var attack = GetDirectionFrames(_animations != null ? _animations.Attack : null, _eightWay);
             if (HasFrames(attack))
             {
                 return attack;
@@ -410,7 +434,7 @@ public class EnemyView : MonoBehaviour
 
         if (_isShooting)
         {
-            var shoot = GetDirectionFrames(_visual != null ? _visual.Shoot : null, _eightWay);
+            var shoot = GetDirectionFrames(_animations != null ? _animations.Shoot : null, _eightWay);
             if (HasFrames(shoot))
             {
                 return shoot;
@@ -424,7 +448,7 @@ public class EnemyView : MonoBehaviour
     {
         if (UsesEightDirection)
         {
-            return GetDirectionFrames(_visual != null ? _visual.Walk : null, _eightWay);
+            return GetDirectionFrames(_animations != null ? _animations.Walk : null, _eightWay);
         }
 
         return _walkSprites;

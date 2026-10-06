@@ -28,6 +28,7 @@ public class Managers : MonoBehaviour
     [SerializeField] private SceneLoadManager _sceneLoadManager;
     [SerializeField] private TrainingManager _trainingManager;
     [SerializeField] private ItemManager _itemManager;
+    [SerializeField] private AddressableManager _addressableManager;
     [SerializeField] private UISettingsWindow _settingsWindow;
 
     private readonly Dictionary<System.Type, BaseManager> _managers = new Dictionary<System.Type, BaseManager>();
@@ -70,6 +71,7 @@ public class Managers : MonoBehaviour
         RegisterManager(_sceneLoadManager);
         RegisterManager(_trainingManager);
         RegisterManager(_itemManager);
+        RegisterManager(_addressableManager);
     }
 
     private void Start()
@@ -165,7 +167,7 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 필드, 적, 경험치, 드롭, 재화, 무기, 계정, 씬, 트레이닝, 인벤토리 순서로 초기화한다.
+    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 필드, 적, 경험치, 드롭, 재화, 무기, 계정, 씬, 트레이닝, 인벤토리, 업그레이드, Addressables 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
@@ -247,6 +249,11 @@ public class Managers : MonoBehaviour
         if (TryGetManager<UpgradeManager>(out var upgradeManager))
         {
             await upgradeManager.InitializeAsync();
+        }
+
+        if (TryGetManager<AddressableManager>(out var addressableManager))
+        {
+            await addressableManager.InitializeAsync();
         }
 
         ChangeState(GameState.Menu);

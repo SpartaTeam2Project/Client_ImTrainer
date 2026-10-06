@@ -1,9 +1,11 @@
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
 
 /// <summary>
-/// 포켓몬 한 종의 그림, 타입, 크기. 몬스터와 무기가 같은 에셋을 쓴다.
-/// 걷기 외 동작은 비워 둘 수 있다. 추적, 사격, 보스 동작은 필요한 칸만 쓴다.
+/// 포켓몬 한 종의 타입, 크기, 도감 정보, 아이콘. 몬스터와 무기가 같은 에셋을 쓴다.
+/// 동작 그림은 텍스처가 커서 MonsterAnimationSet으로 떼어 두고 Addressables 참조만 갖는다.
+/// DB와 UI가 이 에셋을 전부 참조해도 동작 그림은 올라오지 않는다. 그림은 MonsterAnimationLoader로 받는다.
 /// 아이콘과 정보창 그림은 프레임 배열로 둔다. 재생 전에는 첫 장만 보여 준다.
 /// 인스펙터는 MonsterVisualDataEditor가 그린다.
 /// </summary>
@@ -17,22 +19,7 @@ public class MonsterVisualData : ScriptableObject
 
     [SerializeField, Min(0.01f)] private float _scale = DEFAULT_SCALE;
 
-    [SerializeField] private EightDirectionFrames _walk = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _sleep = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _hurt = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _attack = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _charge = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _shoot = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _strike = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _swing = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _rotate = new EightDirectionFrames();
-    [SerializeField] private EightDirectionFrames _hop = new EightDirectionFrames();
-
-    [SerializeField] private Sprite[] _faintLeft = new Sprite[0];
-    [SerializeField] private Sprite[] _faintRight = new Sprite[0];
-
-    [SerializeField] private Sprite[] _poseLeft = new Sprite[0];
-    [SerializeField] private Sprite[] _poseRight = new Sprite[0];
+    [SerializeField] private AssetReferenceT<MonsterAnimationSet> _animations = new AssetReferenceT<MonsterAnimationSet>(string.Empty);
 
     [SerializeField] private WeaponAbilityData _ability;
 
@@ -58,39 +45,10 @@ public class MonsterVisualData : ScriptableObject
 
     public float Scale => _scale > 0f ? _scale : DEFAULT_SCALE;
 
-    public EightDirectionFrames Walk => _walk;
-
-    public EightDirectionFrames Sleep => _sleep;
-
-    public EightDirectionFrames Hurt => _hurt;
-
-    public EightDirectionFrames Attack => _attack;
-
-    public EightDirectionFrames Charge => _charge;
-
-    public EightDirectionFrames Shoot => _shoot;
-
-    public EightDirectionFrames Strike => _strike;
-
-    public EightDirectionFrames Swing => _swing;
-
-    public EightDirectionFrames Rotate => _rotate;
-
-    public EightDirectionFrames Hop => _hop;
-
     /// <summary>
-    /// 기절 그림. 좌우 두 방향만 있다.
+    /// 동작 그림 세트의 Addressables 참조. 형태가 기본형 그림을 같이 쓰면 기본형 세트를 가리킨다.
     /// </summary>
-    public Sprite[] FaintLeft => _faintLeft;
-
-    public Sprite[] FaintRight => _faintRight;
-
-    /// <summary>
-    /// 성공 포즈 그림. 좌우 두 방향만 있다.
-    /// </summary>
-    public Sprite[] PoseLeft => _poseLeft;
-
-    public Sprite[] PoseRight => _poseRight;
+    public AssetReferenceT<MonsterAnimationSet> Animations => _animations;
 
     public WeaponAbilityData WeaponAbility => _ability;
 
@@ -198,20 +156,6 @@ public class MonsterVisualData : ScriptableObject
 
     private void EnsureFrames()
     {
-        _walk ??= new EightDirectionFrames();
-        _sleep ??= new EightDirectionFrames();
-        _hurt ??= new EightDirectionFrames();
-        _attack ??= new EightDirectionFrames();
-        _charge ??= new EightDirectionFrames();
-        _shoot ??= new EightDirectionFrames();
-        _strike ??= new EightDirectionFrames();
-        _swing ??= new EightDirectionFrames();
-        _rotate ??= new EightDirectionFrames();
-        _hop ??= new EightDirectionFrames();
-        _faintLeft ??= new Sprite[0];
-        _faintRight ??= new Sprite[0];
-        _poseLeft ??= new Sprite[0];
-        _poseRight ??= new Sprite[0];
         _icon ??= new Sprite[0];
         _infoAnimation ??= new Sprite[0];
     }

@@ -27,6 +27,7 @@ GameObject:
   - component: {fileID: 3357020527997165755}
   - component: {fileID: 1674151062905869692}
   - component: {fileID: 5910283746501928374}
+  - component: {fileID: 7319027461358201946}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -90,6 +91,7 @@ MonoBehaviour:
   _sceneLoadManager: {fileID: 3936094867411503548}
   _trainingManager: {fileID: 3357020527997165755}
   _itemManager: {fileID: 5910283746501928374}
+  _addressableManager: {fileID: 7319027461358201946}
   _settingsWindow: {fileID: 3061198548743366585}
 --- !u!114 &1728748694618320786
 MonoBehaviour:
@@ -304,6 +306,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemManager
   _monsters: {fileID: 11400000, guid: 7c2a9e4b1d6f48a0b3e5c7d9f1a28460, type: 2}
   _inventoryWindow: {fileID: 5886066596299180750, guid: f763d2026a7b90b40a48cced2f396dd7, type: 3}
+--- !u!114 &7319027461358201946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5778147509170455382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8460206b17534bbc86d4b8b5f03f11b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &5256769204921313244
 PrefabInstance:
   m_ObjectHideFlags: 0

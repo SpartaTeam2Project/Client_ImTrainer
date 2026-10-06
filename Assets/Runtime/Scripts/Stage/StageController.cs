@@ -25,6 +25,11 @@ public class StageController : MonoBehaviour
 
     public StageResult LastResult { get; private set; }
 
+    /// <summary>
+    /// 이 씬이 진행할 스테이지. 판 시작 전에 몬스터 그림을 미리 불러올 때 쓴다.
+    /// </summary>
+    public StageData StageData => _stageData;
+
     private void OnEnable()
     {
         if (Managers.Instance == null)

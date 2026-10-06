@@ -11,8 +11,10 @@ public class MonsterVisualDataEditor : Editor
     private const string FOLD_KEY_PREFIX = "MonsterVisualDataEditor.";
     private const float LABEL_WIDTH = 170f;
     private const float UNLOCK_CONDITION_MIN_HEIGHT = 40f;
+    private const float SET_BUTTON_WIDTH = 70f;
 
-    private static readonly string[] EIGHT_DIRECTION_FIELDS =
+    // SpriteCollab 시트 행 순서와 같다. MonsterSpriteImporter가 행을 방향 칸에 넣을 때 쓴다.
+    internal static readonly string[] EIGHT_DIRECTION_FIELDS =
     {
         "_down", "_downRight", "_right", "_upRight", "_up", "_upLeft", "_left", "_downLeft",
     };
@@ -35,6 +37,8 @@ public class MonsterVisualDataEditor : Editor
     };
 
     private static GUIStyle _textAreaStyle;
+
+    private Editor _animationEditor;
 
     /// <summary>
     /// 크기, 필드 애니메이션, 무기 능력, 타입, 진화, 도감 정보, 상점, UI 애니메이션 순으로 그린다.
@@ -75,21 +79,59 @@ public class MonsterVisualDataEditor : Editor
         EndCategory(expanded);
     }
 
+    private void OnDisable()
+    {
+        if (_animationEditor != null)
+        {
+            DestroyImmediate(_animationEditor);
+        }
+    }
+
+    // 동작 그림은 MonsterAnimationSet에 있다. 연결된 세트의 인스펙터를 이 안에 그대로 그려서 한 화면에서 고친다.
     private void DrawFieldAnimation()
     {
         var expanded = BeginCategory("Animation", "필드 애니메이션 (Animation)");
         if (expanded)
         {
-            for (var i = 0; i < EIGHT_DIRECTION_ACTION_FIELDS.Length; i++)
+            DrawField("_animations", "동작 그림 세트 (Animations)", "Addressables로 필요할 때만 불러온다. 형태는 기본형 세트를 같이 쓸 수 있다");
+            var set = serializedObject.isEditingMultipleObjects ? null : MonsterAnimationAssets.Find((MonsterVisualData)target);
+            if (set == null)
             {
-                DrawEightDirectionAction(EIGHT_DIRECTION_ACTION_FIELDS[i], EIGHT_DIRECTION_ACTION_LABELS[i]);
+                EditorGUILayout.HelpBox("연결된 세트가 없다. Tools/Monster/SpriteCollab 스프라이트 가져오기로 만든다.", MessageType.Info);
             }
+            else
+            {
+                // 아래 칸은 이 SO가 아니라 세트 에셋의 내용이다. 여기서 고쳐도 세트 파일이 바뀐다.
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.HelpBox($"아래 동작 칸은 별도 에셋 {set.name}의 내용이다. 이 SO에는 참조만 있다.", MessageType.None);
+                    if (GUILayout.Button("세트 열기", GUILayout.Width(SET_BUTTON_WIDTH)))
+                    {
+                        EditorGUIUtility.PingObject(set);
+                        Selection.activeObject = set;
+                    }
+                }
 
-            DrawTwoDirectionAction("Faint", "기절 (Faint)", "_faintLeft", "_faintRight");
-            DrawTwoDirectionAction("Pose", "포즈 (Pose)", "_poseLeft", "_poseRight");
+                CreateCachedEditor(set, typeof(MonsterAnimationSetEditor), ref _animationEditor);
+                _animationEditor.OnInspectorGUI();
+            }
         }
 
         EndCategory(expanded);
+    }
+
+    /// <summary>
+    /// 8방향 동작 칸들과 기절, 포즈 칸을 그린다. MonsterAnimationSetEditor가 쓴다.
+    /// </summary>
+    internal static void DrawActions(SerializedObject serialized)
+    {
+        for (var i = 0; i < EIGHT_DIRECTION_ACTION_FIELDS.Length; i++)
+        {
+            DrawEightDirectionAction(serialized, EIGHT_DIRECTION_ACTION_FIELDS[i], EIGHT_DIRECTION_ACTION_LABELS[i]);
+        }
+
+        DrawTwoDirectionAction(serialized, "Faint", "기절 (Faint)", "_faintLeft", "_faintRight");
+        DrawTwoDirectionAction(serialized, "Pose", "포즈 (Pose)", "_poseLeft", "_poseRight");
     }
 
     private void DrawWeaponAbility()
@@ -174,9 +216,9 @@ public class MonsterVisualDataEditor : Editor
         EndCategory(expanded);
     }
 
-    private void DrawEightDirectionAction(string field, string label)
+    private static void DrawEightDirectionAction(SerializedObject serialized, string field, string label)
     {
-        var action = serializedObject.FindProperty(field);
+        var action = serialized.FindProperty(field);
         var filled = 0;
         for (var i = 0; i < EIGHT_DIRECTION_FIELDS.Length; i++)
         {
@@ -201,10 +243,10 @@ public class MonsterVisualDataEditor : Editor
         EditorGUI.indentLevel--;
     }
 
-    private void DrawTwoDirectionAction(string key, string label, string leftField, string rightField)
+    private static void DrawTwoDirectionAction(SerializedObject serialized, string key, string label, string leftField, string rightField)
     {
-        var left = serializedObject.FindProperty(leftField);
-        var right = serializedObject.FindProperty(rightField);
+        var left = serialized.FindProperty(leftField);
+        var right = serialized.FindProperty(rightField);
         var filled = (HasSprites(left) ? 1 : 0) + (HasSprites(right) ? 1 : 0);
         var title = $"{label}   좌우 중 {filled}칸";
         if (!BeginAction(key, title))

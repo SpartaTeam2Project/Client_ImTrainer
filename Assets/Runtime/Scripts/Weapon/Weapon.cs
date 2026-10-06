@@ -41,6 +41,7 @@ public class Weapon : MonoBehaviour
     [SerializeField] private WeaponStats _stats = new WeaponStats();
 
     private MonsterVisualData _visual;
+    private MonsterAnimationSet _animations;
     private Player _owner;
     private SpriteRenderer _renderer;
     private int _playerId;
@@ -134,6 +135,7 @@ public class Weapon : MonoBehaviour
     public void ApplyVisual(MonsterVisualData visual)
     {
         _visual = visual;
+        _animations = MonsterAnimationLoader.Get(visual);
         _shotPose = false;
         _fainting = false;
         _posing = false;
@@ -502,31 +504,31 @@ public class Weapon : MonoBehaviour
 
     private Sprite[] GetFaintFrames()
     {
-        if (_visual == null)
+        if (_animations == null)
         {
             return null;
         }
 
         return _lastSideRight
-            ? FirstFrames(_visual.FaintRight, _visual.FaintLeft)
-            : FirstFrames(_visual.FaintLeft, _visual.FaintRight);
+            ? FirstFrames(_animations.FaintRight, _animations.FaintLeft)
+            : FirstFrames(_animations.FaintLeft, _animations.FaintRight);
     }
 
     private Sprite[] GetPoseFrames()
     {
-        if (_visual == null)
+        if (_animations == null)
         {
             return null;
         }
 
         return _lastSideRight
-            ? FirstFrames(_visual.PoseRight, _visual.PoseLeft)
-            : FirstFrames(_visual.PoseLeft, _visual.PoseRight);
+            ? FirstFrames(_animations.PoseRight, _animations.PoseLeft)
+            : FirstFrames(_animations.PoseLeft, _animations.PoseRight);
     }
 
     private Sprite[] GetEightWayFrames(EightWay way)
     {
-        if (_visual == null || _visual.Walk == null)
+        if (_animations == null || _animations.Walk == null)
         {
             return null;
         }
@@ -534,21 +536,21 @@ public class Weapon : MonoBehaviour
         switch (way)
         {
             case EightWay.UpRight:
-                return FirstFrames(_visual.Walk.UpRight, _visual.Walk.Right);
+                return FirstFrames(_animations.Walk.UpRight, _animations.Walk.Right);
             case EightWay.Up:
-                return FirstFrames(_visual.Walk.Up, _visual.Walk.Right);
+                return FirstFrames(_animations.Walk.Up, _animations.Walk.Right);
             case EightWay.UpLeft:
-                return FirstFrames(_visual.Walk.UpLeft, _visual.Walk.Right);
+                return FirstFrames(_animations.Walk.UpLeft, _animations.Walk.Right);
             case EightWay.Left:
-                return FirstFrames(_visual.Walk.Left, _visual.Walk.Right);
+                return FirstFrames(_animations.Walk.Left, _animations.Walk.Right);
             case EightWay.DownLeft:
-                return FirstFrames(_visual.Walk.DownLeft, _visual.Walk.Right);
+                return FirstFrames(_animations.Walk.DownLeft, _animations.Walk.Right);
             case EightWay.Down:
-                return FirstFrames(_visual.Walk.Down, _visual.Walk.Right);
+                return FirstFrames(_animations.Walk.Down, _animations.Walk.Right);
             case EightWay.DownRight:
-                return FirstFrames(_visual.Walk.DownRight, _visual.Walk.Right);
+                return FirstFrames(_animations.Walk.DownRight, _animations.Walk.Right);
             default:
-                return _visual.Walk.Right;
+                return _animations.Walk.Right;
         }
     }
 

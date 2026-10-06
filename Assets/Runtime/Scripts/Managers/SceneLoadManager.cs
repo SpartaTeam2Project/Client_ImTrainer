@@ -39,6 +39,9 @@ public class SceneLoadManager : BaseManager
             await UnloadSceneAsync(SceneNames.TITLE_SCENE, cancellationToken);
             await LoadSceneAsync(SceneNames.GAME_SCENE, LoadSceneMode.Single, cancellationToken);
 
+            // 스테이지는 Loading 상태에서 시작하지 않으므로, 그동안 이번 판 적과 보스 그림을 불러 둔다.
+            await PreloadStageMonstersAsync(cancellationToken);
+
             if (Managers.Instance != null)
             {
                 Managers.Instance.ChangeState(GameState.Playing);
@@ -68,6 +71,9 @@ public class SceneLoadManager : BaseManager
             Managers.Instance.ChangeState(GameState.Loading);
             await LoadSceneAsync(SceneNames.LOADING_SCENE, LoadSceneMode.Additive, cancellationToken);
             await UnloadSceneAsync(SceneNames.GAME_SCENE, cancellationToken);
+
+            // 타이틀은 아이콘만 쓰므로 판에서 불러온 몬스터 그림을 내린다.
+            MonsterAnimationLoader.ReleaseRun();
             await LoadSceneAsync(SceneNames.TITLE_SCENE, LoadSceneMode.Single, cancellationToken);
 
             if (Managers.Instance != null)
@@ -92,6 +98,18 @@ public class SceneLoadManager : BaseManager
                 transition.FadeOut();
             }
         }
+    }
+
+    private static async UniTask PreloadStageMonstersAsync(CancellationToken cancellationToken)
+    {
+        var gameController = Managers.Instance != null ? Managers.Instance.GetComponent<GameController>() : null;
+        var stage = gameController != null && gameController.ActiveStage != null ? gameController.ActiveStage.StageData : null;
+        if (stage == null)
+        {
+            return;
+        }
+
+        await MonsterAnimationLoader.PreloadStageAsync(stage, cancellationToken);
     }
 
     /// <summary>

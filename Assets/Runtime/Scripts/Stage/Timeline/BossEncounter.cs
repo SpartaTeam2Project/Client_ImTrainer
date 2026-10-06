@@ -153,6 +153,33 @@ public class BossEncounter : PlayableAsset
         return true;
     }
 
+    /// <summary>
+    /// 이 조우에 나올 수 있는 보스 종을 모은다. 판 시작 전에 그림을 미리 불러올 때 쓴다.
+    /// </summary>
+    public void CollectMonsters(System.Collections.Generic.List<MonsterVisualData> monsters)
+    {
+        ResolveBosses(out var fixedBoss, out var candidates);
+        AddMonster(monsters, fixedBoss);
+        if (candidates == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            AddMonster(monsters, candidates[i]);
+        }
+    }
+
+    private static void AddMonster(System.Collections.Generic.List<MonsterVisualData> monsters, BossSpawnEntry entry)
+    {
+        var monster = entry != null ? entry.Monster : null;
+        if (monster != null && !monsters.Contains(monster))
+        {
+            monsters.Add(monster);
+        }
+    }
+
     private void OnValidate()
     {
         SyncPartyStats();

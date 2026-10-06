@@ -54,12 +54,13 @@ public class MonsterWaveTrackEditor : TrackEditor
 
     private static Sprite FirstWalkDown(MonsterVisualData monster)
     {
-        if (monster == null || monster.Walk == null)
+        var animations = MonsterAnimationAssets.Find(monster);
+        if (animations == null || animations.Walk == null)
         {
             return null;
         }
 
-        var frames = monster.Walk.Down;
+        var frames = animations.Walk.Down;
         if (frames == null)
         {
             return null;
