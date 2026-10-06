@@ -28,6 +28,7 @@ public class UILobbyWindow : MonoBehaviour
     [SerializeField] private UIIntroScene _introScene;
     [SerializeField] private UIStorageWindow _storageWindow;
     [SerializeField] private UIRegisterWindow _registerWindow;
+    [SerializeField] private UILoginWindow _loginWindow;
 
     private LobbyButton _selectedButton = LobbyButton.None;
     private LobbyButton _accountButtonBeforeSettings = LobbyButton.Login;
@@ -147,7 +148,10 @@ public class UILobbyWindow : MonoBehaviour
         {
             return true;
         }
-
+        if (_loginWindow != null && _loginWindow.IsOpen)
+        {
+            return true;
+        }
         if (_registerWindow != null && _registerWindow.IsOpen)
         {
             return true;
@@ -301,7 +305,7 @@ public class UILobbyWindow : MonoBehaviour
         if (_loginButton != null)
         {
             _loginButton.onClick.AddListener(PlayButtonClick);
-            _loginButton.onClick.AddListener(EnterAccount);
+            _loginButton.onClick.AddListener(OpenLogin);
         }
 
         if (_registerButton != null)
@@ -322,7 +326,7 @@ public class UILobbyWindow : MonoBehaviour
         if (_loginButton != null)
         {
             _loginButton.onClick.RemoveListener(PlayButtonClick);
-            _loginButton.onClick.RemoveListener(EnterAccount);
+            _loginButton.onClick.RemoveListener(OpenLogin);
         }
 
         if (_registerButton != null)
@@ -396,6 +400,17 @@ public class UILobbyWindow : MonoBehaviour
         transition.FadeOut();
     }
 
+    private void OpenLogin()
+    {
+        if (_loginWindow == null)
+        {
+            Debug.LogError("로그인 창이 없습니다.");
+            return;
+        }
+
+        _loginWindow.Open(EnterAccount);
+    }
+
     private void OpenRegister()
     {
         if (_registerWindow == null)
@@ -404,7 +419,7 @@ public class UILobbyWindow : MonoBehaviour
             return;
         }
 
-        _registerWindow.Open();
+        _registerWindow.Open(OpenLogin);
     }
 
     private void OpenSettings()
@@ -418,6 +433,7 @@ public class UILobbyWindow : MonoBehaviour
 
         settingsWindow.Open();
     }
+
 
     private static UISettingsWindow GetSettingsWindow()
     {

@@ -1454,7 +1454,7 @@ public class UIStorageWindow : MonoBehaviour
             }
 
             _entryVisuals[i] = data;
-            ApplyEntrySprite(i, data != null ? data.Portrait : null);
+            ApplyEntrySprite(i, data != null ? MonsterVisualData.FirstFrame(data.Icon) : null);
             PlaySelect();
             if (IsEntryFull())
             {

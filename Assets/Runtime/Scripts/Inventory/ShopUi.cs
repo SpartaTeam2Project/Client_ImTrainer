@@ -57,7 +57,7 @@ public class ShopUi : MonoBehaviour
             }
 
             var visual = itemManager.GetVisual(item.uid);
-            var portrait = visual != null ? visual.Portrait : null;
+            var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
             var slot = _slots[slotIndex];
             slot.ShowPokemon(portrait, item.name, Item.STAR_MIN, 1, false, false);
             slot.ShowPrice(icon, item.price);

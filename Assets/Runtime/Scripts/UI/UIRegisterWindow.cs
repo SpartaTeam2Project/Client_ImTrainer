@@ -1,6 +1,8 @@
 using DG.Tweening;
+using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 
 /// <summary>
@@ -19,7 +21,14 @@ public class UIRegisterWindow : MonoBehaviour
     [SerializeField] private Button _confirmButton;
     [SerializeField] private Button _cancelButton;
 
+    [Header("System Message Box")]
+    [SerializeField] private GameObject _systemMessageRoot;
+    [SerializeField] private TMP_Text _systemMessage;
+    [SerializeField] private Button _okButton;
+
     private Tween _openTween;
+    private Action _onSignupSuccess;
+    private readonly ApiClient _apiClient=new ApiClient();
 
     public bool IsOpen => gameObject.activeSelf;
 
@@ -39,6 +48,8 @@ public class UIRegisterWindow : MonoBehaviour
         {
             _cancelButton.onClick.AddListener(Close);
         }
+
+        _okButton.onClick.AddListener(CloseSystemMessage);
     }
 
     private void OnDisable()
@@ -53,8 +64,14 @@ public class UIRegisterWindow : MonoBehaviour
             _cancelButton.onClick.RemoveListener(Close);
         }
 
+        _okButton.onClick.RemoveListener(CloseSystemMessage);
+
         KillOpenTween();
         ResetPanelScale();
+    }
+    private void CloseSystemMessage()
+    {
+        _systemMessageRoot.SetActive(false);
     }
 
     private void Update()
@@ -78,13 +95,16 @@ public class UIRegisterWindow : MonoBehaviour
     /// <summary>
     /// 회원가입 창을 연다.
     /// </summary>
-    public void Open()
+    public void Open(Action onSignupSuccess)
     {
         if (gameObject.activeSelf)
         {
             return;
         }
+        
+        _onSignupSuccess = onSignupSuccess;
 
+        ClearFields();
         PlaySound(OPEN_SOUND);
         gameObject.SetActive(true);
         PlayOpen();
@@ -110,6 +130,60 @@ public class UIRegisterWindow : MonoBehaviour
     /// </summary>
     public void Confirm()
     {
+        if (_passwordInput.text != _passwordConfirmInput.text)
+        {
+            ShowMessage("비밀번호가 일치하지 않습니다.");
+            return;
+        }
+
+        StartCoroutine(_apiClient.PostSignup(_nicknameInput.text,_passwordInput.text,HandleSignupResponse));
+    }
+
+    private void HandleSignupResponse(ApiResult result)
+    {
+        if (result.RequestResult == UnityWebRequest.Result.ConnectionError)
+        {
+            ShowMessage("서버에 연결할 수 없습니다.\n잠시 후 다시 시도해주세요.");
+            return;
+        }
+
+        if (result.StatusCode == 201)
+        {
+            Debug.Log("[UIRegisterWindow] 회원가입 성공");
+
+            Close();
+
+            // 로그인 화면 열기
+            _onSignupSuccess?.Invoke();
+            return;
+        }
+
+        if (result.StatusCode == 400 ||
+            result.StatusCode == 409)
+        {
+            ErrorResponse error = ParseError(result.Body);
+
+            ShowMessage(error?.message ?? "회원가입에 실패했습니다.");
+
+            return;
+        }
+
+        ErrorResponse unknownError = ParseError(result.Body);
+
+        ShowMessage(unknownError?.message ??"회원가입 처리 중 오류가 발생했습니다.");
+    }
+    private ErrorResponse ParseError(string body)
+    {
+        if (string.IsNullOrEmpty(body))
+        {
+            return null;
+        }
+        return JsonUtility.FromJson<ErrorResponse>(body);
+    }
+    private void ShowMessage(string message)
+    {
+        _systemMessage.SetText(message);
+        _systemMessageRoot.SetActive(true);
     }
 
     private bool HasRequiredReferences()

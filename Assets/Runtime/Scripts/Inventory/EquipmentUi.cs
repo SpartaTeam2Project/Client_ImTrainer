@@ -108,7 +108,7 @@ public class EquipmentUi : MonoBehaviour
 
             var item = equipment.Stacks[i].Item;
             var visual = itemManager.GetVisual(item.uid);
-            var portrait = visual != null ? visual.Portrait : null;
+            var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
             slot.ShowPokemon(portrait, item.name, item.upgradeLevel, equipment.Stacks[i].Number, false, selected);
         }
     }
