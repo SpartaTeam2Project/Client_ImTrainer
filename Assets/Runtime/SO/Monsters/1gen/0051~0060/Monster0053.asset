@@ -14,14 +14,45 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _scale: 2.7
   _walk:
-    _down: []
-    _downRight: []
-    _right: []
-    _upRight: []
-    _up: []
-    _upLeft: []
-    _left: []
-    _downLeft: []
+    _down:
+    - {fileID: 2419215890893748935, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 7463764014767572131, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -2229252598733437693, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 188385991853992566, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    _downRight:
+    - {fileID: -3035643009190366946, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -671152577426516614, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 4262967637577707557, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 3409670478548808982, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    _right:
+    - {fileID: -5270193761787653561, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -2758058682153385390, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 7066242291011397585, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    _upRight:
+    - {fileID: -5633531108414933283, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -2928106419624550788, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 4077755455299359970, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 4893457813856538282, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    _up:
+    - {fileID: 3896042356894219205, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 3523254233994848077, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -2818523930086747668, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 4697512132488483659, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    _upLeft:
+    - {fileID: 3698208065472861900, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 6469665954927622411, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -9120680346780072108, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -2459173271421032201, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    _left:
+    - {fileID: -4303408213936232882, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: -2332885323975160348, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 2492310830854274769, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 8610056260688581544, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    _downLeft:
+    - {fileID: 7281402018704088588, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 3064642554626491226, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 3847571645956740152, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
+    - {fileID: 5116504290124814365, guid: 578c443b310ee2343847d59aa33b1b01, type: 3}
   _sleep:
     _down: []
     _downRight: []
@@ -32,14 +63,22 @@ MonoBehaviour:
     _left: []
     _downLeft: []
   _hurt:
-    _down: []
-    _downRight: []
-    _right: []
-    _upRight: []
-    _up: []
-    _upLeft: []
-    _left: []
-    _downLeft: []
+    _down:
+    - {fileID: -3483430361698347056, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
+    _downRight:
+    - {fileID: 969750801644170259, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
+    _right:
+    - {fileID: 6376951580759638214, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
+    _upRight:
+    - {fileID: -8788567161575655961, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
+    _up:
+    - {fileID: 6914463669582661488, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
+    _upLeft:
+    - {fileID: 4688548642762085282, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
+    _left:
+    - {fileID: -3622377113796756006, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
+    _downLeft:
+    - {fileID: -8294116024755313535, guid: 99f8ead2243d28c4896e75e3a8e7bbaf, type: 3}
   _attack:
     _down: []
     _downRight: []
