@@ -2,6 +2,7 @@ using DG.Tweening;
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
@@ -78,6 +79,7 @@ public class UIRegisterWindow : MonoBehaviour
     {
         if (IsAnyFieldFocused())
         {
+            HandleTabNavigation();
             return;
         }
 
@@ -243,6 +245,37 @@ public class UIRegisterWindow : MonoBehaviour
     private static bool IsFocused(TMP_InputField inputField)
     {
         return inputField != null && inputField.isFocused;
+    }
+
+    /// <summary>
+    /// 입력 중 Tab은 다음 칸, Shift+Tab은 이전 칸으로 포커스를 옮긴다. 끝에서는 반대쪽 끝으로 돌아간다.
+    /// </summary>
+    private void HandleTabNavigation()
+    {
+        var keyboard = Keyboard.current;
+        if (keyboard == null || !keyboard.tabKey.wasPressedThisFrame)
+        {
+            return;
+        }
+
+        TMP_InputField[] fields = { _nicknameInput, _passwordInput, _passwordConfirmInput };
+        var currentIndex = Array.FindIndex(fields, IsFocused);
+        if (currentIndex < 0)
+        {
+            return;
+        }
+
+        var step = keyboard.shiftKey.isPressed ? -1 : 1;
+        var nextIndex = (currentIndex + step + fields.Length) % fields.Length;
+        var next = fields[nextIndex];
+        if (next == null)
+        {
+            return;
+        }
+
+        fields[currentIndex].DeactivateInputField();
+        next.Select();
+        next.ActivateInputField();
     }
 
     private void ClearFields()
