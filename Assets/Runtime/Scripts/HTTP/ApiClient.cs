@@ -30,6 +30,20 @@ public class ApiClient
         ApiResult result = new ApiResult(request.responseCode, request.downloadHandler.text,request.result);
         onComplete?.Invoke(result);
     }
+
+    public IEnumerator PostLogin(string username, string password, Action<ApiResult> onComplete)
+    {
+        LoginRequest requestBody = new LoginRequest(username, password);
+        string json = JsonUtility.ToJson(requestBody);
+
+        using UnityWebRequest request = UnityWebRequest.Post(BASE_URL+"/auth/login",json,"application/json");
+
+        yield return request.SendWebRequest();
+
+        ApiResult result = new ApiResult(request.responseCode,request.downloadHandler.text,request.result);
+
+        onComplete?.Invoke(result);
+    }
 }
 
 public class ApiResult
