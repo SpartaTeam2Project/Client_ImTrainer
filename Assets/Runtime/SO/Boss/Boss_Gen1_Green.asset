@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c1e9a4b2d8f4e6a9b0c3d5e7f1a2b4c, type: 3}
+  m_Name: Boss_Gen1_Green
+  m_EditorClassIdentifier: Assembly-CSharp::BossTrainerData
+  _trainerName: 
+  _idleDown:
+  - {fileID: 1634908984768152548, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _idleUp:
+  - {fileID: 8949758946251865275, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _idleLeft:
+  - {fileID: -5016787823095836124, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _idleRight:
+  - {fileID: 8052384657177081930, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _walkDown:
+  - {fileID: -8826552770063398049, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: 4404668214400523724, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: -8287052514163658820, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _walkUp:
+  - {fileID: 5494122569556478876, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: 5049985125957207361, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: 1788709320188382548, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _walkLeft:
+  - {fileID: 2216435825016198759, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: 877140787427483073, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: 1583363854781919020, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _walkRight:
+  - {fileID: -62823444292091365, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: -4884362934742446147, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  - {fileID: -6361779608619446301, guid: 7375563a793684d4aa8a520976ee84bb, type: 3}
+  _exclamation: {fileID: 852928365244996250, guid: ac1a63b0677189b488503eabf5a51a37, type: 3}
+  _versusFrames:
+  - {fileID: 3026923590674865393, guid: b449ed1478235b548891e29c1c3e5761, type: 3}
+  - {fileID: 2319174660098978352, guid: 923078108c6c61247bc4e0ba2c50b8ba, type: 3}
+  - {fileID: -254727304920312836, guid: 2432f0b9f5c82734c91344e5118658a6, type: 3}
+  - {fileID: -4139057910741786342, guid: 28b4d18b466690a4290a08f9a663a92e, type: 3}
+  - {fileID: -1419231400471532243, guid: d1c6f96d9b4b8b34e967795f7e16b955, type: 3}
+  - {fileID: 2897448453242058859, guid: a88746d4525d8884e9d6de7c2a50a20b, type: 3}
+  - {fileID: -5044054765975100142, guid: 7f9b409dc5143c4408723b540b44b3db, type: 3}
+  - {fileID: -6185743766938853429, guid: 1037a80edcdba274c8ff874563c53131, type: 3}
+  - {fileID: 3556605386957187059, guid: 7233ac410a9c55642a6ad7e25bfb0c26, type: 3}
+  - {fileID: 1624768951071397882, guid: 0925e370bcb20b5448361790b18509cb, type: 3}
+  _party:
+  - _monster: {fileID: 11400000, guid: 08d59cce9609425dbee57361332d7038, type: 2}
+    _skill: 1
+    _projectileSprite: {fileID: 1195778422731569831, guid: 1f9b459377338ec41af1e5f38e79b6fd, type: 3}
+  - _monster: {fileID: 0}
+    _skill: 0
+    _projectileSprite: {fileID: 0}

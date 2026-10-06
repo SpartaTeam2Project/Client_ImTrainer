@@ -163,9 +163,13 @@ public class EnemyProjectile : MonoBehaviour
         transform.position = position;
         var size = Mathf.Max(0.01f, attackDistance);
         ApplyWorldSize(size);
+        if (_renderer == null || _renderer.sprite == null)
+        {
+            _hitRadius = Mathf.Max(0f, hitRadius);
+        }
+
         _direction = direction.sqrMagnitude > MOVE_SQR_EPSILON ? direction.normalized : Vector2.right;
         _speed = Mathf.Max(0f, speed);
-        _hitRadius = Mathf.Max(0f, hitRadius);
         _remainingRange = Mathf.Max(0f, range) + _hitRadius;
         _damage = Mathf.Max(0f, damage);
         _phase = Phase.Flying;
@@ -250,6 +254,21 @@ public class EnemyProjectile : MonoBehaviour
 
         var scale = worldSize / spriteSize;
         transform.localScale = new Vector3(scale, scale, 1f);
+        _hitRadius = SpriteReach(scale, worldSize);
+    }
+
+    /// <summary>
+    /// 맞춘 탄 그림의 가장자리까지를 맞는 반경으로 쓴다.
+    /// </summary>
+    private float SpriteReach(float scale, float worldSize)
+    {
+        if (_renderer == null || _renderer.sprite == null)
+        {
+            return worldSize * 0.5f;
+        }
+
+        var bounds = _renderer.sprite.bounds;
+        return (Mathf.Max(bounds.extents.x, bounds.extents.y) + bounds.center.magnitude) * Mathf.Abs(scale);
     }
 
     private void TickRise(float deltaTime)

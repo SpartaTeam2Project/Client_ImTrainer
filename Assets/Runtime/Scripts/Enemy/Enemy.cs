@@ -634,7 +634,7 @@ public class Enemy : MonoBehaviour
 
     private bool TryContactDamage(Vector2 playerPosition)
     {
-        if (Vector2.Distance(transform.position, playerPosition) > _hitRadius)
+        if (Vector2.Distance(transform.position, playerPosition) > ContactReach)
         {
             return true;
         }
@@ -685,6 +685,18 @@ public class Enemy : MonoBehaviour
         _shootPoseUntil = Time.time + SHOOT_POSE_SECONDS;
         _owner.LaunchProjectile(_playerId, origin, toPlayer, _projectileSpeed, _attackRange, _contactDamage, _hitRadius, _attackDistance, _projectileSprite);
         return true;
+    }
+
+    /// <summary>
+    /// 몸통이 플레이어에게 닿는 거리. 그림에 맞춘 판정에 스케일을 곱한 값이다.
+    /// </summary>
+    private float ContactReach
+    {
+        get
+        {
+            var body = BodyReach;
+            return body > 0f ? body : _hitRadius;
+        }
     }
 
     private void SetView(bool isMoving, Vector2 lookDirection, bool shooting)
