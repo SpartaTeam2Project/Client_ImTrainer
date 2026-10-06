@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,7 +18,11 @@ public class InventoryUi : MonoBehaviour
         Shop
     }
 
+    private const float OPEN_FADE_DURATION = 0.2f;
+    private const float CLOSE_FADE_DURATION = 0.15f;
+
     [SerializeField] private Canvas _canvas;
+    [SerializeField] private CanvasGroup _panelGroup;
     [SerializeField] private ScreenBackdrop _backdrop;
     [SerializeField] private EquipmentUi _equipmentUi;
     [SerializeField] private ShopUi _shopUi;
@@ -44,6 +49,8 @@ public class InventoryUi : MonoBehaviour
     private bool _holdTime;
     private bool _subscribed;
     private Coroutine _showRoutine;
+    private Tween _fadeTween;
+    private bool _closing;
 
     private void Awake()
     {
@@ -80,6 +87,8 @@ public class InventoryUi : MonoBehaviour
         _holdTime = false;
         _open = false;
         _showRoutine = null;
+        _closing = false;
+        ResetFade();
         if (_backdrop != null)
         {
             _backdrop.Release();
@@ -132,6 +141,12 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
+        // 닫히는 중에 다시 열면 남은 페이드를 건너뛰고 끈 다음 새로 연다.
+        if (_closing)
+        {
+            FinishClose();
+        }
+
         _open = true;
         _holdTime = Managers.Instance.CurrentState == GameState.Playing;
         if (_holdTime)
@@ -154,8 +169,27 @@ public class InventoryUi : MonoBehaviour
         _showRoutine = null;
         _canvas.gameObject.SetActive(true);
         Refresh();
+        PlayOpen();
     }
 
+    /// <summary>
+    /// 패널을 서서히 나타낸다. 창이 열려 있는 동안 시간이 멈춰 있어서 시간 정지와 상관없이 돈다.
+    /// </summary>
+    private void PlayOpen()
+    {
+        if (_panelGroup == null)
+        {
+            return;
+        }
+
+        ResetFade();
+        _panelGroup.alpha = 0f;
+        _fadeTween = _panelGroup.DOFade(1f, OPEN_FADE_DURATION).SetUpdate(true).SetLink(gameObject);
+    }
+
+    /// <summary>
+    /// 패널을 서서히 감춘 뒤 창을 끈다. 사라지는 동안에는 버튼이 눌리지 않는다.
+    /// </summary>
     private void Close()
     {
         _open = false;
@@ -165,6 +199,34 @@ public class InventoryUi : MonoBehaviour
             _showRoutine = null;
         }
 
+        if (_closing)
+        {
+            return;
+        }
+
+        if (_panelGroup == null || _canvas == null || !_canvas.gameObject.activeSelf)
+        {
+            FinishClose();
+            return;
+        }
+
+        if (_fadeTween != null)
+        {
+            _fadeTween.Kill();
+        }
+
+        _closing = true;
+        _panelGroup.blocksRaycasts = false;
+        _fadeTween = _panelGroup.DOFade(0f, CLOSE_FADE_DURATION).SetUpdate(true).SetLink(gameObject).OnComplete(FinishClose);
+    }
+
+    /// <summary>
+    /// 페이드가 끝나면 배경 캡처를 돌려주고 창을 끈 뒤 멈춰 둔 시간을 되돌린다.
+    /// </summary>
+    private void FinishClose()
+    {
+        _closing = false;
+        ResetFade();
         if (_backdrop != null)
         {
             _backdrop.Release();
@@ -181,6 +243,24 @@ public class InventoryUi : MonoBehaviour
         }
 
         _holdTime = false;
+    }
+
+    /// <summary>
+    /// 페이드 도중에 끊겨도 다음에 열 때 패널이 흐리거나 눌리지 않는 채로 남지 않게 되돌린다.
+    /// </summary>
+    private void ResetFade()
+    {
+        if (_fadeTween != null)
+        {
+            _fadeTween.Kill();
+            _fadeTween = null;
+        }
+
+        if (_panelGroup != null)
+        {
+            _panelGroup.alpha = 1f;
+            _panelGroup.blocksRaycasts = true;
+        }
     }
 
     private bool CanToggle()

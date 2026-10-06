@@ -1185,6 +1185,7 @@ GameObject:
   - component: {fileID: 2406826381439334327}
   - component: {fileID: 421958576759403850}
   - component: {fileID: 3305598941074721143}
+  - component: {fileID: 7315420986125473019}
   m_Layer: 5
   m_Name: Panel
   m_TagString: Untagged
@@ -11629,6 +11630,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InventoryUi
   _canvas: {fileID: 2125650520070317889}
+  _panelGroup: {fileID: 7315420986125473019}
   _backdrop: {fileID: 4718203956120384517}
   _equipmentUi: {fileID: 5320406575388601804}
   _shopUi: {fileID: 6890944392598884010}
@@ -14691,3 +14693,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!225 &7315420986125473019
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 437480782410034490}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
