@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Transactions;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -54,6 +55,22 @@ public class ApiClient
         yield return request.SendWebRequest();
 
         ApiResult result = new ApiResult(request.responseCode, request.downloadHandler.text, request.result);
+
+        onComplete?.Invoke(result);
+    }
+    public IEnumerator PostLogout(string accessToken, string refreshToken, Action<ApiResult> onComplete)
+    {
+        RefreshTokenRequest requestBody = new RefreshTokenRequest(refreshToken);
+
+        string json = JsonUtility.ToJson(requestBody);
+
+        using UnityWebRequest request = UnityWebRequest.Post(BASE_URL + "/auth/logout", json, "application/json");
+
+        request.SetRequestHeader("Authorization", $"Bearer {accessToken}");
+
+        yield return request.SendWebRequest();
+
+        ApiResult result = new ApiResult(request.responseCode,request.downloadHandler.text, request.result);
 
         onComplete?.Invoke(result);
     }

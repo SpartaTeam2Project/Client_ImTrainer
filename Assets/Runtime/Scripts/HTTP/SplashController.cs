@@ -7,6 +7,7 @@ public class SplashController : MonoBehaviour
 {
     [SerializeField] private GameObject _splashRoot;
     [SerializeField] private GameObject _titleRoot;
+    [SerializeField] private UILobbyWindow lobbyWindow;
     [SerializeField] private TMP_Text announceText;
     [SerializeField] private Button okButton;
 
@@ -60,8 +61,7 @@ public class SplashController : MonoBehaviour
 
             Debug.Log($"[SplashController] MasterData 로드 성공. version={response.version}");
 
-            //storage 화면으로 이동 위치
-            ShowTitle();
+            ShowStorageWindow();
             return;
         }
 
@@ -185,5 +185,16 @@ public class SplashController : MonoBehaviour
 
         okButton.onClick.RemoveAllListeners();
         okButton.onClick.AddListener(() => ShowTitle());
+    }
+
+    private void ShowStorageWindow()
+    {
+        _splashRoot.SetActive(false);
+        _titleRoot.SetActive(true);
+
+        okButton.gameObject.SetActive(false);
+        okButton.onClick.RemoveAllListeners();
+
+        lobbyWindow.EnterStorage();
     }
 }
