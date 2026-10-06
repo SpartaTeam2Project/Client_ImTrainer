@@ -252,6 +252,9 @@ MonoBehaviour:
   _passwordInput: {fileID: 1722980870}
   _confirmButton: {fileID: 1443533393}
   _cancelButton: {fileID: 1077212673}
+  _systemMessageRoot: {fileID: 2034485643}
+  _systemMessage: {fileID: 493664133}
+  _okButton: {fileID: 868773984}
 --- !u!1 &300265486
 GameObject:
   m_ObjectHideFlags: 0
@@ -1203,7 +1206,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1057638643}
   m_Layer: 5
-  m_Name: Test Text
+  m_Name: Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2140,6 +2143,18 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8100000000000000101, guid: 784ea4e7a06a6b14a8b6f18e0cf78976, type: 3}
+      propertyPath: _okButton
+      value: 
+      objectReference: {fileID: 868773984}
+    - target: {fileID: 8100000000000000101, guid: 784ea4e7a06a6b14a8b6f18e0cf78976, type: 3}
+      propertyPath: _systemMessage
+      value: 
+      objectReference: {fileID: 493664133}
+    - target: {fileID: 8100000000000000101, guid: 784ea4e7a06a6b14a8b6f18e0cf78976, type: 3}
+      propertyPath: _systemMessageRoot
+      value: 
+      objectReference: {fileID: 2034485643}
     - target: {fileID: 8234853306909164655, guid: 784ea4e7a06a6b14a8b6f18e0cf78976, type: 3}
       propertyPath: m_IsActive
       value: 0

@@ -419,7 +419,7 @@ public class UILobbyWindow : MonoBehaviour
             return;
         }
 
-        _registerWindow.Open();
+        _registerWindow.Open(OpenLogin);
     }
 
     private void OpenSettings()

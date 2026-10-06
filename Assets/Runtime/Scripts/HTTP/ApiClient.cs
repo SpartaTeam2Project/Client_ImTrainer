@@ -44,6 +44,19 @@ public class ApiClient
 
         onComplete?.Invoke(result);
     }
+    public IEnumerator PostSignup(string username, string password, Action<ApiResult> onComplete)
+    {
+        SignupRequest requestBody = new SignupRequest(username, password);
+        string json = JsonUtility.ToJson(requestBody);
+
+        using UnityWebRequest request = UnityWebRequest.Post(BASE_URL + "/auth/signup", json, "application/json");
+
+        yield return request.SendWebRequest();
+
+        ApiResult result = new ApiResult(request.responseCode, request.downloadHandler.text, request.result);
+
+        onComplete?.Invoke(result);
+    }
 }
 
 public class ApiResult
