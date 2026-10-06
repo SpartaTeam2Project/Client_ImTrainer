@@ -51,6 +51,7 @@ public class PlayerManager : BaseManager
 
     private Player _player;
     private bool _movementLocked;
+    private Vector2 _scriptedMove;
 
 
     public int LocalPlayerId => LOCAL_PLAYER_ID_VALUE;
@@ -76,10 +77,19 @@ public class PlayerManager : BaseManager
     public void SetMovementLocked(bool locked)
     {
         _movementLocked = locked;
+        _scriptedMove = Vector2.zero;
         if (locked && _player != null)
         {
             _player.Movement.Move(Vector2.zero);
         }
+    }
+
+    /// <summary>
+    /// 이동이 잠긴 동안 연출이 플레이어를 걷게 한다. 영벡터면 그 자리에 선다.
+    /// </summary>
+    public void SetScriptedMove(Vector2 movement)
+    {
+        _scriptedMove = movement;
     }
 
     /// <summary>
@@ -191,7 +201,7 @@ public class PlayerManager : BaseManager
 
         if (_movementLocked)
         {
-            _player.Movement.Move(Vector2.zero);
+            _player.Movement.Move(_scriptedMove);
             return;
         }
 

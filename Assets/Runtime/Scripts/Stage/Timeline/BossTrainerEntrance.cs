@@ -9,7 +9,9 @@ public struct BossTrainerEntranceCast
     public Sprite[] DownFrames;
     public Sprite SideFrame;
     public Sprite StandingFrame;
+    public Sprite RevealFrame;
     public Sprite Exclamation;
+    public BossEntranceKind Kind;
     public BossTrainerVersusCast Versus;
 }
 
@@ -28,6 +30,15 @@ public static class BossTrainerEntrance
     private const float WALK_SPEED = 1.8f;
     private const float FRAME_SECONDS = 0.12f;
     private const float REVEAL_SECONDS = 0.6f;
+    private const float REVEAL_HOLD_SECONDS = 1.5f;
+    private const float REVEAL_APPROACH_SPEED = 0.5f;
+    private const float REVEAL_APPROACH_LIMIT = 14f;
+    private const float REVEAL_BACK_STEPS = 5f;
+    private const float REVEAL_STOP_GAP = 2.8f + STEP_DISTANCE * REVEAL_BACK_STEPS;
+    private const float REVEAL_FACE_SECONDS = 1.5f;
+    private const float REVEAL_OFFSCREEN_PAD = 0.2f;
+    private const float REVEAL_OFFSCREEN_EXTRA = 0.2f;
+    private const float MARK_WORLD_SCALE = 0.5f;
     private const float EXCLAIM_SECONDS = 1.6f;
     private const float MARK_LIFT = 0.5f;
     private const int TRAINER_SORTING_ORDER = 11;
@@ -44,6 +55,12 @@ public static class BossTrainerEntrance
     public static async UniTask PlayAsync(int token, BossTrainerEntranceCast cast)
     {
         Stop();
+        if (cast.Kind == BossEntranceKind.Reveal)
+        {
+            await PlayRevealAsync(token, cast);
+            return;
+        }
+
         if (!HasFrames(cast.DownFrames) || cast.SideFrame == null || cast.Exclamation == null)
         {
             Debug.LogWarning("보스 트레이너 등장 그림이 비어 있습니다. 보스 SO에 아래 걷기, 왼쪽 아이들, 느낌표를 넣으세요.");
@@ -108,6 +125,109 @@ public static class BossTrainerEntrance
 
         Stop();
         BossArenaPlayback.StartFight(token);
+    }
+
+    private static async UniTask PlayRevealAsync(int token, BossTrainerEntranceCast cast)
+    {
+        if (cast.RevealFrame == null || cast.SideFrame == null || cast.Exclamation == null)
+        {
+            Debug.LogWarning("보스 제자리 공개 그림이 비어 있습니다. 보스 SO에 오른쪽 아이들, 왼쪽 아이들, 느낌표를 넣으세요.");
+            return;
+        }
+
+        if (!TryGetPlayer(out var playerManager) || !TryGetCamera(out var cameraManager) || !cameraManager.HasView)
+        {
+            return;
+        }
+
+        var playerPosition = (Vector2)playerManager.PlayerTransform.position;
+        playerManager.SetMovementLocked(true);
+        playerManager.SetLookDirection(Vector2.right);
+        SetWeaponsPaused(true);
+        var offscreenExtra = cameraManager.HalfWidth * REVEAL_OFFSCREEN_EXTRA;
+        var trainerPosition = new Vector2(cameraManager.RightBound + RevealOffscreenReach(cast.RevealFrame) + offscreenExtra, playerPosition.y);
+        CreateVisuals(cast, trainerPosition);
+        _trainer.sprite = cast.RevealFrame;
+        PlaceMarkAbove(playerPosition);
+        _mark.SetActive(true);
+        PlayMusic(RIVAL_MUSIC_NAME);
+        await UniTask.Delay(System.TimeSpan.FromSeconds(REVEAL_HOLD_SECONDS));
+        if (!IsCurrent(token))
+        {
+            return;
+        }
+
+        _mark.SetActive(false);
+        cameraManager.ClearLookPoint();
+        await ApproachAsync(token, playerManager, trainerPosition.x - REVEAL_STOP_GAP);
+        if (!IsCurrent(token))
+        {
+            return;
+        }
+
+        _trainer.sprite = cast.SideFrame;
+        playerManager.SetLookDirection(Vector2.right);
+        await UniTask.Delay(System.TimeSpan.FromSeconds(REVEAL_FACE_SECONDS));
+        if (!IsCurrent(token))
+        {
+            return;
+        }
+
+        var startBattle = await BossTrainerVersus.PlayAsync(token, cast.Versus);
+        if (!startBattle || !IsCurrent(token))
+        {
+            return;
+        }
+
+        Stop();
+        BossArenaPlayback.StartFight(token);
+    }
+
+    private static async UniTask ApproachAsync(int token, PlayerManager playerManager, float stopX)
+    {
+        playerManager.SetScriptedMove(Vector2.right * REVEAL_APPROACH_SPEED);
+        var elapsed = 0f;
+        while (elapsed < REVEAL_APPROACH_LIMIT)
+        {
+            if (!IsCurrent(token) || playerManager.PlayerTransform == null)
+            {
+                return;
+            }
+
+            elapsed += Time.deltaTime;
+            if (playerManager.PlayerTransform.position.x >= stopX)
+            {
+                break;
+            }
+
+            await UniTask.Yield();
+        }
+
+        playerManager.SetScriptedMove(Vector2.zero);
+        playerManager.SetLookDirection(Vector2.right);
+    }
+
+    private static float RevealOffscreenReach(Sprite sprite)
+    {
+        if (sprite == null)
+        {
+            return OFFSCREEN_MARGIN;
+        }
+
+        var bounds = sprite.bounds;
+        return (bounds.center.x + bounds.extents.x) * TRAINER_SCALE + REVEAL_OFFSCREEN_PAD;
+    }
+
+    private static void PlaceMarkAbove(Vector2 position)
+    {
+        if (_mark == null)
+        {
+            return;
+        }
+
+        _mark.transform.SetParent(null, true);
+        _mark.transform.position = position + Vector2.up * MARK_LIFT;
+        _mark.transform.localScale = new Vector3(MARK_WORLD_SCALE, MARK_WORLD_SCALE, 1f);
     }
 
     /// <summary>

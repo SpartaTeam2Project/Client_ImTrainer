@@ -2,6 +2,17 @@ using System;
 using UnityEngine;
 
 /// <summary>
+/// 보스 트레이너가 등장하는 방식.
+/// </summary>
+public enum BossEntranceKind
+{
+    [InspectorName("걸어오기")]
+    WalkIn = 0,
+    [InspectorName("제자리 공개")]
+    Reveal = 1
+}
+
+/// <summary>
 /// 보스 트레이너 한 명. 등장 그림과 VS 초상화, 데리고 있는 몬스터를 가진다.
 /// </summary>
 [CreateAssetMenu(fileName = "BossTrainer", menuName = "Boss/Boss Trainer")]
@@ -22,7 +33,8 @@ public class BossTrainerData : ScriptableObject
     [SerializeField] private Sprite[] _walkRight = System.Array.Empty<Sprite>();
 
     [Header("Entrance")]
-    [Tooltip("걸어오는 연출에서 띄우는 느낌표.")]
+    [SerializeField] private BossEntranceKind _entranceKind = BossEntranceKind.WalkIn;
+    [Tooltip("등장할 때 띄우는 느낌표.")]
     [SerializeField] private Sprite _exclamation;
 
     [Header("Versus")]
@@ -49,6 +61,8 @@ public class BossTrainerData : ScriptableObject
     public Sprite[] WalkLeft => _walkLeft;
 
     public Sprite[] WalkRight => _walkRight;
+
+    public BossEntranceKind EntranceKind => _entranceKind;
 
     public Sprite Exclamation => _exclamation;
 
