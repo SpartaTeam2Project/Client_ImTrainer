@@ -42,6 +42,24 @@ public class EquipmentUi : MonoBehaviour
     }
 
     /// <summary>
+    /// 같은 종, 같은 성인 장착 칸에 합성 표시를 켠다. 끌기 시작한 칸은 뺀다. uid가 음수면 모두 끈다.
+    /// </summary>
+    public void SetMergeHints(InventoryHolder equipment, int uid, int upgradeLevel, int exceptSlot)
+    {
+        for (var i = 0; i < _slots.Length; i++)
+        {
+            if (_slots[i] == null)
+            {
+                continue;
+            }
+
+            var on = uid >= 0 && i != exceptSlot && equipment != null && i < equipment.Stacks.Count
+                && equipment.Stacks[i].isSameItem(uid, upgradeLevel);
+            _slots[i].SetMergeHint(on);
+        }
+    }
+
+    /// <summary>
     /// 장착 목록을 다시 그린다.
     /// </summary>
     public void Refresh(int playerId, int selectedSlot, Action<int> onSelect)

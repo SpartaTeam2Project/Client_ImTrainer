@@ -639,6 +639,7 @@ public class InventoryUi : MonoBehaviour
         }
 
         ShowDragGhost(itemManager, item.uid);
+        ShowMergeHints(itemManager, playerId);
         MoveDrag(eventData);
         if (_trashZone != null)
         {
@@ -671,6 +672,7 @@ public class InventoryUi : MonoBehaviour
     /// </summary>
     public void EndDrag()
     {
+        ClearMergeHints();
         _dragKind = InventorySlotDrag.SlotKind.None;
         _dragIndex = -1;
         _dragUid = -1;
@@ -830,6 +832,42 @@ public class InventoryUi : MonoBehaviour
         }
 
         return bag.FindIndex(_dragUid, _dragStar);
+    }
+
+    /// <summary>
+    /// 가방과 장착에서 끌고 있는 포켓몬과 같은 종, 같은 성인 칸 테두리를 깜빡인다.
+    /// </summary>
+    private void ShowMergeHints(ItemManager itemManager, int playerId)
+    {
+        var bag = itemManager.GetInventory(playerId);
+        var equipment = itemManager.GetEquipment(playerId);
+        var bagExcept = _dragKind == InventorySlotDrag.SlotKind.Bag ? _dragIndex : -1;
+        for (var i = 0; i < _bagSlots.Count; i++)
+        {
+            _bagSlots[i].SetMergeHint(i != bagExcept && IsSameAsDragged(bag, i));
+        }
+
+        if (_equipmentUi != null)
+        {
+            var equipmentExcept = _dragKind == InventorySlotDrag.SlotKind.Equipment ? _dragIndex : -1;
+            _equipmentUi.SetMergeHints(equipment, _dragUid, _dragStar, equipmentExcept);
+        }
+    }
+
+    private void ClearMergeHints()
+    {
+        for (var i = 0; i < _bagSlots.Count; i++)
+        {
+            if (_bagSlots[i] != null)
+            {
+                _bagSlots[i].SetMergeHint(false);
+            }
+        }
+
+        if (_equipmentUi != null)
+        {
+            _equipmentUi.SetMergeHints(null, -1, 0, -1);
+        }
     }
 
     private void CreateDragGhost()
