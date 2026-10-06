@@ -1102,6 +1102,7 @@ public class UIStorageWindow : MonoBehaviour
         var x = (float)padding.left;
         var y = (float)padding.top;
         var rowHeight = 0f;
+        var rowStart = 0;
 
         for (var i = 0; i < count; i++)
         {
@@ -1115,9 +1116,11 @@ public class UIStorageWindow : MonoBehaviour
             var height = rect.sizeDelta.y;
             if (x > padding.left && x + width > innerRight)
             {
+                AlignRowBottom(rowStart, i, y, rowHeight);
                 x = padding.left;
                 y += rowHeight + spacing.y;
                 rowHeight = 0f;
+                rowStart = i;
             }
 
             rect.anchoredPosition = new Vector2(x, -y);
@@ -1125,9 +1128,30 @@ public class UIStorageWindow : MonoBehaviour
             rowHeight = Mathf.Max(rowHeight, height);
         }
 
+        AlignRowBottom(rowStart, count, y, rowHeight);
+
         var size = content.sizeDelta;
         size.y = y + rowHeight + padding.bottom;
         content.sizeDelta = size;
+    }
+
+    /// <summary>
+    /// 한 줄의 칸을 줄 아랫변에 붙인다. 칸 아랫변이 발끝이라 키가 달라도 발이 한 선에 선다.
+    /// </summary>
+    private void AlignRowBottom(int start, int end, float rowTop, float rowHeight)
+    {
+        for (var i = start; i < end; i++)
+        {
+            var rect = ActiveSlotRect(i);
+            if (rect == null)
+            {
+                continue;
+            }
+
+            var position = rect.anchoredPosition;
+            position.y = -(rowTop + rowHeight - rect.sizeDelta.y);
+            rect.anchoredPosition = position;
+        }
     }
 
     private int ColumnCount()
