@@ -89,11 +89,30 @@ public class BossEncounter : PlayableAsset
         {
             View = _versusView,
             RedBar = _versusBar,
-            PlayerBack = _playerBack,
+            PlayerBack = ResolvePlayerBack(),
             RivalFrames = _rivalFrames,
             SlashFrames = _slashFrames,
             Versus = _versusMark
         };
+    }
+
+    /// <summary>
+    /// 선택한 플레이어블의 등 사진. 없거나 비어 있으면 클립에 넣은 등 사진을 쓴다.
+    /// </summary>
+    private Sprite ResolvePlayerBack()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var account))
+        {
+            return _playerBack;
+        }
+
+        var playable = account.ResolveSelectedPlayable();
+        if (playable == null || playable.VersusBack == null)
+        {
+            return _playerBack;
+        }
+
+        return playable.VersusBack;
     }
 
     private static BossSpawnEntry[] CreateCandidates()
