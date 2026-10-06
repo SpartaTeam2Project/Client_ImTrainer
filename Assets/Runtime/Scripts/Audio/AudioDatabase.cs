@@ -63,6 +63,8 @@ public class AudioEntry
     [SerializeField] private AudioFloatRange _volume = new AudioFloatRange(1f, 1f);
     [SerializeField] private AudioFloatRange _pitch = new AudioFloatRange(1f, 1f);
     [SerializeField, Range(0f, 1f)] private float _cooldown;
+    [Tooltip("같은 클립을 동시에 재생할 수 있는 최대 개수. 0이면 기본값을 쓴다.")]
+    [SerializeField, Min(0)] private int _maxInstances;
 
     private float _lastPlayedTime = -1f;
 
@@ -73,6 +75,8 @@ public class AudioEntry
     public float Volume => _volume.Pick();
 
     public float Pitch => _pitch.Pick();
+
+    public int MaxInstances => _maxInstances;
 
     /// <summary>
     /// 재생 간격을 초기화한다.

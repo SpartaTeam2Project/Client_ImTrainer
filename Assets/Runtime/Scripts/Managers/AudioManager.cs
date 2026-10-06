@@ -12,6 +12,7 @@ public class AudioManager : BaseManager
     private const string MUSIC_VOLUME_KEY = "Audio.MusicVolume";
     private const int INITIAL_SOUND_POOL_SIZE = 2;
     private const float DEFAULT_VOLUME = 1f;
+    private const int DEFAULT_MAX_SOUND_INSTANCES = 3;
 
     [SerializeField] private AudioDatabase _database;
 
@@ -146,7 +147,8 @@ public class AudioManager : BaseManager
             return null;
         }
 
-        return PlaySound(entry.Clip, entry.Volume, entry.Pitch);
+        var maxInstances = entry.MaxInstances > 0 ? entry.MaxInstances : DEFAULT_MAX_SOUND_INSTANCES;
+        return PlaySound(entry.Clip, entry.Volume, entry.Pitch, maxInstances);
     }
 
     /// <summary>
@@ -154,11 +156,28 @@ public class AudioManager : BaseManager
     /// </summary>
     public AudioSource PlaySound(AudioClip clip, float volume = 1f, float pitch = 1f)
     {
+        return PlaySound(clip, volume, pitch, DEFAULT_MAX_SOUND_INSTANCES);
+    }
+
+    /// <summary>
+    /// 같은 클립은 한 프레임에 한 번, 최대 개수까지만 겹쳐 틀고 겹칠수록 작게 튼다.
+    /// 여러 적이 동시에 맞을 때 타격음이 그대로 더해져 커지는 것을 막는다.
+    /// </summary>
+    private AudioSource PlaySound(AudioClip clip, float volume, float pitch, int maxInstances)
+    {
         if (clip == null)
         {
             Debug.LogWarning("효과음 클립이 비어 있습니다.");
             return null;
         }
+
+        var playingCount = CountPlaying(clip, out var startedThisFrame);
+        if (startedThisFrame || playingCount >= maxInstances)
+        {
+            return null;
+        }
+
+        volume /= Mathf.Sqrt(playingCount + 1);
 
         var source = GetSoundSource();
         source.clip = clip;
@@ -167,8 +186,31 @@ public class AudioManager : BaseManager
         source.volume = volume * _soundVolume;
         source.Play();
 
-        _playingSounds.Add(new PlayingSound(source, volume));
+        _playingSounds.Add(new PlayingSound(source, volume, Time.frameCount));
         return source;
+    }
+
+    private int CountPlaying(AudioClip clip, out bool startedThisFrame)
+    {
+        var count = 0;
+        startedThisFrame = false;
+
+        for (var i = 0; i < _playingSounds.Count; i++)
+        {
+            var playing = _playingSounds[i];
+            if (playing.Source.clip != clip || !playing.Source.isPlaying)
+            {
+                continue;
+            }
+
+            count++;
+            if (playing.StartFrame == Time.frameCount)
+            {
+                startedThisFrame = true;
+            }
+        }
+
+        return count;
     }
 
     /// <summary>
@@ -425,14 +467,17 @@ public class AudioManager : BaseManager
 
     private sealed class PlayingSound
     {
-        public PlayingSound(AudioSource source, float baseVolume)
+        public PlayingSound(AudioSource source, float baseVolume, int startFrame)
         {
             Source = source;
             BaseVolume = baseVolume;
+            StartFrame = startFrame;
         }
 
         public AudioSource Source { get; }
 
         public float BaseVolume { get; }
+
+        public int StartFrame { get; }
     }
 }
