@@ -49,6 +49,7 @@ public class UIStorageWindow : MonoBehaviour
     [SerializeField] private Button _trainingButton;
     [SerializeField] private UITrainingWindow _trainingWindow;
     [SerializeField] private GameObject _entryCharacter;
+    [SerializeField] private Button _logoutButton;
     [SerializeField] private Button _gameStartButton;
     [SerializeField] private TMP_Text _goldText;
 
@@ -476,6 +477,8 @@ public class UIStorageWindow : MonoBehaviour
         {
             AddSideItem(_entryMonsters[i] != null ? _entryMonsters[i].gameObject : null, null, false, i);
         }
+
+        AddSideItem(_logoutButton != null ? _logoutButton.gameObject: null, _logoutButton, false, -1);
 
         AddSideItem(_gameStartButton != null ? _gameStartButton.gameObject : null, _gameStartButton, false, -1);
     }

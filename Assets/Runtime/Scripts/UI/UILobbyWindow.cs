@@ -1,4 +1,5 @@
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -468,5 +469,41 @@ public class UILobbyWindow : MonoBehaviour
             default:
                 return null;
         }
+    }
+
+
+    public void EnterStorage()
+    {
+        ShowStorage();
+    }
+    public void ReturnToLobby()
+    {
+        var transition = ScreenTransition.Instance;
+
+        if (transition.IsClosed)
+        {
+            SwapToLobby(transition);
+            return;
+        }
+
+        if (transition.IsCovering)
+        {
+            return;
+        }
+
+        transition.Close()
+            .OnComplete(() => SwapToLobby(transition));
+    }
+
+    private void SwapToLobby(ScreenTransition transition)
+    {
+        if (_storageWindow != null)
+        {
+            _storageWindow.gameObject.SetActive(false);
+        }
+
+        gameObject.SetActive(true);
+
+        transition.FadeOut();
     }
 }
