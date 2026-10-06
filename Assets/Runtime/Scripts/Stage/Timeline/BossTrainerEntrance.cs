@@ -8,6 +8,7 @@ public struct BossTrainerEntranceCast
 {
     public Sprite[] DownFrames;
     public Sprite SideFrame;
+    public Sprite StandingFrame;
     public Sprite Exclamation;
     public BossTrainerVersusCast Versus;
 }
@@ -45,7 +46,7 @@ public static class BossTrainerEntrance
         Stop();
         if (!HasFrames(cast.DownFrames) || cast.SideFrame == null || cast.Exclamation == null)
         {
-            Debug.LogWarning("보스 트레이너 등장 그림이 비어 있습니다. 클립에 아래 걷기, 옆모습, 느낌표를 넣으세요.");
+            Debug.LogWarning("보스 트레이너 등장 그림이 비어 있습니다. 보스 SO에 아래 걷기, 왼쪽 아이들, 느낌표를 넣으세요.");
             return;
         }
 
@@ -74,7 +75,7 @@ public static class BossTrainerEntrance
             return;
         }
 
-        _trainer.sprite = cast.DownFrames[0];
+        _trainer.sprite = StandingSprite(cast);
         _mark.SetActive(true);
         PlayMusic(RIVAL_MUSIC_NAME);
         await UniTask.Delay(System.TimeSpan.FromSeconds(EXCLAIM_SECONDS));
@@ -140,7 +141,7 @@ public static class BossTrainerEntrance
     {
         _root = new GameObject("BossTrainerEntrance");
         _trainer = _root.AddComponent<SpriteRenderer>();
-        _trainer.sprite = cast.DownFrames[0];
+        _trainer.sprite = StandingSprite(cast);
         _trainer.sortingOrder = TRAINER_SORTING_ORDER;
         _root.transform.position = position;
         _root.transform.localScale = new Vector3(TRAINER_SCALE, TRAINER_SCALE, 1f);
@@ -230,6 +231,16 @@ public static class BossTrainerEntrance
     private static bool IsCurrent(int token)
     {
         return BossArenaPlayback.IsCurrent(token);
+    }
+
+    private static Sprite StandingSprite(BossTrainerEntranceCast cast)
+    {
+        if (cast.StandingFrame != null)
+        {
+            return cast.StandingFrame;
+        }
+
+        return cast.DownFrames[0];
     }
 
     private static bool HasFrames(Sprite[] frames)

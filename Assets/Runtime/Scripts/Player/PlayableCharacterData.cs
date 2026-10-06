@@ -17,6 +17,10 @@ public class PlayableCharacterData : ScriptableObject
     [SerializeField] private Sprite _portrait;
     [SerializeField] private Vector2 _portraitSize;
 
+    [Header("Versus")]
+    [Tooltip("보스 VS 화면 왼쪽에 나오는 등 사진.")]
+    [SerializeField] private Sprite _versusBack;
+
     [Header("Idle")]
     [SerializeField] private Sprite[] _idleDown = System.Array.Empty<Sprite>();
     [SerializeField] private Sprite[] _idleUp = System.Array.Empty<Sprite>();
@@ -47,6 +51,8 @@ public class PlayableCharacterData : ScriptableObject
     public Sprite Portrait => _portrait;
 
     public Vector2 PortraitSize => _portraitSize;
+
+    public Sprite VersusBack => _versusBack;
 
     public Sprite[] IdleDown => _idleDown;
 

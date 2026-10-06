@@ -7,7 +7,6 @@ using UnityEngine;
 /// </summary>
 public static class BossArenaPlayback
 {
-    private const int MAX_CANDIDATES = 5;
     private const float RIGHT_SPAWN_INSET = 1.5f;
     private const float APPROACH_DELAY_SECONDS = 1f;
 
@@ -219,8 +218,7 @@ public static class BossArenaPlayback
         }
 
         var pool = new List<BossSpawnEntry>();
-        var limit = Mathf.Min(MAX_CANDIDATES, candidates.Length);
-        for (var i = 0; i < limit; i++)
+        for (var i = 0; i < candidates.Length; i++)
         {
             var candidate = candidates[i];
             if (candidate != null && candidate.Monster != null)
