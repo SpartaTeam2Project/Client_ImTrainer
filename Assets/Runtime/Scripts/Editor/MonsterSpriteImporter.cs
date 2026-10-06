@@ -64,6 +64,21 @@ public static class MonsterSpriteImporter
 
     // 형태 SO가 쓸 SpriteCollab 형태 폴더. 표에 없거나 폴더에 그림이 없으면 기본형 시트를 같이 쓴다.
     // 0003, 0009의 메가와 거다이맥스는 원본에 그림이 없다.
+    /// <summary>
+    /// 특수 기술 목록에 넣을 SpriteCollab 전투 동작. sprite_config.json의 dungeon_actions에서
+    /// 동작 칸이 따로 있는 12개와 Idle을 뺐다. 종에 없는 기술은 건너뛰고, CopyOf 기술은 원본 시트를 같이 쓴다.
+    /// </summary>
+    public static readonly string[] SKILL_ANIMS =
+    {
+        "Double", "QuickStrike", "Chop", "Scratch", "Punch", "Slap", "Slice", "MultiScratch", "MultiStrike", "Uppercut",
+        "Ricochet", "Bite", "Shake", "Jab", "Kick", "Lick", "Slam", "Stomp", "Appeal", "Dance", "Twirl", "TailWhip",
+        "Sing", "Sound", "Rumble", "FlapAround", "Gas", "Shock", "Emit", "SpAttack", "Withdraw", "RearUp", "Swell", "Hover",
+    };
+
+    private const string SKILLS_FIELD = "_skills";
+    private const string SKILL_NAME_FIELD = "_name";
+    private const string SKILL_FRAMES_FIELD = "_frames";
+
     private static readonly Dictionary<string, string> FORM_FOLDERS = new Dictionary<string, string>
     {
         { "0006_Mega", "0001" },
@@ -116,6 +131,7 @@ public static class MonsterSpriteImporter
         public string SourceRoot;
         public bool Overwrite;
         public bool ForceReslice;
+        public bool IncludeSkills;
         public int ChunkSize = DEFAULT_CHUNK_SIZE;
     }
 
@@ -141,6 +157,7 @@ public static class MonsterSpriteImporter
     public class FieldEntry
     {
         public ActionField Action;
+        public string SkillName;
         public SheetEntry Sheet;
     }
 
@@ -493,9 +510,39 @@ public static class MonsterSpriteImporter
                     monster.Fields.Add(new FieldEntry { Action = action, Sheet = sheet });
                 }
             }
+
+            if (options.IncludeSkills)
+            {
+                PlanSkills(plan, monster, serialized, options, animData, targetFolder, prefix);
+            }
         }
 
         return monster;
+    }
+
+    // 종에 있는 기술만 넣는다. 대부분의 종은 기술이 몇 개뿐이라 없는 기술은 '원본에 없는 칸'으로 세지 않는다.
+    private static void PlanSkills(Plan plan, MonsterEntry monster, SerializedObject serialized, Options options, SpriteCollabAnimData animData, string targetFolder, string prefix)
+    {
+        foreach (var skill in SKILL_ANIMS)
+        {
+            if (!animData.TryResolve(skill, out var anim))
+            {
+                continue;
+            }
+
+            if (!options.Overwrite && serialized != null && FindSkill(serialized, skill) is { } existing
+                && HasAnyDirection(existing.FindPropertyRelative(SKILL_FRAMES_FIELD)))
+            {
+                plan.KeptFields++;
+                continue;
+            }
+
+            var sheet = PlanSheet(plan, animData, anim, targetFolder, prefix, monster.Name);
+            if (sheet != null)
+            {
+                monster.Fields.Add(new FieldEntry { SkillName = skill, Sheet = sheet });
+            }
+        }
     }
 
     // 형태 표에 있으면 그 형태 폴더를, 아니면 기본형 폴더를 쓴다. prefix는 복사할 시트 이름 앞부분이다.
@@ -795,6 +842,11 @@ public static class MonsterSpriteImporter
         var sheet = field.Sheet;
         var singleRow = sheet.Rows == SINGLE_ROW;
         var changed = false;
+        if (field.SkillName != null)
+        {
+            return WriteSkill(serialized, field.SkillName, sprites, sheet);
+        }
+
         if (field.Action.IsSides)
         {
             changed |= WriteFrames(serialized.FindProperty(field.Action.LeftField), sprites, singleRow ? 0 : LEFT_ROW, sheet.Columns);
@@ -812,6 +864,65 @@ public static class MonsterSpriteImporter
         }
 
         return changed;
+    }
+
+    // 기술 목록에서 이름이 같은 칸을 찾아 8방향을 쓴다. 없으면 목록 끝에 새로 만든다.
+    private static bool WriteSkill(SerializedObject serialized, string skill, Sprite[] sprites, SheetEntry sheet)
+    {
+        var changed = false;
+        var element = FindSkill(serialized, skill);
+        if (element == null)
+        {
+            var list = serialized.FindProperty(SKILLS_FIELD);
+            list.arraySize++;
+            element = list.GetArrayElementAtIndex(list.arraySize - 1);
+            element.FindPropertyRelative(SKILL_NAME_FIELD).stringValue = skill;
+            changed = true;
+        }
+
+        // 새 칸은 앞 칸 값을 복사해 생기지만, 아래에서 8방향을 모두 다시 쓴다.
+        var frames = element.FindPropertyRelative(SKILL_FRAMES_FIELD);
+        var directions = MonsterVisualDataEditor.EIGHT_DIRECTION_FIELDS;
+        for (var direction = 0; direction < directions.Length; direction++)
+        {
+            var row = sheet.Rows == SINGLE_ROW ? 0 : direction;
+            changed |= WriteFrames(frames.FindPropertyRelative(directions[direction]), sprites, row, sheet.Columns);
+        }
+
+        return changed;
+    }
+
+    private static SerializedProperty FindSkill(SerializedObject serialized, string skill)
+    {
+        var list = serialized.FindProperty(SKILLS_FIELD);
+        if (list == null)
+        {
+            return null;
+        }
+
+        for (var i = 0; i < list.arraySize; i++)
+        {
+            var element = list.GetArrayElementAtIndex(i);
+            if (element.FindPropertyRelative(SKILL_NAME_FIELD).stringValue == skill)
+            {
+                return element;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool HasAnyDirection(SerializedProperty frames)
+    {
+        foreach (var direction in MonsterVisualDataEditor.EIGHT_DIRECTION_FIELDS)
+        {
+            if (HasReference(frames.FindPropertyRelative(direction)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // 이미 같은 스프라이트가 같은 순서로 있으면 쓰지 않는다. 다시 실행해도 SO가 바뀌지 않는다.

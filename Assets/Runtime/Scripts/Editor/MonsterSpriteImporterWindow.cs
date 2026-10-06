@@ -30,6 +30,7 @@ public class MonsterSpriteImporterWindow : EditorWindow
     private int _toDex = MAX_DEX;
     private string _dexList = string.Empty;
     private bool[] _anims;
+    private bool _includeSkills = true;
     private bool _overwrite;
     private bool _forceReslice;
     private int _chunkSize = MonsterSpriteImporter.DEFAULT_CHUNK_SIZE;
@@ -148,6 +149,7 @@ public class MonsterSpriteImporterWindow : EditorWindow
             }
         }
 
+        _includeSkills = EditorGUILayout.ToggleLeft($"특수 기술 목록 ({MonsterSpriteImporter.SKILL_ANIMS.Length}종 중 그 포켓몬에 있는 것, 예: 피카츄 Shock)", _includeSkills);
         if (EditorGUI.EndChangeCheck())
         {
             _plan = null;
@@ -295,6 +297,7 @@ public class MonsterSpriteImporterWindow : EditorWindow
             SourceRoot = NormalizeRoot(_sourceRoot),
             Overwrite = _overwrite,
             ForceReslice = _forceReslice,
+            IncludeSkills = _includeSkills,
             ChunkSize = _chunkSize,
         };
 

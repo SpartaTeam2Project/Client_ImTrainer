@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -23,6 +24,8 @@ public class MonsterAnimationSet : ScriptableObject
 
     [SerializeField] private Sprite[] _poseLeft = new Sprite[0];
     [SerializeField] private Sprite[] _poseRight = new Sprite[0];
+
+    [SerializeField] private List<MonsterSkillAnimation> _skills = new List<MonsterSkillAnimation>();
 
     public EightDirectionFrames Walk => _walk;
 
@@ -58,6 +61,29 @@ public class MonsterAnimationSet : ScriptableObject
 
     public Sprite[] PoseRight => _poseRight;
 
+    /// <summary>
+    /// 종마다 다른 특수 기술 그림 목록. 종에 없는 기술은 들어 있지 않다.
+    /// </summary>
+    public IReadOnlyList<MonsterSkillAnimation> Skills => _skills;
+
+    /// <summary>
+    /// 이름으로 특수 기술 그림을 찾는다. 예: 피카츄의 "Shock". 없으면 false.
+    /// </summary>
+    public bool TryGetSkill(string skillName, out EightDirectionFrames frames)
+    {
+        for (var i = 0; i < _skills.Count; i++)
+        {
+            if (_skills[i] != null && _skills[i].Name == skillName)
+            {
+                frames = _skills[i].Frames;
+                return frames != null;
+            }
+        }
+
+        frames = null;
+        return false;
+    }
+
     private void OnEnable()
     {
         _walk ??= new EightDirectionFrames();
@@ -74,5 +100,6 @@ public class MonsterAnimationSet : ScriptableObject
         _faintRight ??= new Sprite[0];
         _poseLeft ??= new Sprite[0];
         _poseRight ??= new Sprite[0];
+        _skills ??= new List<MonsterSkillAnimation>();
     }
 }

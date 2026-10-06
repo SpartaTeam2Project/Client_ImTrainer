@@ -132,6 +132,31 @@ public class MonsterVisualDataEditor : Editor
 
         DrawTwoDirectionAction(serialized, "Faint", "기절 (Faint)", "_faintLeft", "_faintRight");
         DrawTwoDirectionAction(serialized, "Pose", "포즈 (Pose)", "_poseLeft", "_poseRight");
+        DrawSkills(serialized);
+    }
+
+    // 종마다 다른 특수 기술(예: 피카츄 Shock). 이름은 SpriteCollab 애니 이름 그대로다.
+    private static void DrawSkills(SerializedObject serialized)
+    {
+        var skills = serialized.FindProperty("_skills");
+        if (skills == null)
+        {
+            return;
+        }
+
+        if (!BeginAction("Skills", $"특수 기술 (Skills)   {skills.arraySize}개"))
+        {
+            return;
+        }
+
+        for (var i = 0; i < skills.arraySize; i++)
+        {
+            var skill = skills.GetArrayElementAtIndex(i);
+            var name = skill.FindPropertyRelative("_name").stringValue;
+            DrawDirections(skill.FindPropertyRelative("_frames"), "Skill." + name, name);
+        }
+
+        EditorGUI.indentLevel--;
     }
 
     private void DrawWeaponAbility()
@@ -218,7 +243,11 @@ public class MonsterVisualDataEditor : Editor
 
     private static void DrawEightDirectionAction(SerializedObject serialized, string field, string label)
     {
-        var action = serialized.FindProperty(field);
+        DrawDirections(serialized.FindProperty(field), field, label);
+    }
+
+    private static void DrawDirections(SerializedProperty action, string field, string label)
+    {
         var filled = 0;
         for (var i = 0; i < EIGHT_DIRECTION_FIELDS.Length; i++)
         {
