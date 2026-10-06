@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -40,7 +41,16 @@ public class InventoryUi : MonoBehaviour
     [SerializeField] private Button _discardButton;
     [SerializeField] private Button _closeButton;
 
+    [Header("Drag")]
+    [SerializeField] private InventoryDropZone _trashZone;
+    [SerializeField] private Vector2 _dragGhostSize = new Vector2(96f, 96f);
+
     private readonly List<InventoryItem> _bagSlots = new List<InventoryItem>();
+    private Image _dragGhost;
+    private InventorySlotDrag.SlotKind _dragKind = InventorySlotDrag.SlotKind.None;
+    private int _dragIndex = -1;
+    private int _dragUid = -1;
+    private int _dragStar;
     private SelectionKind _selection = SelectionKind.None;
     private int _selectedIndex = -1;
     private int _selectedUid = -1;
@@ -65,6 +75,12 @@ public class InventoryUi : MonoBehaviour
             _shopUi.Bind(Refresh, SelectShop);
         }
 
+        if (_equipmentUi != null)
+        {
+            _equipmentUi.BindDrag(this);
+        }
+
+        CreateDragGhost();
         if (_canvas != null)
         {
             _canvas.gameObject.SetActive(false);
@@ -79,6 +95,7 @@ public class InventoryUi : MonoBehaviour
     private void OnDisable()
     {
         Unsubscribe();
+        EndDrag();
         if (_holdTime && Managers.Instance != null && Managers.Instance.CurrentState == GameState.Playing)
         {
             Time.timeScale = 1f;
@@ -193,6 +210,7 @@ public class InventoryUi : MonoBehaviour
     private void Close()
     {
         _open = false;
+        EndDrag();
         if (_showRoutine != null)
         {
             StopCoroutine(_showRoutine);
@@ -403,6 +421,7 @@ public class InventoryUi : MonoBehaviour
             var index = i;
             var slot = Instantiate(_slotPrefab, _bagContent);
             slot.Button.onClick.AddListener(() => SelectBag(index));
+            slot.Drag.Bind(this, InventorySlotDrag.SlotKind.Bag, index);
             _bagSlots.Add(slot);
         }
     }
@@ -585,6 +604,263 @@ public class InventoryUi : MonoBehaviour
         }
 
         Refresh();
+    }
+
+    /// <summary>
+    /// 칸 끌기를 시작한다. 빈 칸이면 false를 돌려줘서 칸이 스크롤로 넘기게 한다.
+    /// </summary>
+    public bool BeginDrag(InventorySlotDrag.SlotKind kind, int index, PointerEventData eventData)
+    {
+        if (!_open || _closing || !TryGetContext(out var itemManager, out var playerId))
+        {
+            return false;
+        }
+
+        var holder = kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId)
+            : kind == InventorySlotDrag.SlotKind.Equipment ? itemManager.GetEquipment(playerId)
+            : null;
+        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Empty || holder.Stacks[index].Item == null)
+        {
+            return false;
+        }
+
+        var item = holder.Stacks[index].Item;
+        _dragKind = kind;
+        _dragIndex = index;
+        _dragUid = item.uid;
+        _dragStar = item.upgradeLevel;
+        if (kind == InventorySlotDrag.SlotKind.Bag)
+        {
+            SelectBag(index);
+        }
+        else
+        {
+            SelectEquipment(index);
+        }
+
+        ShowDragGhost(itemManager, item.uid);
+        MoveDrag(eventData);
+        if (_trashZone != null)
+        {
+            _trashZone.SetHighlight(true);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 끌고 있는 그림을 포인터 위치로 옮긴다.
+    /// </summary>
+    public void MoveDrag(PointerEventData eventData)
+    {
+        if (_dragGhost == null || !_dragGhost.gameObject.activeSelf || _canvas == null)
+        {
+            return;
+        }
+
+        var canvasRect = (RectTransform)_canvas.transform;
+        var eventCamera = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : eventData.pressEventCamera;
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, eventData.position, eventCamera, out var local))
+        {
+            _dragGhost.rectTransform.localPosition = local;
+        }
+    }
+
+    /// <summary>
+    /// 끌기를 끝낸다. 놓은 자리가 없으면 아무것도 하지 않고 취소된다.
+    /// </summary>
+    public void EndDrag()
+    {
+        _dragKind = InventorySlotDrag.SlotKind.None;
+        _dragIndex = -1;
+        _dragUid = -1;
+        if (_dragGhost != null)
+        {
+            _dragGhost.gameObject.SetActive(false);
+        }
+
+        if (_trashZone != null)
+        {
+            _trashZone.SetHighlight(false);
+        }
+    }
+
+    /// <summary>
+    /// 가방이나 장착 칸 위에 놓았다.
+    /// </summary>
+    public void DropOnSlot(InventorySlotDrag.SlotKind targetKind, int targetIndex)
+    {
+        if (_dragKind == InventorySlotDrag.SlotKind.None || !TryGetContext(out var itemManager, out var playerId))
+        {
+            return;
+        }
+
+        if (_dragKind == InventorySlotDrag.SlotKind.Bag)
+        {
+            DropBag(itemManager, playerId, targetKind, targetIndex);
+        }
+        else
+        {
+            DropEquipment(itemManager, playerId, targetKind, targetIndex);
+        }
+
+        EndDrag();
+        Refresh();
+    }
+
+    /// <summary>
+    /// 칸이 아닌 영역에 놓았다. 가방 영역이면 해제, 휴지통이면 판매한다.
+    /// </summary>
+    public void DropOnZone(InventoryDropZone.ZoneKind zone)
+    {
+        if (_dragKind == InventorySlotDrag.SlotKind.None || !TryGetContext(out var itemManager, out var playerId))
+        {
+            return;
+        }
+
+        if (zone == InventoryDropZone.ZoneKind.Trash)
+        {
+            if (_dragKind == InventorySlotDrag.SlotKind.Bag)
+            {
+                var bagIndex = ResolveDragBagIndex(itemManager, playerId);
+                if (bagIndex >= 0)
+                {
+                    itemManager.TrySell(playerId, bagIndex);
+                }
+            }
+            else
+            {
+                itemManager.TrySellEquipped(playerId, _dragIndex);
+            }
+        }
+        else if (zone == InventoryDropZone.ZoneKind.Bag && _dragKind == InventorySlotDrag.SlotKind.Equipment)
+        {
+            itemManager.TryUnequip(playerId, _dragIndex);
+        }
+
+        EndDrag();
+        Refresh();
+    }
+
+    private void DropBag(ItemManager itemManager, int playerId, InventorySlotDrag.SlotKind targetKind, int targetIndex)
+    {
+        var bagIndex = ResolveDragBagIndex(itemManager, playerId);
+        if (bagIndex < 0)
+        {
+            return;
+        }
+
+        if (targetKind == InventorySlotDrag.SlotKind.Equipment)
+        {
+            if (IsSameAsDragged(itemManager.GetEquipment(playerId), targetIndex))
+            {
+                itemManager.TrySynthesize(playerId, _dragUid, _dragStar, targetIndex, -1);
+                return;
+            }
+
+            itemManager.TryEquipToSlot(playerId, bagIndex, targetIndex);
+            return;
+        }
+
+        // 가방은 자동 정렬이라 자리만 옮기는 동작은 없다. 같은 종, 같은 성 칸에 놓을 때만 합성한다.
+        if (targetKind != InventorySlotDrag.SlotKind.Bag || targetIndex == _dragIndex)
+        {
+            return;
+        }
+
+        if (IsSameAsDragged(itemManager.GetInventory(playerId), targetIndex))
+        {
+            itemManager.TrySynthesize(playerId, _dragUid, _dragStar);
+        }
+    }
+
+    private void DropEquipment(ItemManager itemManager, int playerId, InventorySlotDrag.SlotKind targetKind, int targetIndex)
+    {
+        if (targetKind == InventorySlotDrag.SlotKind.Equipment)
+        {
+            if (targetIndex == _dragIndex)
+            {
+                return;
+            }
+
+            if (IsSameAsDragged(itemManager.GetEquipment(playerId), targetIndex))
+            {
+                itemManager.TrySynthesize(playerId, _dragUid, _dragStar, targetIndex, _dragIndex);
+                return;
+            }
+
+            itemManager.TrySwapEquipped(playerId, _dragIndex, targetIndex);
+            return;
+        }
+
+        if (targetKind != InventorySlotDrag.SlotKind.Bag)
+        {
+            return;
+        }
+
+        // 같은 종, 같은 성 가방 칸에 놓으면 합성하고 결과는 끈 장착 칸에 남긴다. 그 밖에는 해제한다.
+        if (IsSameAsDragged(itemManager.GetInventory(playerId), targetIndex))
+        {
+            itemManager.TrySynthesize(playerId, _dragUid, _dragStar, -1, _dragIndex);
+            return;
+        }
+
+        itemManager.TryUnequip(playerId, _dragIndex);
+    }
+
+    private bool IsSameAsDragged(InventoryHolder holder, int index)
+    {
+        return holder != null && index >= 0 && index < holder.Stacks.Count && holder.Stacks[index].isSameItem(_dragUid, _dragStar);
+    }
+
+    /// <summary>
+    /// 가방은 바뀔 때마다 정렬돼서 끌기 시작한 칸 번호 대신 종과 성으로 다시 찾는다.
+    /// </summary>
+    private int ResolveDragBagIndex(ItemManager itemManager, int playerId)
+    {
+        var bag = itemManager.GetInventory(playerId);
+        if (bag == null)
+        {
+            return -1;
+        }
+
+        if (_dragIndex >= 0 && _dragIndex < bag.Stacks.Count && bag.Stacks[_dragIndex].isSameItem(_dragUid, _dragStar))
+        {
+            return _dragIndex;
+        }
+
+        return bag.FindIndex(_dragUid, _dragStar);
+    }
+
+    private void CreateDragGhost()
+    {
+        if (_canvas == null)
+        {
+            return;
+        }
+
+        var ghost = new GameObject("DragGhost", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        ghost.layer = _canvas.gameObject.layer;
+        ghost.transform.SetParent(_canvas.transform, false);
+        _dragGhost = ghost.GetComponent<Image>();
+        _dragGhost.raycastTarget = false;
+        _dragGhost.preserveAspect = true;
+        _dragGhost.rectTransform.sizeDelta = _dragGhostSize;
+        ghost.SetActive(false);
+    }
+
+    private void ShowDragGhost(ItemManager itemManager, int uid)
+    {
+        if (_dragGhost == null)
+        {
+            return;
+        }
+
+        var visual = itemManager.GetVisual(uid);
+        _dragGhost.sprite = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
+        _dragGhost.enabled = _dragGhost.sprite != null;
+        _dragGhost.transform.SetAsLastSibling();
+        _dragGhost.gameObject.SetActive(true);
     }
 
     private bool TryGetSelectedBag(out ItemManager itemManager, out int playerId, out InventoryStack stack)

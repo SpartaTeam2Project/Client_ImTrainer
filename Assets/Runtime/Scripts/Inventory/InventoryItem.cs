@@ -22,7 +22,25 @@ public class InventoryItem : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _countText;
     [SerializeField] private Button _button;
 
+    private InventorySlotDrag _drag;
+
     public Button Button => _button;
+
+    /// <summary>
+    /// 끌기를 받는 컴포넌트. 프리팹에 없으면 붙여서 돌려준다.
+    /// </summary>
+    public InventorySlotDrag Drag
+    {
+        get
+        {
+            if (_drag == null && !TryGetComponent(out _drag))
+            {
+                _drag = gameObject.AddComponent<InventorySlotDrag>();
+            }
+
+            return _drag;
+        }
+    }
 
     private void Awake()
     {

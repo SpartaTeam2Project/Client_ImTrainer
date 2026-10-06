@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 인게임 장착 칸 여섯 개. 칸을 누르면 선택한다.
+/// 인게임 장착 칸 여섯 개. 칸을 누르면 선택하고, 끌어서 옮길 수 있다.
 /// </summary>
 public class EquipmentUi : MonoBehaviour
 {
@@ -24,6 +24,20 @@ public class EquipmentUi : MonoBehaviour
 
             var slotIndex = i;
             _slots[i].Button.onClick.AddListener(() => _onSelect?.Invoke(slotIndex));
+        }
+    }
+
+    /// <summary>
+    /// 장착 칸 끌기를 창에 연결한다.
+    /// </summary>
+    public void BindDrag(InventoryUi owner)
+    {
+        for (var i = 0; i < _slots.Length; i++)
+        {
+            if (_slots[i] != null)
+            {
+                _slots[i].Drag.Bind(owner, InventorySlotDrag.SlotKind.Equipment, i);
+            }
         }
     }
 

@@ -432,9 +432,19 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 가방의 같은 종, 같은 성 세 마리를 합성한다.
+    /// 가방과 장착 칸을 합쳐 같은 종, 같은 성 세 마리를 합성한다.
     /// </summary>
     public bool TrySynthesize(int playerId, int uid, int upgradeLevel)
+    {
+        return TrySynthesize(playerId, uid, upgradeLevel, -1, -1);
+    }
+
+    /// <summary>
+    /// 가방과 장착 칸을 합쳐 같은 종, 같은 성 세 마리를 합성한다.
+    /// 재료는 놓은 장착 칸, 끈 장착 칸, 가방, 나머지 장착 칸 순서로 쓴다.
+    /// 장착 칸이 재료로 쓰이면 결과는 처음 쓰인 장착 칸에 남고, 아니면 가방에 들어간다.
+    /// </summary>
+    public bool TrySynthesize(int playerId, int uid, int upgradeLevel, int targetSlot, int sourceSlot)
     {
         var run = GetRun(playerId);
         var source = TryGetItem(uid);
@@ -444,46 +454,54 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        if (run.Bag.GetItemNumber(uid, upgradeLevel) < SYNTHESIS_COUNT)
+        if (run.Bag.GetItemNumber(uid, upgradeLevel) + run.Equipment.GetItemNumber(uid, upgradeLevel) < SYNTHESIS_COUNT)
         {
             LastMessage = "같은 성 세 마리가 필요합니다.";
             return false;
         }
 
-        Item result;
-        if (upgradeLevel < Item.STAR_MAX)
+        if (!TryCreateSynthesisResult(source, upgradeLevel, out var result))
         {
-            result = CreateItem(uid, upgradeLevel + 1);
+            return false;
         }
-        else if (source.evolutionUid >= 0)
+
+        var bagSnapshot = run.Bag.Capture();
+        var usedSlots = new List<int>(SYNTHESIS_COUNT);
+        TakeEquippedMaterial(run, targetSlot, uid, upgradeLevel, usedSlots);
+        TakeEquippedMaterial(run, sourceSlot, uid, upgradeLevel, usedSlots);
+        var remaining = SYNTHESIS_COUNT - usedSlots.Count;
+        remaining -= run.Bag.RemoveItem(uid, upgradeLevel, remaining);
+        for (var i = 0; i < run.Equipment.Stacks.Count && remaining > 0; i++)
         {
-            result = CreateItem(source.evolutionUid, Item.STAR_MIN);
+            if (TakeEquippedMaterial(run, i, uid, upgradeLevel, usedSlots))
+            {
+                remaining--;
+            }
+        }
+
+        if (usedSlots.Count > 0)
+        {
+            run.Equipment.Stacks[usedSlots[0]].SetItem(result, 1);
         }
         else
         {
-            LastMessage = "다음 포켓몬이 없습니다.";
-            return false;
-        }
-
-        if (result == null)
-        {
-            LastMessage = "합성 결과를 만들지 못했습니다.";
-            return false;
-        }
-
-        var snapshot = run.Bag.Capture();
-        run.Bag.RemoveItem(uid, upgradeLevel, SYNTHESIS_COUNT);
-        var leftover = run.Bag.AddItem(result, 1);
-        if (!leftover.Empty)
-        {
-            run.Bag.Restore(snapshot);
-            LastMessage = "가방이 가득 찼습니다.";
-            return false;
+            var leftover = run.Bag.AddItem(result, 1);
+            if (!leftover.Empty)
+            {
+                run.Bag.Restore(bagSnapshot);
+                LastMessage = "가방이 가득 찼습니다.";
+                return false;
+            }
         }
 
         RecordObtained(playerId, result.uid);
         LastMessage = result.name + " " + result.upgradeLevel + "성이 되었습니다.";
         FinishBag(playerId);
+        for (var i = 0; i < usedSlots.Count; i++)
+        {
+            PublishEquipmentSlot(playerId, usedSlots[i]);
+        }
+
         return true;
     }
 
@@ -515,6 +533,97 @@ public class ItemManager : BaseManager
         LastMessage = "장착했습니다.";
         FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
+        return true;
+    }
+
+    /// <summary>
+    /// 가방 칸 한 마리를 정한 시계 칸에 장착한다. 칸이 차 있으면 서로 바꾼다.
+    /// </summary>
+    public bool TryEquipToSlot(int playerId, int bagIndex, int slot)
+    {
+        var run = GetRun(playerId);
+        if (run == null || bagIndex < 0 || bagIndex >= run.Bag.Stacks.Count || run.Bag.Stacks[bagIndex].Empty)
+        {
+            LastMessage = "장착할 포켓몬이 없습니다.";
+            return false;
+        }
+
+        if (slot < 0 || slot >= run.Equipment.Stacks.Count)
+        {
+            LastMessage = "장착하지 못했습니다.";
+            return false;
+        }
+
+        if (!run.Equipment.Stacks[slot].Empty)
+        {
+            return TrySwapBagWithEquipped(playerId, bagIndex, slot);
+        }
+
+        if (!TryMoveToSlot(run, bagIndex, slot))
+        {
+            LastMessage = "장착하지 못했습니다.";
+            return false;
+        }
+
+        LastMessage = "장착했습니다.";
+        FinishBag(playerId);
+        PublishEquipmentSlot(playerId, slot);
+        return true;
+    }
+
+    /// <summary>
+    /// 가방 칸과 시계 칸의 포켓몬을 맞바꾼다.
+    /// </summary>
+    public bool TrySwapBagWithEquipped(int playerId, int bagIndex, int slot)
+    {
+        var run = GetRun(playerId);
+        if (run == null || bagIndex < 0 || bagIndex >= run.Bag.Stacks.Count || run.Bag.Stacks[bagIndex].Empty
+            || slot < 0 || slot >= run.Equipment.Stacks.Count || run.Equipment.Stacks[slot].Empty)
+        {
+            LastMessage = "교체할 포켓몬이 없습니다.";
+            return false;
+        }
+
+        var bagItem = run.Bag.Stacks[bagIndex].Item.Copy();
+        var equippedItem = run.Equipment.Stacks[slot].Item.Copy();
+        run.Bag.Stacks[bagIndex].SetItem(equippedItem, 1);
+        run.Equipment.Stacks[slot].SetItem(bagItem, 1);
+        LastMessage = "교체했습니다.";
+        FinishBag(playerId);
+        PublishEquipmentSlot(playerId, slot);
+        return true;
+    }
+
+    /// <summary>
+    /// 시계 칸끼리 자리를 바꾼다. 한쪽이 비어 있으면 옮기기만 한다.
+    /// </summary>
+    public bool TrySwapEquipped(int playerId, int from, int to)
+    {
+        var run = GetRun(playerId);
+        if (run == null || from == to
+            || from < 0 || from >= run.Equipment.Stacks.Count || run.Equipment.Stacks[from].Empty
+            || to < 0 || to >= run.Equipment.Stacks.Count)
+        {
+            return false;
+        }
+
+        var fromStack = run.Equipment.Stacks[from];
+        var toStack = run.Equipment.Stacks[to];
+        var moving = fromStack.Item.Copy();
+        if (toStack.Empty)
+        {
+            fromStack.Delete();
+        }
+        else
+        {
+            fromStack.SetItem(toStack.Item, 1);
+        }
+
+        toStack.SetItem(moving, 1);
+        LastMessage = "자리를 바꿨습니다.";
+        PublishInventory(playerId);
+        PublishEquipmentSlot(playerId, from);
+        PublishEquipmentSlot(playerId, to);
         return true;
     }
 
@@ -862,6 +971,51 @@ public class ItemManager : BaseManager
         }
 
         return account.ResolveStarterVisual();
+    }
+
+    /// <summary>
+    /// 합성 결과를 만든다. 3성 미만은 같은 종 한 성 위, 3성은 다음 진화 1성이다.
+    /// </summary>
+    private bool TryCreateSynthesisResult(Item source, int upgradeLevel, out Item result)
+    {
+        result = null;
+        if (upgradeLevel < Item.STAR_MAX)
+        {
+            result = CreateItem(source.uid, upgradeLevel + 1);
+        }
+        else if (source.evolutionUid >= 0)
+        {
+            result = CreateItem(source.evolutionUid, Item.STAR_MIN);
+        }
+        else
+        {
+            LastMessage = "다음 포켓몬이 없습니다.";
+            return false;
+        }
+
+        if (result == null)
+        {
+            LastMessage = "합성 결과를 만들지 못했습니다.";
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 같은 종, 같은 성인 장착 칸을 합성 재료로 비운다. 이미 쓴 칸은 다시 쓰지 않는다.
+    /// </summary>
+    private static bool TakeEquippedMaterial(RunInventory run, int slot, int uid, int upgradeLevel, List<int> usedSlots)
+    {
+        if (slot < 0 || slot >= run.Equipment.Stacks.Count || usedSlots.Count >= SYNTHESIS_COUNT || usedSlots.Contains(slot)
+            || !run.Equipment.Stacks[slot].isSameItem(uid, upgradeLevel))
+        {
+            return false;
+        }
+
+        run.Equipment.Stacks[slot].Delete();
+        usedSlots.Add(slot);
+        return true;
     }
 
     private bool TryMoveToSlot(RunInventory run, int bagIndex, int slot)
