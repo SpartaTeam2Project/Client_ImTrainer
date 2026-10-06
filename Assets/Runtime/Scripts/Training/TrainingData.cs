@@ -16,7 +16,41 @@ public class TrainingData : ScriptableObject
     [SerializeField] private TrainingValueDisplay _valueDisplay;
     [SerializeField] private List<TrainingLevel> _levels = new List<TrainingLevel>();
 
+    [Header("스킬트리 배치")]
+    [SerializeField] private TrainingCategory _category;
+    [SerializeField, Min(0)] private int _row;
+    [SerializeField, Range(0, 2)] private int _column;
+
+    [Header("해금 조건")]
+    [SerializeField] private TrainingCategory _requiredCategory;
+    [SerializeField, Min(0)] private int _requiredLevel;
+
     public TrainingType TrainingType => _trainingType;
+
+    /// <summary>
+    /// 창에서 이 칸이 놓이는 열.
+    /// </summary>
+    public TrainingCategory Category => _category;
+
+    /// <summary>
+    /// 열 안의 행. 0이 맨 위.
+    /// </summary>
+    public int Row => _row;
+
+    /// <summary>
+    /// 열 안의 칸. 0이 맨 왼쪽.
+    /// </summary>
+    public int Column => _column;
+
+    /// <summary>
+    /// 해금 기준이 되는 카테고리.
+    /// </summary>
+    public TrainingCategory RequiredCategory => _requiredCategory;
+
+    /// <summary>
+    /// 해금에 필요한 카테고리 Lv. 0이면 처음부터 열려 있다.
+    /// </summary>
+    public int RequiredLevel => _requiredLevel;
 
     public Sprite Icon => _icon;
 

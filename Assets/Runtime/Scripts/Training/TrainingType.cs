@@ -15,6 +15,17 @@ public enum TrainingType
 }
 
 /// <summary>
+/// 트레이닝 창의 열. 값은 에셋에 저장되므로 바꾸지 않는다.
+/// </summary>
+public enum TrainingCategory
+{
+    Attack = 0,
+    Defense = 1,
+    Resource = 2,
+    Ancient = 3,
+}
+
+/// <summary>
 /// 트레이닝 효과 수치를 칸에 그리는 형식.
 /// </summary>
 public enum TrainingValueDisplay

@@ -74,6 +74,104 @@ public class TrainingManager : BaseManager
         return trainingLevel == null ? 0f : trainingLevel.Value;
     }
 
+    /// <summary>
+    /// 카테고리 Lv. 그 카테고리 트레이닝들에서 올린 레벨 수를 더한다.
+    /// </summary>
+    public int GetCategoryLevel(int playerId, TrainingCategory category)
+    {
+        if (_database == null)
+        {
+            LogMissingDatabase();
+            return 0;
+        }
+
+        var total = 0;
+        for (var i = 0; i < _database.Count; i++)
+        {
+            var data = _database.GetTraining(i);
+            if (data == null || data.Category != category)
+            {
+                continue;
+            }
+
+            total += GetTrainingLevel(playerId, data.TrainingType) + 1;
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    /// 해금 조건을 채웠으면 true.
+    /// </summary>
+    public bool IsUnlocked(int playerId, TrainingData data)
+    {
+        if (data == null)
+        {
+            return false;
+        }
+
+        return data.RequiredLevel <= 0 || GetCategoryLevel(playerId, data.RequiredCategory) >= data.RequiredLevel;
+    }
+
+    /// <summary>
+    /// 지금까지 산 레벨들의 포켓달러 비용 합.
+    /// </summary>
+    public int GetSpentCost(int playerId)
+    {
+        if (_database == null)
+        {
+            LogMissingDatabase();
+            return 0;
+        }
+
+        var total = 0;
+        for (var i = 0; i < _database.Count; i++)
+        {
+            var data = _database.GetTraining(i);
+            if (data == null)
+            {
+                continue;
+            }
+
+            var level = GetTrainingLevel(playerId, data.TrainingType);
+            for (var id = 0; id <= level; id++)
+            {
+                var trainingLevel = data.GetLevel(id);
+                if (trainingLevel != null)
+                {
+                    total += trainingLevel.Cost;
+                }
+            }
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    /// 그 플레이어의 트레이닝 레벨을 모두 지운다. 돌려줄 포켓달러 합을 반환한다.
+    /// </summary>
+    public int ResetAll(int playerId)
+    {
+        if (_database == null)
+        {
+            LogMissingDatabase();
+            return 0;
+        }
+
+        var refund = GetSpentCost(playerId);
+        for (var i = 0; i < _database.Count; i++)
+        {
+            var data = _database.GetTraining(i);
+            if (data != null)
+            {
+                PlayerPrefs.DeleteKey(GetKey(playerId, data.TrainingType));
+            }
+        }
+
+        PlayerPrefs.Save();
+        return refund;
+    }
+
     private static string GetKey(int playerId, TrainingType trainingType)
     {
         return PREFS_PREFIX + playerId + "_" + (int)trainingType;

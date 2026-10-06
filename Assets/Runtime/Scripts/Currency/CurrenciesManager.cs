@@ -86,6 +86,23 @@ public class CurrenciesManager : BaseManager
     }
 
     /// <summary>
+    /// 판이 끝나도 남는 메타 잔액에 더한다. 메타 잔액이 없는 재화면 무시한다.
+    /// </summary>
+    public void DepositMeta(int playerId, string currencyId, int amount)
+    {
+        var data = FindCurrency(currencyId);
+        if (amount <= 0 || data == null || !data.KeepAfterStage)
+        {
+            return;
+        }
+
+        var meta = GetOrCreateMeta(playerId, currencyId);
+        meta.Deposit(amount);
+        SaveMeta(playerId, currencyId, meta.Amount);
+        Publish(playerId, currencyId, meta.Amount, true);
+    }
+
+    /// <summary>
     /// 재화 아이콘. 없으면 null.
     /// </summary>
     public Sprite GetIcon(string currencyId)

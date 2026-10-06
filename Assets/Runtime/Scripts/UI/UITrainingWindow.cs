@@ -1,30 +1,39 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 스토리지에서 포켓달러로 트레이닝 레벨을 올린다.
+/// 스토리지에서 포켓달러로 트레이닝 레벨을 올린다. 카테고리 열로 나눈 스킬트리 형태다.
 /// </summary>
 public class UITrainingWindow : MonoBehaviour
 {
-    private const int COLUMN_COUNT = 2;
-    private const float ITEM_SCROLL_GAP = 16f;
     private const string MENU_MOVE_SOUND = "cursor";
     private const string BUTTON_CLICK_SOUND = "select";
     private const string OPEN_SOUND = "open";
     private const string CLOSE_SOUND = "close";
+    private const string RESET_LABEL = "리셋";
+    private const string RESET_CONFIRM_LABEL = "정말 리셋?";
+    private const string LOCK_FORMAT = "<color=#{0}>{1}</color> Lv {2} 필요";
+    private const float PERPENDICULAR_WEIGHT = 2f;
 
     [SerializeField] private TrainingDatabase _database;
-    [SerializeField] private TrainingItemBehavior _itemPrefab;
-    [SerializeField] private RectTransform _itemsParent;
-    [SerializeField] private ScrollRect _scrollView;
-    [SerializeField] private GridLayoutGroup _grid;
+    [SerializeField] private TrainingSlotBehavior _slotPrefab;
+    [SerializeField] private TrainingCategoryColumn[] _columns;
+    [SerializeField] private TrainingDetailPanel _detail;
+    [SerializeField] private TMP_Text _currencyLabel;
+    [SerializeField] private Image _currencyIcon;
+    [SerializeField] private Button _resetButton;
+    [SerializeField] private GameObject _resetSelect;
+    [SerializeField] private TMP_Text _resetLabel;
     [SerializeField] private Button _backButton;
     [SerializeField] private GameObject _backSelect;
 
-    private readonly List<TrainingItemBehavior> _items = new List<TrainingItemBehavior>();
+    private readonly List<TrainingSlotBehavior> _slots = new List<TrainingSlotBehavior>();
     private int _playerId;
     private int _selectedIndex;
+    private int _lastSlotIndex;
+    private bool _resetArmed;
     private bool _subscribed;
 
     public bool IsOpen => gameObject.activeSelf;
@@ -34,9 +43,13 @@ public class UITrainingWindow : MonoBehaviour
         if (_backButton != null)
         {
             _backButton.onClick.AddListener(Close);
-            var navigation = _backButton.navigation;
-            navigation.mode = Navigation.Mode.None;
-            _backButton.navigation = navigation;
+            DisableNavigation(_backButton);
+        }
+
+        if (_resetButton != null)
+        {
+            _resetButton.onClick.AddListener(HandleResetClick);
+            DisableNavigation(_resetButton);
         }
     }
 
@@ -45,6 +58,11 @@ public class UITrainingWindow : MonoBehaviour
         if (_backButton != null)
         {
             _backButton.onClick.RemoveListener(Close);
+        }
+
+        if (_resetButton != null)
+        {
+            _resetButton.onClick.RemoveListener(HandleResetClick);
         }
     }
 
@@ -58,14 +76,16 @@ public class UITrainingWindow : MonoBehaviour
         _playerId = ResolvePlayerId();
         Rebuild();
         SubscribeCurrency();
-        _selectedIndex = _items.Count > 0 ? 0 : BackIndex();
-        ApplySelection(false);
+        _selectedIndex = _slots.Count > 0 ? 0 : BackIndex();
+        _lastSlotIndex = 0;
+        SetResetArmed(false);
+        ApplySelection();
     }
 
     private void OnDisable()
     {
         UnsubscribeCurrency();
-        ClearItems();
+        ClearSlots();
     }
 
     private void Update()
@@ -122,8 +142,8 @@ public class UITrainingWindow : MonoBehaviour
 
     private void Rebuild()
     {
-        ClearItems();
-        if (_database == null || _itemPrefab == null || _itemsParent == null)
+        ClearSlots();
+        if (_database == null || _slotPrefab == null)
         {
             return;
         }
@@ -136,121 +156,196 @@ public class UITrainingWindow : MonoBehaviour
                 continue;
             }
 
-            var item = Instantiate(_itemPrefab, _itemsParent);
-            item.gameObject.SetActive(true);
-            var savedLevel = GetSavedLevel(data.TrainingType);
-            item.Init(data, savedLevel + 1, _playerId, FocusItem, PurchaseItem);
-            _items.Add(item);
+            var column = FindColumn(data.Category);
+            if (column == null)
+            {
+                Debug.LogError($"트레이닝 창에 {data.Category} 열이 없습니다.");
+                continue;
+            }
+
+            var slot = Instantiate(_slotPrefab);
+            slot.gameObject.SetActive(true);
+            column.Place(slot, data.Row, data.Column);
+            slot.Init(data, column.Color, FocusSlot, PurchaseSlot);
+            _slots.Add(slot);
         }
 
-        ResizeContent();
+        SortSlotsByLayout();
+        RefreshAll();
     }
 
-    private void ResizeContent()
+    private void SortSlotsByLayout()
     {
-        if (_itemsParent == null || _grid == null)
+        // 처음 고를 칸이 왼쪽 위가 되도록 열, 행, 칸 순서로 정렬한다.
+        _slots.Sort((a, b) =>
+        {
+            var category = a.Data.Category.CompareTo(b.Data.Category);
+            if (category != 0)
+            {
+                return category;
+            }
+
+            var row = a.Data.Row.CompareTo(b.Data.Row);
+            return row != 0 ? row : a.Data.Column.CompareTo(b.Data.Column);
+        });
+    }
+
+    private void ClearSlots()
+    {
+        for (var i = 0; i < _slots.Count; i++)
+        {
+            if (_slots[i] != null)
+            {
+                _slots[i].transform.SetParent(null);
+                Destroy(_slots[i].gameObject);
+            }
+        }
+
+        _slots.Clear();
+    }
+
+    private void RefreshAll()
+    {
+        if (!TryGetTraining(out var training))
         {
             return;
         }
 
-        var rows = (_items.Count + COLUMN_COUNT - 1) / COLUMN_COUNT;
-        var height = (float)(_grid.padding.top + _grid.padding.bottom);
-        if (rows > 0)
+        for (var i = 0; i < _slots.Count; i++)
         {
-            height += rows * _grid.cellSize.y + (rows - 1) * _grid.spacing.y;
+            var slot = _slots[i];
+            var level = training.GetTrainingLevel(_playerId, slot.Data.TrainingType) + 1;
+            slot.Redraw(level, training.IsUnlocked(_playerId, slot.Data));
         }
 
-        var size = _itemsParent.sizeDelta;
-        size.y = height;
-        _itemsParent.sizeDelta = size;
-    }
-
-    private void ClearItems()
-    {
-        for (var i = 0; i < _items.Count; i++)
+        if (_columns != null)
         {
-            if (_items[i] != null)
+            for (var i = 0; i < _columns.Length; i++)
             {
-                _items[i].transform.SetParent(null);
-                Destroy(_items[i].gameObject);
+                if (_columns[i] != null)
+                {
+                    _columns[i].SetLevel(training.GetCategoryLevel(_playerId, _columns[i].Category));
+                }
             }
         }
 
-        _items.Clear();
+        RefreshCurrency();
+        RefreshDetail();
+    }
+
+    private void RefreshCurrency()
+    {
+        if (!TryGetCurrencies(out var currencies))
+        {
+            return;
+        }
+
+        if (_currencyLabel != null)
+        {
+            var save = currencies.GetCurrency(_playerId, CurrenciesManager.POCKET_DOLLAR_ID, true);
+            _currencyLabel.text = save == null ? "0" : save.Amount.ToString();
+        }
+
+        if (_currencyIcon != null)
+        {
+            _currencyIcon.sprite = currencies.GetIcon(CurrenciesManager.POCKET_DOLLAR_ID);
+            _currencyIcon.enabled = _currencyIcon.sprite != null;
+        }
+    }
+
+    private void RefreshDetail()
+    {
+        if (_detail == null || _slots.Count == 0)
+        {
+            return;
+        }
+
+        // 버튼을 고른 동안에는 마지막으로 본 칸을 계속 보여 준다.
+        var slot = _slots[Mathf.Clamp(IsSlotSelected() ? _selectedIndex : _lastSlotIndex, 0, _slots.Count - 1)];
+        var cost = slot.IsMaxed ? null : slot.Data.GetLevel(slot.Level);
+        _detail.Show(slot, BuildLockText(slot.Data), cost != null && CanAfford(cost.Cost), GetPocketDollarIcon());
+    }
+
+    private string BuildLockText(TrainingData data)
+    {
+        var column = FindColumn(data.RequiredCategory);
+        var title = column != null ? column.Title : data.RequiredCategory.ToString();
+        var color = column != null ? column.Color : Color.white;
+        return string.Format(LOCK_FORMAT, ColorUtility.ToHtmlStringRGB(color), title, data.RequiredLevel);
     }
 
     private void MoveSelection(Vector2Int move)
     {
-        var previous = _selectedIndex;
-        if (move.x > 0)
-        {
-            MoveHorizontal(1);
-        }
-        else if (move.x < 0)
-        {
-            MoveHorizontal(-1);
-        }
-        else if (move.y < 0)
-        {
-            MoveVertical(COLUMN_COUNT);
-        }
-        else if (move.y > 0)
-        {
-            MoveVertical(-COLUMN_COUNT);
-        }
-
-        if (_selectedIndex == previous)
+        var next = FindNeighbor(_selectedIndex, new Vector2(move.x, move.y));
+        if (next < 0 || next == _selectedIndex)
         {
             return;
         }
 
-        ApplySelection(true);
-        PlaySound(MENU_MOVE_SOUND);
+        Select(next);
     }
 
-    private void MoveHorizontal(int direction)
+    /// <summary>
+    /// 화면 위치 기준으로 그 방향에서 가장 가까운 대상을 찾는다. 없으면 -1.
+    /// </summary>
+    private int FindNeighbor(int from, Vector2 direction)
     {
-        if (IsBackSelected())
+        var origin = GetTarget(from);
+        if (origin == null)
         {
-            return;
+            return -1;
         }
 
-        var next = _selectedIndex + direction;
-        if (next >= 0 && next < _items.Count)
+        var best = -1;
+        var bestScore = float.MaxValue;
+        var count = BackIndex() + 1;
+        for (var i = 0; i < count; i++)
         {
-            _selectedIndex = next;
-            return;
-        }
-
-        if (direction > 0)
-        {
-            _selectedIndex = BackIndex();
-        }
-    }
-
-    private void MoveVertical(int delta)
-    {
-        if (IsBackSelected())
-        {
-            if (delta < 0 && _items.Count > 0)
+            var target = GetTarget(i);
+            if (i == from || target == null)
             {
-                _selectedIndex = _items.Count - 1;
+                continue;
             }
 
-            return;
+            var delta = (Vector2)(target.position - origin.position);
+            var along = Vector2.Dot(delta, direction);
+            if (along <= 0f)
+            {
+                continue;
+            }
+
+            var perpendicular = Mathf.Abs(direction.x * delta.y - direction.y * delta.x);
+            if (perpendicular > along * PERPENDICULAR_WEIGHT)
+            {
+                continue;
+            }
+
+            var score = along + perpendicular * PERPENDICULAR_WEIGHT;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = i;
+            }
         }
 
-        var next = _selectedIndex + delta;
-        if (next >= 0 && next < _items.Count)
+        return best;
+    }
+
+    private void Select(int index)
+    {
+        _selectedIndex = index;
+        if (IsSlotSelected())
         {
-            _selectedIndex = next;
-            return;
+            _lastSlotIndex = index;
         }
 
-        if (delta > 0)
+        if (!IsResetSelected())
         {
-            _selectedIndex = BackIndex();
+            SetResetArmed(false);
         }
+
+        ApplySelection();
+        PlaySound(MENU_MOVE_SOUND);
     }
 
     private void SubmitSelection()
@@ -261,43 +356,43 @@ public class UITrainingWindow : MonoBehaviour
             return;
         }
 
-        if (_selectedIndex < 0 || _selectedIndex >= _items.Count)
+        if (IsResetSelected())
         {
+            HandleResetClick();
             return;
         }
 
-        PurchaseItem(_items[_selectedIndex]);
+        if (IsSlotSelected())
+        {
+            PurchaseSlot(_slots[_selectedIndex]);
+        }
     }
 
-    private void FocusItem(TrainingItemBehavior item)
+    private void FocusSlot(TrainingSlotBehavior slot)
     {
-        var index = _items.IndexOf(item);
+        var index = _slots.IndexOf(slot);
         if (index < 0 || index == _selectedIndex)
         {
             return;
         }
 
-        _selectedIndex = index;
-        ApplySelection(true);
-        PlaySound(MENU_MOVE_SOUND);
+        Select(index);
     }
 
-    private void PurchaseItem(TrainingItemBehavior item)
+    private void PurchaseSlot(TrainingSlotBehavior slot)
     {
-        if (item == null || item.Data == null || !item.CanPurchase)
+        if (slot == null || slot.Data == null || !slot.Unlocked || slot.IsMaxed)
         {
             return;
         }
 
-        var level = item.Data.GetLevel(GetSavedLevel(item.Data.TrainingType) + 1);
+        var level = slot.Data.GetLevel(slot.Level);
         if (level == null)
         {
             return;
         }
 
-        if (Managers.Instance == null
-            || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies)
-            || !Managers.Instance.TryGetManager<TrainingManager>(out var training))
+        if (!TryGetCurrencies(out var currencies) || !TryGetTraining(out var training))
         {
             Debug.LogError("트레이닝 구매에 필요한 매니저가 없습니다.");
             return;
@@ -305,20 +400,67 @@ public class UITrainingWindow : MonoBehaviour
 
         if (!currencies.TryWithdraw(_playerId, CurrenciesManager.POCKET_DOLLAR_ID, level.Cost, true))
         {
-            item.Redraw();
             return;
         }
 
-        training.IncrementTrainingLevel(_playerId, item.Data.TrainingType);
-        item.AdvanceLevel();
+        training.IncrementTrainingLevel(_playerId, slot.Data.TrainingType);
         PlaySound(BUTTON_CLICK_SOUND);
+        RefreshAll();
     }
 
-    private void ApplySelection(bool scroll)
+    private void HandleResetClick()
     {
-        for (var i = 0; i < _items.Count; i++)
+        if (!IsResetSelected())
         {
-            _items[i].SetFocused(i == _selectedIndex);
+            _selectedIndex = ResetIndex();
+            ApplySelection();
+        }
+
+        // 실수로 지우지 않도록 두 번 눌러야 실행한다.
+        if (!_resetArmed)
+        {
+            SetResetArmed(true);
+            PlaySound(MENU_MOVE_SOUND);
+            return;
+        }
+
+        SetResetArmed(false);
+        ResetTrainings();
+    }
+
+    private void ResetTrainings()
+    {
+        if (!TryGetCurrencies(out var currencies) || !TryGetTraining(out var training))
+        {
+            Debug.LogError("트레이닝 리셋에 필요한 매니저가 없습니다.");
+            return;
+        }
+
+        var refund = training.ResetAll(_playerId);
+        currencies.DepositMeta(_playerId, CurrenciesManager.POCKET_DOLLAR_ID, refund);
+        PlaySound(BUTTON_CLICK_SOUND);
+        RefreshAll();
+    }
+
+    private void SetResetArmed(bool armed)
+    {
+        _resetArmed = armed;
+        if (_resetLabel != null)
+        {
+            _resetLabel.text = armed ? RESET_CONFIRM_LABEL : RESET_LABEL;
+        }
+    }
+
+    private void ApplySelection()
+    {
+        for (var i = 0; i < _slots.Count; i++)
+        {
+            _slots[i].SetFocused(i == _selectedIndex);
+        }
+
+        if (_resetSelect != null)
+        {
+            _resetSelect.SetActive(IsResetSelected());
         }
 
         if (_backSelect != null)
@@ -326,37 +468,7 @@ public class UITrainingWindow : MonoBehaviour
             _backSelect.SetActive(IsBackSelected());
         }
 
-        if (scroll && !IsBackSelected())
-        {
-            ScrollToSelected();
-        }
-    }
-
-    private void ScrollToSelected()
-    {
-        if (_scrollView == null || _selectedIndex < 0 || _selectedIndex >= _items.Count)
-        {
-            return;
-        }
-
-        var selected = _items[_selectedIndex];
-        if (selected == null || selected.Rect == null || _scrollView.content == null)
-        {
-            return;
-        }
-
-        var local = (Vector2)_scrollView.transform.InverseTransformPoint(selected.Rect.position);
-        var scrollHeight = ((RectTransform)_scrollView.transform).rect.height;
-        var itemHeight = selected.Rect.rect.height;
-        var content = _scrollView.content;
-        if (local.y > scrollHeight / 2f)
-        {
-            content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y - itemHeight - ITEM_SCROLL_GAP);
-        }
-        else if (local.y < -scrollHeight / 2f)
-        {
-            content.anchoredPosition = new Vector2(content.anchoredPosition.x, content.anchoredPosition.y + itemHeight + ITEM_SCROLL_GAP);
-        }
+        RefreshDetail();
     }
 
     private void SubscribeCurrency()
@@ -389,20 +501,76 @@ public class UITrainingWindow : MonoBehaviour
             return;
         }
 
-        for (var i = 0; i < _items.Count; i++)
-        {
-            _items[i].Redraw();
-        }
+        RefreshCurrency();
+        RefreshDetail();
     }
 
-    private int GetSavedLevel(TrainingType trainingType)
+    private TrainingCategoryColumn FindColumn(TrainingCategory category)
     {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<TrainingManager>(out var training))
+        if (_columns == null)
         {
-            return -1;
+            return null;
         }
 
-        return training.GetTrainingLevel(_playerId, trainingType);
+        for (var i = 0; i < _columns.Length; i++)
+        {
+            if (_columns[i] != null && _columns[i].Category == category)
+            {
+                return _columns[i];
+            }
+        }
+
+        return null;
+    }
+
+    private RectTransform GetTarget(int index)
+    {
+        if (index >= 0 && index < _slots.Count)
+        {
+            return _slots[index].Rect;
+        }
+
+        if (index == ResetIndex())
+        {
+            return _resetButton == null ? null : (RectTransform)_resetButton.transform;
+        }
+
+        if (index == BackIndex())
+        {
+            return _backButton == null ? null : (RectTransform)_backButton.transform;
+        }
+
+        return null;
+    }
+
+    private bool CanAfford(int cost)
+    {
+        if (cost <= 0 || !TryGetCurrencies(out var currencies))
+        {
+            return false;
+        }
+
+        var save = currencies.GetCurrency(_playerId, CurrenciesManager.POCKET_DOLLAR_ID, true);
+        return save != null && save.CanAfford(cost);
+    }
+
+    private Sprite GetPocketDollarIcon()
+    {
+        return TryGetCurrencies(out var currencies)
+            ? currencies.GetIcon(CurrenciesManager.POCKET_DOLLAR_ID)
+            : null;
+    }
+
+    private static bool TryGetTraining(out TrainingManager training)
+    {
+        training = null;
+        return Managers.Instance != null && Managers.Instance.TryGetManager(out training);
+    }
+
+    private static bool TryGetCurrencies(out CurrenciesManager currencies)
+    {
+        currencies = null;
+        return Managers.Instance != null && Managers.Instance.TryGetManager(out currencies);
     }
 
     private int ResolvePlayerId()
@@ -415,23 +583,47 @@ public class UITrainingWindow : MonoBehaviour
         return 1;
     }
 
+    private int ResetIndex()
+    {
+        return _slots.Count;
+    }
+
     private int BackIndex()
     {
-        return _items.Count;
+        return _slots.Count + 1;
+    }
+
+    private bool IsSlotSelected()
+    {
+        return _selectedIndex >= 0 && _selectedIndex < _slots.Count;
+    }
+
+    private bool IsResetSelected()
+    {
+        return _selectedIndex == ResetIndex();
     }
 
     private bool IsBackSelected()
     {
-        return _selectedIndex >= _items.Count;
+        return _selectedIndex == BackIndex();
     }
 
     private bool HasRequiredReferences()
     {
         return _database != null
-            && _itemPrefab != null
-            && _itemsParent != null
-            && _scrollView != null
+            && _slotPrefab != null
+            && _columns != null
+            && _columns.Length > 0
+            && _detail != null
+            && _resetButton != null
             && _backButton != null;
+    }
+
+    private static void DisableNavigation(Button button)
+    {
+        var navigation = button.navigation;
+        navigation.mode = Navigation.Mode.None;
+        button.navigation = navigation;
     }
 
     private static void PlaySound(string soundName)
