@@ -42,8 +42,15 @@ public class AccountManager : BaseManager
     private readonly HashSet<string> _obtainedMonsterNames = new HashSet<string>();
 
     private bool _alwaysShowIntro;
+    private bool _unlockAllForTest;
 
     public bool IntroCompleted => _introCompleted;
+
+    /// <summary>
+    /// 테스트용 임시 스위치. 켜져 있으면 모든 플레이어블과 포켓몬을 획득한 것으로 본다.
+    /// 저장하지 않아서 게임을 다시 켜면 꺼진다.
+    /// </summary>
+    public bool UnlockAllForTest => _unlockAllForTest;
 
     /// <summary>
     /// 타이틀의 임시 체크. 켜진 채로 로그인하면 보유 데이터를 지우고 인트로를 다시 연다.
@@ -152,6 +159,14 @@ public class AccountManager : BaseManager
     }
 
     /// <summary>
+    /// 테스트용 전체 해금 스위치를 세션에만 바꾼다.
+    /// </summary>
+    public void SetUnlockAllForTest(bool unlockAll)
+    {
+        _unlockAllForTest = unlockAll;
+    }
+
+    /// <summary>
     /// 보유 플레이어블과 스타터를 비운다. 인트로를 다시 고르게 한다.
     /// </summary>
     public void ResetOwnedProfile()
@@ -189,6 +204,11 @@ public class AccountManager : BaseManager
     /// </summary>
     public bool IsMonsterUnlocked(MonsterVisualData data)
     {
+        if (_unlockAllForTest && data != null)
+        {
+            return true;
+        }
+
         return _introCompleted
             && data != null
             && !string.IsNullOrEmpty(_starterVisualName)
@@ -200,6 +220,11 @@ public class AccountManager : BaseManager
     /// </summary>
     public bool IsPlayableUnlocked(PlayableCharacterData data)
     {
+        if (_unlockAllForTest && data != null)
+        {
+            return true;
+        }
+
         return _introCompleted
             && data != null
             && data.UnlockedByIntro

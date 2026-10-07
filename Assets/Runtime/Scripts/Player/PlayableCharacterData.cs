@@ -7,6 +7,7 @@ using UnityEngine;
 public class PlayableCharacterData : ScriptableObject
 {
     private const int MIN_GENERATION = 1;
+    private const float DEFAULT_PORTRAIT_FRAME_RATE = 10f;
 #if UNITY_EDITOR
     // 그림 경계 바깥 여백. 유니티 자동 자르기와 같은 1픽셀이라 _portraitSize 값을 그대로 쓴다.
     private const int PORTRAIT_AREA_PADDING = 1;
@@ -22,6 +23,12 @@ public class PlayableCharacterData : ScriptableObject
     [SerializeField] private Vector2 _portraitSize;
     // _portrait 칸 안에서 그림이 있는 영역. 픽셀 단위이고 칸 왼쪽 아래가 원점이다. 에디터가 _portrait를 바꿀 때 채운다.
     [SerializeField, HideInInspector] private Rect _portraitArea;
+
+    [Header("Portrait Animation")]
+    [Tooltip("보관함에서 포커스되면 한 번 재생하는 프레임. 비어 있으면 에디터가 초상화 시트 순서(위 줄부터, 왼쪽부터)로 채운다.")]
+    [SerializeField] private Sprite[] _portraitFrames = System.Array.Empty<Sprite>();
+    [Tooltip("초당 프레임 수. 0이면 기본값 10.")]
+    [SerializeField, Min(0f)] private float _portraitFrameRate;
 
     [Header("Versus")]
     [Tooltip("보스 VS 화면 왼쪽에 나오는 등 사진.")]
@@ -74,6 +81,31 @@ public class PlayableCharacterData : ScriptableObject
     }
 
     public Vector2 PortraitSize => _portraitSize;
+
+    /// <summary>
+    /// 여백까지 담긴 칸 그대로의 초상화. 애니메이션 프레임과 크기와 기준점이 같다.
+    /// </summary>
+    public Sprite PortraitSheetFrame => _portrait;
+
+    /// <summary>
+    /// 칸 안에서 그림이 있는 영역. 픽셀 단위이고 칸 왼쪽 아래가 원점이다. 재지 않았으면 칸 전체.
+    /// </summary>
+    public Rect PortraitArea
+    {
+        get
+        {
+            if (_portraitArea.width > 0f && _portraitArea.height > 0f)
+            {
+                return _portraitArea;
+            }
+
+            return _portrait != null ? new Rect(Vector2.zero, _portrait.rect.size) : default;
+        }
+    }
+
+    public Sprite[] PortraitFrames => _portraitFrames ?? System.Array.Empty<Sprite>();
+
+    public float PortraitFrameRate => _portraitFrameRate > 0f ? _portraitFrameRate : DEFAULT_PORTRAIT_FRAME_RATE;
 
     public Sprite VersusBack => _versusBack;
 
@@ -128,14 +160,59 @@ public class PlayableCharacterData : ScriptableObject
     public bool RefreshPortraitArea()
     {
         _croppedPortrait = null;
+        var changed = FillPortraitFrames();
         var area = MeasurePortraitArea();
-        if (area == _portraitArea)
+        if (area != _portraitArea)
+        {
+            _portraitArea = area;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// 프레임 목록이 비어 있으면 초상화 시트의 칸을 위 줄부터, 왼쪽부터 채운다. 직접 넣은 목록은 건드리지 않는다.
+    /// </summary>
+    private bool FillPortraitFrames()
+    {
+        if (_portrait == null || (_portraitFrames != null && _portraitFrames.Length > 0))
         {
             return false;
         }
 
-        _portraitArea = area;
-        UnityEditor.EditorUtility.SetDirty(this);
+        var path = UnityEditor.AssetDatabase.GetAssetPath(_portrait);
+        if (string.IsNullOrEmpty(path))
+        {
+            return false;
+        }
+
+        var frames = new System.Collections.Generic.List<Sprite>();
+        foreach (var asset in UnityEditor.AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
+        {
+            if (asset is Sprite sprite)
+            {
+                frames.Add(sprite);
+            }
+        }
+
+        if (frames.Count == 0)
+        {
+            return false;
+        }
+
+        // 유니티 좌표는 아래가 0이라 y가 큰 칸이 위 줄이다.
+        frames.Sort((a, b) =>
+        {
+            var row = b.rect.y.CompareTo(a.rect.y);
+            return row != 0 ? row : a.rect.x.CompareTo(b.rect.x);
+        });
+        _portraitFrames = frames.ToArray();
         return true;
     }
 
