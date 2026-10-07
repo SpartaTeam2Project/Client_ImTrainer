@@ -21,6 +21,8 @@ public class InventoryUi : MonoBehaviour
 
     private const float OPEN_FADE_DURATION = 0.2f;
     private const float CLOSE_FADE_DURATION = 0.15f;
+    private const string OPEN_SOUND = "inventory_open";
+    private const string CLOSE_SOUND = "inventory_close";
 
     [SerializeField] private Canvas _canvas;
     [SerializeField] private CanvasGroup _panelGroup;
@@ -171,6 +173,7 @@ public class InventoryUi : MonoBehaviour
             Time.timeScale = 0f;
         }
 
+        PlaySound(OPEN_SOUND);
         _showRoutine = StartCoroutine(ShowAfterCapture());
     }
 
@@ -222,6 +225,7 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
+        PlaySound(CLOSE_SOUND);
         if (_panelGroup == null || _canvas == null || !_canvas.gameObject.activeSelf)
         {
             FinishClose();
@@ -994,6 +998,16 @@ public class InventoryUi : MonoBehaviour
         eventManager.Unsubscribe<InventoryChanged>(HandleInventoryChanged);
         eventManager.Unsubscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = false;
+    }
+
+    private static void PlaySound(string name)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(name);
     }
 
     private static void AddAction(Button button, UnityEngine.Events.UnityAction action)
