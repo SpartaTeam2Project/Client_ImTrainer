@@ -313,6 +313,7 @@ public class UIStorageWindow : MonoBehaviour
 
         if (_showingMonsters && Entry.ClearLastMonster())
         {
+            StorageSounds.PlayEntryPickDown();
             return;
         }
 
@@ -436,9 +437,9 @@ public class UIStorageWindow : MonoBehaviour
         {
             ClearEntry();
         }
-        else
+        else if (Entry.ReleaseMonster(_side.MonsterEntryAt(index)))
         {
-            Entry.ReleaseMonster(_side.MonsterEntryAt(index));
+            StorageSounds.PlayEntryPickDown();
         }
 
         // 포커스된 엔트리 칸이 비면 아래, 없으면 위의 항목으로 옮기고, 둘 다 없으면 스토리지로 돌아간다.
@@ -674,7 +675,7 @@ public class UIStorageWindow : MonoBehaviour
 
         account.SelectPlayable(slot.Data);
         Entry.SetCharacter(slot.Data);
-        StorageSounds.PlaySelect();
+        StorageSounds.PlayEntryPickUp();
         _showingMonsters = true;
         ClearSlotSelect();
         SetScrolls();
@@ -695,7 +696,7 @@ public class UIStorageWindow : MonoBehaviour
             return;
         }
 
-        StorageSounds.PlaySelect();
+        StorageSounds.PlayEntryPickUp();
         FocusGameStartIfFull();
     }
 
@@ -733,6 +734,12 @@ public class UIStorageWindow : MonoBehaviour
         if (account != null)
         {
             account.ClearSelectedPlayable();
+        }
+
+        // 트레이너가 빠지면 엔트리 전체가 비므로 빠지는 소리를 한 번만 낸다.
+        if (Entry.Character != null)
+        {
+            StorageSounds.PlayEntryPickDown();
         }
 
         var restoreCharacters = _showingMonsters;

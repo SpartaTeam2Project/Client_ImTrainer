@@ -145,16 +145,20 @@ public sealed class StorageEntrySlots
         return false;
     }
 
-    public void ReleaseMonster(int index)
+    /// <summary>
+    /// 해당 칸의 포켓몬을 뺀다. 뺄 포켓몬이 없으면 false.
+    /// </summary>
+    public bool ReleaseMonster(int index)
     {
         EnsureState();
         if (!HasMonster(index))
         {
-            return;
+            return false;
         }
 
         _visuals[index] = null;
         ApplySprite(index, null);
+        return true;
     }
 
     /// <summary>

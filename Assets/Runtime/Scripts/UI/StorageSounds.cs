@@ -6,6 +6,8 @@ public static class StorageSounds
     private const string MENU_MOVE_SOUND = "cursor";
     private const string FILTER_APPLY_SOUND = "select";
     private const string ENTRY_LOCKED_SOUND = "error";
+    private const string ENTRY_PICK_UP_SOUND = "storage_entry_pick_up";
+    private const string ENTRY_PICK_DOWN_SOUND = "storage_entry_pick_down";
     private const string STORAGE_MUSIC_NAME = "storage";
 
     public static void PlayMusic()
@@ -29,6 +31,16 @@ public static class StorageSounds
     public static void PlayEntryLocked()
     {
         PlaySound(ENTRY_LOCKED_SOUND);
+    }
+
+    public static void PlayEntryPickUp()
+    {
+        PlaySound(ENTRY_PICK_UP_SOUND);
+    }
+
+    public static void PlayEntryPickDown()
+    {
+        PlaySound(ENTRY_PICK_DOWN_SOUND);
     }
 
     private static void PlaySound(string soundName)
