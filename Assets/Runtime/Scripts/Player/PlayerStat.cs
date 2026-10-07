@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -69,22 +70,66 @@ public class PlayerStat : MonoBehaviour
         invincibleSeconds = Mathf.Max(0f, _invincibleSeconds);
     }
 
+    // player stat changer
+    #region StatChangeAPI
     /// <summary>
-    /// 이동 속도 배율을 기본값에 곱한다.
+    /// Upgrade에 의한 이동속도 배율을 합연산으로 누적한다.
+    /// input:0.2f = +20%
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddMoveSpeedMultiplier(float value)
+    {
+        moveSpeedMultiplier = Mathf.Max(0f, moveSpeedMultiplier + value);
+    }
+
+    /// <summary>
+    /// Upgrade에 의한 경험치 배율을 합연산으로 누적한다.
+    /// input:0.2f = +20%
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddXpMultiplier(float value)
+    {
+        xpMultiplier = Mathf.Max(0f, xpMultiplier + value);
+    }
+
+    /// <summary>
+    /// Upgrade에 의한 받는 피해 배율을 합연산으로 누적한다.
+    /// input:-0.1f = -10% (받는피해 10%감소)
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddReceivedDamageMultiplier(float value)
+    {
+        receivedDamageMultiplier = Mathf.Max(0f, receivedDamageMultiplier + value);
+    }
+    /// <summary>
+    /// Upgrade에 의한 주는 피해 배율을 합연산으로 누적한다.
+    /// input:0.2f = +20%
+    /// </summary>
+    /// <param name="value"></param>
+    public void AddDamageMultiplier(float value)
+    {
+        damageMultiplier = Mathf.Max(0f, damageMultiplier + value);
+    }
+    #endregion
+
+    #region LegacyStatChageAPI
+    [Obsolete]
+    /// <summary>
+    /// replaced: AddMoveSpeedMultiplier
     /// </summary>
     public void RecalculateMoveSpeed(float multiplier)
     {
         moveSpeed = Mathf.Max(0f, _moveSpeed) * Mathf.Max(0f, multiplier);
     }
-
+    [Obsolete]
     /// <summary>
-    /// 경험치 배율을 기본값에 곱한다.
+    /// replaced: AddXpMultiplier
     /// </summary>
     public void RecalculateXpMultiplier(float multiplier)
     {
         xpMultiplier = Mathf.Max(0f, _xpMultiplier) * Mathf.Max(0f, multiplier);
     }
-
+    [Obsolete]
     /// <summary>
     /// 쿨다운 배율을 기본값에 곱한다.
     /// </summary>
@@ -92,7 +137,7 @@ public class PlayerStat : MonoBehaviour
     {
         cooldownMultiplier = Mathf.Max(0f, _cooldownMultiplier) * Mathf.Max(0f, multiplier);
     }
-
+    [Obsolete]
     /// <summary>
     /// 자석 반경 배율을 기본값에 곱한다.
     /// </summary>
@@ -100,7 +145,7 @@ public class PlayerStat : MonoBehaviour
     {
         magnetRadius = Mathf.Max(0f, _magnetRadius) * Mathf.Max(0f, multiplier);
     }
-
+    [Obsolete]
     /// <summary>
     /// 투사체 속도 배율을 기본값에 곱한다.
     /// </summary>
@@ -108,7 +153,7 @@ public class PlayerStat : MonoBehaviour
     {
         projectileSpeedMultiplier = Mathf.Max(0f, _projectileSpeedMultiplier) * Mathf.Max(0f, multiplier);
     }
-
+    [Obsolete]
     /// <summary>
     /// 능력 크기 배율을 기본값에 곱한다.
     /// </summary>
@@ -116,7 +161,7 @@ public class PlayerStat : MonoBehaviour
     {
         sizeMultiplier = Mathf.Max(0f, _sizeMultiplier) * Mathf.Max(0f, multiplier);
     }
-
+    [Obsolete]
     /// <summary>
     /// 지속 시간 배율을 기본값에 곱한다.
     /// </summary>
@@ -124,14 +169,15 @@ public class PlayerStat : MonoBehaviour
     {
         durationMultiplier = Mathf.Max(0f, _durationMultiplier) * Mathf.Max(0f, multiplier);
     }
-
+    [Obsolete]
     /// <summary>
-    /// 받는 피해를 줄이는 퍼센트를 정한다. 0이면 그대로, 100이면 피해가 없다.
+    /// replaced: AddReceivedDamageMultiplier
     /// </summary>
     public void RecalculateDamageReduction(float percent)
     {
         damageReductionPercent = Mathf.Clamp(percent, 0f, 100f);
     }
-
     #endregion
+    #endregion
+
 }

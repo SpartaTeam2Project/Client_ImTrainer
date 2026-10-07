@@ -125,48 +125,5 @@ public class Player : MonoBehaviour
         }
     }
 
-    // TODO: PlayerStat으로 옮길 예정
-    //upgrade 관련 API입니다.(for client)
-    #region UpgradeAPI
-    /// <summary>
-    /// Upgrade에 의한 이동속도 배율을 합연산으로 누적한다.
-    /// input:0.2f = +20%
-    /// </summary>
-    /// <param name="value"></param>
-    public void AddMoveSpeedMultiplier(float value)
-    {
-        Stat.moveSpeedMultiplier = Mathf.Max(0f, Stat.moveSpeedMultiplier + value);
-    }
-
-    /// <summary>
-    /// Upgrade에 의한 경험치 배율을 합연산으로 누적한다.
-    /// input:0.2f = +20%
-    /// </summary>
-    /// <param name="value"></param>
-    public void AddXpMultiplier(float value)
-    {
-        Stat.xpMultiplier = Mathf.Max(0f, Stat.xpMultiplier + value);
-    }
-
-    /// <summary>
-    /// Upgrade에 의한 받는 피해 배율을 합연산으로 누적한다.
-    /// input:-0.1f = -10% (받는피해 10%감소)
-    /// </summary>
-    /// <param name="value"></param>
-    public void AddReceivedDamageMultiplier(float value)
-    {
-        Stat.receivedDamageMultiplier= Mathf.Max(0f, Stat.receivedDamageMultiplier + value);
-    }
-    /// <summary>
-    /// Upgrade에 의한 주는 피해 배율을 합연산으로 누적한다.
-    /// input:0.2f = +20%
-    /// </summary>
-    /// <param name="value"></param>
-    public void AddDamageMultiplier(float value)
-    {
-        Stat.damageMultiplier= Mathf.Max(0f, Stat.damageMultiplier + value);
-    }
-    #endregion
-
     #endregion
 }

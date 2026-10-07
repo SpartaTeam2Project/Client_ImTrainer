@@ -263,25 +263,25 @@ public class PlayerManager : BaseManager
     {
         if (playerId != LocalPlayerId || _player == null) return;
 
-        _player.AddMoveSpeedMultiplier(value);
+        _player.Stat.AddMoveSpeedMultiplier(value);
     }
 
     public void AddXpMultiplier(int playerId,float value)
     {
         if(playerId!=LocalPlayerId || _player == null) return;
-        _player.AddXpMultiplier(value);
+        _player.Stat.AddXpMultiplier(value);
     }
 
     public void AddReceiveDamageMultiplier(int playerId,float value)
     {
         if (playerId != LocalPlayerId || _player == null) return;
-        _player.AddReceivedDamageMultiplier(value);
+        _player.Stat.AddReceivedDamageMultiplier(value);
     }
 
     public void AddDamageMultiplier(int playerId,float value)
     {
         if (playerId != LocalPlayerId || _player == null) return;
-        _player.AddDamageMultiplier(value);
+        _player.Stat.AddDamageMultiplier(value);
     }
     #endregion
 
