@@ -22,6 +22,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: MainScene
     _clip: {fileID: 8300000, guid: fc49fd472b1c685479e3c16acfc4a1d0, type: 3}
     _volume:
@@ -31,6 +32,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: Intro
     _clip: {fileID: 8300000, guid: bca01d67eecc3074caf8bf822e8862ec, type: 3}
     _volume:
@@ -40,6 +42,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: storage
     _clip: {fileID: 8300000, guid: cc907124d3f1a5947abd2b24514b6564, type: 3}
     _volume:
@@ -49,6 +52,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: RivalAppears
     _clip: {fileID: 8300000, guid: f5649088a0833cf4e82bd20ec394eab1, type: 3}
     _volume:
@@ -58,6 +62,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: LastBattle
     _clip: {fileID: 8300000, guid: 1494caee9f57bb24797f2c34736d671a, type: 3}
     _volume:
@@ -67,6 +72,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   _uiSounds:
   - _name: cursor
     _clip: {fileID: 8300000, guid: 64b63911462723b48850fd5ba211aaed, type: 3}
@@ -77,6 +83,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: select
     _clip: {fileID: 8300000, guid: 95c306ae251a241479e3143076d538fb, type: 3}
     _volume:
@@ -86,6 +93,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: cancle
     _clip: {fileID: 8300000, guid: 3060e9b41f0ffd642839ab647a083ad1, type: 3}
     _volume:
@@ -95,6 +103,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: warning
     _clip: {fileID: 8300000, guid: 31b3b8d5fe7dc1d42b764cf9ceb2b8f5, type: 3}
     _volume:
@@ -104,6 +113,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: error
     _clip: {fileID: 8300000, guid: 59cbd8f00847c3343bcf5e3a88cc524f, type: 3}
     _volume:
@@ -113,6 +123,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: open
     _clip: {fileID: 8300000, guid: 51790c9ba4837ec46889ff7a2b6f8e19, type: 3}
     _volume:
@@ -122,6 +133,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: close
     _clip: {fileID: 8300000, guid: 35396647ead3043459f0172014eeb465, type: 3}
     _volume:
@@ -131,6 +143,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: message
     _clip: {fileID: 8300000, guid: 76c953f5a94837340838f6fb9b378569, type: 3}
     _volume:
@@ -140,6 +153,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: pc_login
     _clip: {fileID: 8300000, guid: 36c2cb6c80a643246a9e134ff4624988, type: 3}
     _volume:
@@ -149,6 +163,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: pc_logoff
     _clip: {fileID: 8300000, guid: ac679eafce3f40544a7a403a90137605, type: 3}
     _volume:
@@ -158,6 +173,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: register_open
     _clip: {fileID: 8300000, guid: 4b1abedb9496b9a4d90a66949adfa9bf, type: 3}
     _volume:
@@ -167,6 +183,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: register_close
     _clip: {fileID: 8300000, guid: cc910b8d645e9f0449d8534cf6611153, type: 3}
     _volume:
@@ -176,9 +193,40 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
+  - _name: shop_pb
+    _clip: {fileID: 8300000, guid: cffc033437f13914cabcc102f76b81f5, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+    _maxInstances: 0
+  - _name: shop_stamp
+    _clip: {fileID: 8300000, guid: c4c1ac1114b92564797308b4857b760b, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+    _maxInstances: 0
+  - _name: shop_reroll
+    _clip: {fileID: 8300000, guid: caaee58f5a184b44a962975fe8f0594a, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+    _maxInstances: 0
   _combatSounds:
   - _name: damage_low
-    _clip: {fileID: 8300000, guid: 973a37c4999c28247b7f414e46469b17, type: 3}
+    _clip: {fileID: 8300000, guid: 7a40afed37666904fbb3d2d5eee030ad, type: 3}
     _volume:
       _min: 1
       _max: 1
@@ -186,8 +234,9 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: damage_middle
-    _clip: {fileID: 8300000, guid: ee715c04c6411c84e9faad255d3f8874, type: 3}
+    _clip: {fileID: 8300000, guid: 6ab5938595895da4bbe62bb9cacef30a, type: 3}
     _volume:
       _min: 1
       _max: 1
@@ -195,8 +244,9 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: damage_high
-    _clip: {fileID: 8300000, guid: 1e5657bde147c214a95a2ec64719af2f, type: 3}
+    _clip: {fileID: 8300000, guid: 976bf331000930a4d95783a45cbde96f, type: 3}
     _volume:
       _min: 1
       _max: 1
@@ -204,6 +254,7 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
   - _name: damage_zero
     _clip: {fileID: 8300000, guid: 973a37c4999c28247b7f414e46469b17, type: 3}
     _volume:
@@ -213,6 +264,7 @@ MonoBehaviour:
       _min: 0.5
       _max: 0.5
     _cooldown: 0
+    _maxInstances: 0
   - _name: danger
     _clip: {fileID: 8300000, guid: 845759ce1c8746e4c8e780224330d856, type: 3}
     _volume:
@@ -222,3 +274,24 @@ MonoBehaviour:
       _min: 1
       _max: 1
     _cooldown: 0
+    _maxInstances: 0
+  - _name: exp
+    _clip: {fileID: 8300000, guid: 79556f55be3a78a409b73eb59d155180, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+    _maxInstances: 0
+  - _name: expmax
+    _clip: {fileID: 8300000, guid: dbf091d486383524d88c0f52664623f5, type: 3}
+    _volume:
+      _min: 1
+      _max: 1
+    _pitch:
+      _min: 1
+      _max: 1
+    _cooldown: 0
+    _maxInstances: 0

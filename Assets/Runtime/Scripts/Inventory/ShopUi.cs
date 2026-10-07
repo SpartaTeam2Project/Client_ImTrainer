@@ -6,10 +6,14 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 인벤토리 창 왼쪽의 구매 목록. 가격 버튼을 누르면 몬스터볼로 사고, 잠근 칸은 새로고침에서 빠진다.
+/// 사면 가격 버튼의 볼이 열린 뒤 도장이 찍힌다.
 /// </summary>
 public class ShopUi : MonoBehaviour
 {
     private const string SOLD_LABEL = "매진";
+    private const string BALL_OPEN_SOUND = "shop_pb";
+    private const string STAMP_SOUND = "shop_stamp";
+    private const string REROLL_SOUND = "shop_reroll";
 
     private static readonly Color LOCKED_COLOR = Color.white;
     private static readonly Color UNLOCKED_COLOR = new Color(0.6f, 0.6f, 0.6f, 1f);
@@ -19,6 +23,8 @@ public class ShopUi : MonoBehaviour
     private const float STAMP_DROP_DURATION = 0.22f;
     private const float STAMP_FADE_DURATION = 0.12f;
     private const float DIM_FADE_DURATION = 0.2f;
+    // 볼이 열리는 그림 한 장을 보여 주는 시간.
+    private const float BALL_FRAME_DURATION = 0.12f;
 
     [Serializable]
     private class OfferRow
@@ -91,7 +97,7 @@ public class ShopUi : MonoBehaviour
     }
 
     /// <summary>
-    /// 연출 도중 창이 닫히면 도장을 다 찍힌 모습으로 맞춘다.
+    /// 연출 도중 창이 닫히면 가격 버튼을 끄고 도장을 다 찍힌 모습으로 맞춘다.
     /// </summary>
     private void OnDisable()
     {
@@ -154,9 +160,8 @@ public class ShopUi : MonoBehaviour
             SetTypes(row, visual);
             if (offer.Purchased)
             {
-                SetPrice(row, null, 0, false);
                 SetLock(row, false, false);
-                RefreshCaptured(i);
+                RefreshCaptured(i, item.currencyId);
                 continue;
             }
 
@@ -164,8 +169,6 @@ public class ShopUi : MonoBehaviour
             SetLock(row, true, offer.Locked);
             HideCaptured(i);
         }
-
-        _pendingStampIndex = -1;
     }
 
     /// <summary>
@@ -178,7 +181,11 @@ public class ShopUi : MonoBehaviour
             return;
         }
 
-        itemManager.TryRefreshShop(playerId);
+        if (itemManager.TryRefreshShop(playerId))
+        {
+            PlaySound(REROLL_SOUND);
+        }
+
         _onChanged?.Invoke();
     }
 
@@ -189,9 +196,11 @@ public class ShopUi : MonoBehaviour
             return;
         }
 
-        if (itemManager.TryPurchase(playerId, index))
+        // 구매 중에 나가는 InventoryChanged로 Refresh가 먼저 불리므로 산다고 미리 표시해 둔다.
+        _pendingStampIndex = index;
+        if (!itemManager.TryPurchase(playerId, index))
         {
-            _pendingStampIndex = index;
+            _pendingStampIndex = -1;
         }
 
         _onChanged?.Invoke();
@@ -209,13 +218,14 @@ public class ShopUi : MonoBehaviour
     }
 
     /// <summary>
-    /// 방금 산 칸이면 도장을 찍고, 이미 산 칸이면 찍힌 모습으로 둔다. 찍는 중이면 그대로 둔다.
+    /// 방금 산 칸이면 볼을 열고 도장을 찍고, 이미 산 칸이면 찍힌 모습으로 둔다. 연출 중이면 그대로 둔다.
     /// </summary>
-    private void RefreshCaptured(int index)
+    private void RefreshCaptured(int index, string currencyId)
     {
         if (index == _pendingStampIndex)
         {
-            PlayStamp(index);
+            _pendingStampIndex = -1;
+            PlayPurchase(index, currencyId);
             return;
         }
 
@@ -226,38 +236,57 @@ public class ShopUi : MonoBehaviour
     }
 
     /// <summary>
-    /// Dim이 서서히 어두워지고, 도장이 크게 떠 있다가 내려와 쾅 찍힌다.
+    /// 가격 버튼의 볼 그림이 열리는 그림으로 차례로 바뀐 뒤 버튼이 사라진다.
+    /// 이어서 Dim이 서서히 어두워지고, 도장이 크게 떠 있다가 내려와 쾅 찍힌다.
     /// </summary>
-    private void PlayStamp(int index)
+    private void PlayPurchase(int index, string currencyId)
     {
         var row = _rows[index];
-        if (row.Captured == null)
-        {
-            return;
-        }
-
         KillStamp(index);
-        var pose = _poses[index];
-        row.Captured.SetActive(true);
-        // 커진 도장이 아래 칸에 가리지 않게 이 칸을 맨 위에 그린다.
-        row.Captured.transform.parent.SetAsLastSibling();
+        if (row.Buy != null)
+        {
+            row.Buy.interactable = false;
+        }
 
         var sequence = DOTween.Sequence();
-        if (row.Dim != null)
+        if (row.PriceIcon != null && TryGetOpenIcons(currencyId, out var opening, out var open))
         {
-            SetAlpha(row.Dim, 0f);
-            sequence.Join(row.Dim.DOFade(pose.DimAlpha, DIM_FADE_DURATION));
+            // 볼 소리는 누르자마자 나고, 그림은 한 박자 뒤부터 바뀐다.
+            PlaySound(BALL_OPEN_SOUND);
+            sequence.AppendInterval(BALL_FRAME_DURATION);
+            sequence.AppendCallback(() => row.PriceIcon.sprite = opening);
+            sequence.AppendInterval(BALL_FRAME_DURATION);
+            sequence.AppendCallback(() => row.PriceIcon.sprite = open);
+            sequence.AppendInterval(BALL_FRAME_DURATION);
         }
 
-        if (row.Stamp != null)
+        sequence.AppendCallback(() => SetPrice(row, null, 0, false));
+        var stampAt = sequence.Duration();
+        if (row.Captured != null)
         {
-            var stamp = row.Stamp.rectTransform;
-            stamp.localScale = pose.StampScale * STAMP_START_SCALE;
-            stamp.localEulerAngles = pose.StampAngles + new Vector3(0f, 0f, STAMP_START_ANGLE);
-            SetAlpha(row.Stamp, 0f);
-            sequence.Join(stamp.DOScale(pose.StampScale, STAMP_DROP_DURATION).SetEase(Ease.InBack));
-            sequence.Join(stamp.DOLocalRotate(pose.StampAngles, STAMP_DROP_DURATION).SetEase(Ease.InQuad));
-            sequence.Join(row.Stamp.DOFade(1f, STAMP_FADE_DURATION));
+            var pose = _poses[index];
+            row.Captured.SetActive(true);
+            // 커진 도장이 아래 칸에 가리지 않게 이 칸을 맨 위에 그린다.
+            row.Captured.transform.parent.SetAsLastSibling();
+
+            if (row.Dim != null)
+            {
+                SetAlpha(row.Dim, 0f);
+                sequence.Insert(stampAt, row.Dim.DOFade(pose.DimAlpha, DIM_FADE_DURATION));
+            }
+
+            if (row.Stamp != null)
+            {
+                var stamp = row.Stamp.rectTransform;
+                stamp.localScale = pose.StampScale * STAMP_START_SCALE;
+                stamp.localEulerAngles = pose.StampAngles + new Vector3(0f, 0f, STAMP_START_ANGLE);
+                SetAlpha(row.Stamp, 0f);
+                sequence.Insert(stampAt, stamp.DOScale(pose.StampScale, STAMP_DROP_DURATION).SetEase(Ease.InBack));
+                sequence.Insert(stampAt, stamp.DOLocalRotate(pose.StampAngles, STAMP_DROP_DURATION).SetEase(Ease.InQuad));
+                sequence.Insert(stampAt, row.Stamp.DOFade(1f, STAMP_FADE_DURATION));
+                // 도장이 다 내려와 닿는 순간에 소리를 낸다.
+                sequence.InsertCallback(stampAt + STAMP_DROP_DURATION, () => PlaySound(STAMP_SOUND));
+            }
         }
 
         sequence.SetUpdate(true).SetLink(gameObject).OnComplete(() => _stampTweens[index] = null);
@@ -268,6 +297,7 @@ public class ShopUi : MonoBehaviour
     {
         KillStamp(index);
         var row = _rows[index];
+        SetPrice(row, null, 0, false);
         if (row.Captured == null)
         {
             return;
@@ -380,6 +410,7 @@ public class ShopUi : MonoBehaviour
         if (row.Buy != null)
         {
             row.Buy.gameObject.SetActive(available);
+            row.Buy.interactable = available;
         }
 
         if (row.PriceIcon != null)
@@ -439,5 +470,24 @@ public class ShopUi : MonoBehaviour
         }
 
         return currencies.GetIcon(currencyId);
+    }
+
+    private static void PlaySound(string name)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(name);
+    }
+
+    private static bool TryGetOpenIcons(string currencyId, out Sprite opening, out Sprite open)
+    {
+        opening = null;
+        open = null;
+        return Managers.Instance != null
+            && Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies)
+            && currencies.TryGetOpenIcons(currencyId, out opening, out open);
     }
 }

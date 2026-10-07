@@ -112,6 +112,17 @@ public class CurrenciesManager : BaseManager
     }
 
     /// <summary>
+    /// 상점에서 살 때 볼이 열리는 그림 두 장. 둘 다 있을 때만 true.
+    /// </summary>
+    public bool TryGetOpenIcons(string currencyId, out Sprite opening, out Sprite open)
+    {
+        var data = FindCurrency(currencyId);
+        opening = data != null ? data.OpeningIcon : null;
+        open = data != null ? data.OpenIcon : null;
+        return opening != null && open != null;
+    }
+
+    /// <summary>
     /// 재화 표시 이름. 없으면 id를 그대로 돌려준다.
     /// </summary>
     public string GetName(string currencyId)
