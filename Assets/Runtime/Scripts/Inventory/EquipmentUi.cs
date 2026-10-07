@@ -42,6 +42,14 @@ public class EquipmentUi : MonoBehaviour
     }
 
     /// <summary>
+    /// 장착 칸 하나를 돌려준다. 범위 밖이면 null이다.
+    /// </summary>
+    public InventoryItem GetSlot(int index)
+    {
+        return index >= 0 && index < _slots.Length ? _slots[index] : null;
+    }
+
+    /// <summary>
     /// 같은 종, 같은 성인 장착 칸에 합성 표시를 켠다. 끌기 시작한 칸은 뺀다. uid가 음수면 모두 끈다.
     /// </summary>
     public void SetMergeHints(InventoryHolder equipment, int uid, int upgradeLevel, int exceptSlot)

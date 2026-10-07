@@ -23,6 +23,9 @@ public class InventoryUi : MonoBehaviour
     private const float CLOSE_FADE_DURATION = 0.15f;
     private const string OPEN_SOUND = "inventory_open";
     private const string CLOSE_SOUND = "inventory_close";
+    private const string STAR_UP_SOUND = "inventory_star_up";
+    private const string EVOLUTION_START_SOUND = "inventory_star_evolution_start";
+    private const string EVOLUTION_END_SOUND = "inventory_star_evolution_end";
 
     [SerializeField] private Canvas _canvas;
     [SerializeField] private CanvasGroup _panelGroup;
@@ -950,6 +953,54 @@ public class InventoryUi : MonoBehaviour
         Refresh();
     }
 
+    /// <summary>
+    /// 합성 결과 칸에 연출을 건다. 성이 오르면 별을 튕기고, 진화하면 이전 그림이 빛나며 새 그림으로 바뀐다.
+    /// </summary>
+    private void HandleItemSynthesized(ItemSynthesized synthesized)
+    {
+        if (!_open || !TryGetContext(out var itemManager, out var playerId) || synthesized.PlayerId != playerId)
+        {
+            return;
+        }
+
+        var slot = FindSynthesizedSlot(itemManager, synthesized);
+        if (!synthesized.Evolved)
+        {
+            PlaySound(STAR_UP_SOUND);
+            if (slot != null)
+            {
+                slot.PlayStarUp(synthesized.UpgradeLevel);
+            }
+
+            return;
+        }
+
+        PlaySound(EVOLUTION_START_SOUND);
+        if (slot != null)
+        {
+            slot.PlayEvolution(GetPortrait(itemManager, synthesized.PreviousUid), GetPortrait(itemManager, synthesized.Uid),
+                () => PlaySound(EVOLUTION_END_SOUND));
+        }
+    }
+
+    private InventoryItem FindSynthesizedSlot(ItemManager itemManager, ItemSynthesized synthesized)
+    {
+        if (synthesized.EquipmentSlot >= 0)
+        {
+            return _equipmentUi != null ? _equipmentUi.GetSlot(synthesized.EquipmentSlot) : null;
+        }
+
+        var bag = itemManager.GetInventory(synthesized.PlayerId);
+        var index = bag != null ? bag.FindIndex(synthesized.Uid, synthesized.UpgradeLevel) : -1;
+        return index >= 0 && index < _bagSlots.Count ? _bagSlots[index] : null;
+    }
+
+    private static Sprite GetPortrait(ItemManager itemManager, int uid)
+    {
+        var visual = itemManager.GetVisual(uid);
+        return visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
+    }
+
     private void HandleStateChanged(GameStateChanged changed)
     {
         if (changed.Next == GameState.Playing)
@@ -983,6 +1034,7 @@ public class InventoryUi : MonoBehaviour
         }
 
         eventManager.Subscribe<InventoryChanged>(HandleInventoryChanged);
+        eventManager.Subscribe<ItemSynthesized>(HandleItemSynthesized);
         eventManager.Subscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = true;
     }
@@ -996,6 +1048,7 @@ public class InventoryUi : MonoBehaviour
         }
 
         eventManager.Unsubscribe<InventoryChanged>(HandleInventoryChanged);
+        eventManager.Unsubscribe<ItemSynthesized>(HandleItemSynthesized);
         eventManager.Unsubscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = false;
     }

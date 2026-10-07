@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -15,6 +16,13 @@ public class InventoryItem : MonoBehaviour
     private const float MERGE_HINT_MAX_ALPHA = 1f;
     private const float MERGE_HINT_MIN_ALPHA = 0.2f;
     private const float MERGE_HINT_DURATION = 0.45f;
+    private const float STAR_PUNCH_SCALE = 0.5f;
+    private const float STAR_PUNCH_DURATION = 0.3f;
+    private const int STAR_PUNCH_VIBRATO = 6;
+    private const float EVOLUTION_GLOW_IN_DURATION = 0.5f;
+    private const float EVOLUTION_HOLD_DURATION = 0.15f;
+    private const float EVOLUTION_GLOW_OUT_DURATION = 0.5f;
+    private static readonly int HIT_EFFECT_BLEND_ID = Shader.PropertyToID("_HitEffectBlend");
 
     [SerializeField] private Image _frame;
     [SerializeField] private Image[] _starImages = new Image[Item.STAR_MAX];
@@ -25,11 +33,16 @@ public class InventoryItem : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _starText;
     [SerializeField] private TextMeshProUGUI _countText;
     [SerializeField] private Button _button;
+    [SerializeField] private Material _evolutionMaterial;
 
     private InventorySlotDrag _drag;
     private Color _selectColor;
     private bool _selected;
     private Tween _mergeHintTween;
+    private Tween _starPunchTween;
+    private Tween _evolutionTween;
+    private Material _evolutionInstance;
+    private Sprite _evolutionTarget;
 
     public Button Button => _button;
 
@@ -71,6 +84,7 @@ public class InventoryItem : MonoBehaviour
     /// </summary>
     public void ShowEmpty()
     {
+        StopEvolution();
         if (_icon != null)
         {
             _icon.sprite = null;
@@ -100,7 +114,14 @@ public class InventoryItem : MonoBehaviour
     /// </summary>
     public void ShowPokemon(Sprite portrait, string pokemonName, int star, int count, bool showCount, bool selected)
     {
-        if (_icon != null)
+        // 진화 연출 중 같은 결과로 다시 그리면 그림과 별은 연출에 맡긴다. 다른 포켓몬이면 연출을 끝낸다.
+        var keepEvolution = _evolutionTween != null && portrait == _evolutionTarget;
+        if (!keepEvolution)
+        {
+            StopEvolution();
+        }
+
+        if (_icon != null && !keepEvolution)
         {
             _icon.sprite = portrait;
             _icon.enabled = portrait != null;
@@ -119,7 +140,11 @@ public class InventoryItem : MonoBehaviour
             _countText.text = "x" + count;
         }
 
-        ShowStars(star);
+        if (!keepEvolution)
+        {
+            ShowStars(star);
+        }
+
         SetSelected(selected);
         if (_frame != null)
         {
@@ -181,9 +206,132 @@ public class InventoryItem : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 성이 올랐다. 새로 켜진 별을 한 번 튕긴다.
+    /// </summary>
+    public void PlayStarUp(int star)
+    {
+        StopStarPunch();
+        var index = star - 1;
+        if (_starImages == null || index < 0 || index >= _starImages.Length || _starImages[index] == null)
+        {
+            return;
+        }
+
+        _starPunchTween = _starImages[index].transform
+            .DOPunchScale(Vector3.one * STAR_PUNCH_SCALE, STAR_PUNCH_DURATION, STAR_PUNCH_VIBRATO)
+            .SetUpdate(true)
+            .SetLink(gameObject);
+    }
+
+    /// <summary>
+    /// 3성이 다음 포켓몬으로 진화한다. 이전 그림이 하얗게 빛나고, 가장 밝을 때 새 그림으로 바뀐 뒤 빛이 빠진다.
+    /// 끝까지 돌면 onFinished를 부르고, 중간에 다시 그려지거나 꺼지면 부르지 않는다.
+    /// </summary>
+    public void PlayEvolution(Sprite from, Sprite to, Action onFinished)
+    {
+        StopEvolution();
+        if (_icon == null || _evolutionMaterial == null)
+        {
+            return;
+        }
+
+        if (_evolutionInstance == null)
+        {
+            _evolutionInstance = new Material(_evolutionMaterial);
+        }
+
+        _icon.material = _evolutionInstance;
+        _icon.sprite = from;
+        _icon.enabled = from != null;
+        _evolutionTarget = to;
+        SetEvolutionBlend(0f);
+        ShowStars(Item.STAR_MAX);
+
+        _evolutionTween = DOTween.Sequence()
+            .Append(DOVirtual.Float(0f, 1f, EVOLUTION_GLOW_IN_DURATION, SetEvolutionBlend).SetEase(Ease.InQuad))
+            .AppendCallback(() =>
+            {
+                _icon.sprite = to;
+                _icon.enabled = to != null;
+                ShowStars(Item.STAR_MIN);
+            })
+            .AppendInterval(EVOLUTION_HOLD_DURATION)
+            .Append(DOVirtual.Float(1f, 0f, EVOLUTION_GLOW_OUT_DURATION, SetEvolutionBlend).SetEase(Ease.OutQuad))
+            .SetUpdate(true)
+            .SetLink(gameObject)
+            .OnComplete(() =>
+            {
+                _evolutionTween = null;
+                ResetEvolutionMaterial();
+                onFinished?.Invoke();
+            });
+    }
+
+    private void StopEvolution()
+    {
+        if (_evolutionTween == null)
+        {
+            return;
+        }
+
+        _evolutionTween.Kill();
+        _evolutionTween = null;
+        ResetEvolutionMaterial();
+        if (_icon != null && _evolutionTarget != null)
+        {
+            _icon.sprite = _evolutionTarget;
+            _icon.enabled = true;
+        }
+    }
+
+    private void ResetEvolutionMaterial()
+    {
+        SetEvolutionBlend(0f);
+        if (_icon != null)
+        {
+            _icon.material = null;
+        }
+    }
+
+    /// <summary>
+    /// 마스크 안에서는 그리는 머티리얼이 따로 복사돼서 둘 다 바꾼다.
+    /// </summary>
+    private void SetEvolutionBlend(float blend)
+    {
+        if (_evolutionInstance != null)
+        {
+            _evolutionInstance.SetFloat(HIT_EFFECT_BLEND_ID, blend);
+        }
+
+        if (_icon != null && _icon.materialForRendering != _evolutionInstance && _icon.material == _evolutionInstance)
+        {
+            _icon.materialForRendering.SetFloat(HIT_EFFECT_BLEND_ID, blend);
+        }
+    }
+
+    private void StopStarPunch()
+    {
+        if (_starPunchTween != null)
+        {
+            _starPunchTween.Complete();
+            _starPunchTween = null;
+        }
+    }
+
     private void OnDisable()
     {
         StopMergeHint();
+        StopEvolution();
+        StopStarPunch();
+    }
+
+    private void OnDestroy()
+    {
+        if (_evolutionInstance != null)
+        {
+            Destroy(_evolutionInstance);
+        }
     }
 
     private void ShowStars(int star)

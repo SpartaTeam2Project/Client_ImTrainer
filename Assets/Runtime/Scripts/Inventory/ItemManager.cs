@@ -311,6 +311,8 @@ public class ItemManager : BaseManager
             PublishEquipmentSlot(playerId, _usedSlots[i]);
         }
 
+        var equipmentSlot = _usedSlots.Count > 0 ? _usedSlots[0] : -1;
+        PublishSynthesized(new ItemSynthesized(playerId, uid, result.uid, result.upgradeLevel, result.uid != uid, equipmentSlot));
         return true;
     }
 
@@ -680,6 +682,14 @@ public class ItemManager : BaseManager
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
         {
             eventManager.Publish(new InventoryChanged(playerId));
+        }
+    }
+
+    private void PublishSynthesized(ItemSynthesized synthesized)
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(synthesized);
         }
     }
 
