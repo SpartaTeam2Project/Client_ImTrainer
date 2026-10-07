@@ -11,8 +11,9 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
     // 아이콘 픽셀 배율. 정수라야 픽셀이 고르게 보인다.
     private const int ICON_PIXEL_SCALE = 3;
     private const string LOCKED_SELECT_SOUND = "error";
-    private const int DEFAULT_BOB_PIXELS = 1;
-    private const float DEFAULT_BOB_INTERVAL = 0.25f;
+    // 엔트리 칸도 같은 움직임을 쓴다.
+    public const int DEFAULT_BOB_PIXELS = 1;
+    public const float DEFAULT_BOB_INTERVAL = 0.25f;
 
     // 아이콘 시트에서 가장 큰 아이콘 크기. 모든 칸을 이 크기로 맞춘다.
     private static readonly Vector2 MAX_ICON_SIZE = new Vector2(40f, 30f);
@@ -42,6 +43,14 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
     public static Vector2 IconSize(Sprite icon)
     {
         return icon != null ? icon.rect.size * ICON_PIXEL_SCALE : Vector2.zero;
+    }
+
+    /// <summary>
+    /// 위로 뜬 아이콘의 화면 높이. 원본 픽셀 수에 아이콘 배율을 곱한다.
+    /// </summary>
+    public static float BobHeight(int pixels)
+    {
+        return pixels * ICON_PIXEL_SCALE;
     }
 
     /// <summary>
@@ -159,7 +168,7 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
     private void StepBob()
     {
         _bobUp = !_bobUp;
-        _unlockAnimation.rectTransform.anchoredPosition = new Vector2(0f, _bobUp ? _bobPixels * ICON_PIXEL_SCALE : 0f);
+        _unlockAnimation.rectTransform.anchoredPosition = new Vector2(0f, _bobUp ? BobHeight(_bobPixels) : 0f);
 
         var frames = Data.Icon;
         var next = NextFrameIndex(frames, _frameIndex);
@@ -196,7 +205,7 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
     /// <summary>
     /// current 다음의 비어 있지 않은 프레임 번호. 끝에서는 처음으로 돌아가고, 없으면 -1.
     /// </summary>
-    private static int NextFrameIndex(Sprite[] frames, int current)
+    public static int NextFrameIndex(Sprite[] frames, int current)
     {
         if (frames == null || frames.Length == 0)
         {

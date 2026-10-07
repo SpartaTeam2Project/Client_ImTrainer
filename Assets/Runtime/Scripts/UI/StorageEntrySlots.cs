@@ -11,10 +11,15 @@ public sealed class StorageEntrySlots
     private readonly GameObject _choose;
     private readonly Image _chooseImage;
     private readonly GameObject _notChosen;
+    // 트레이너 그림이 놓인 원래 자리. 위아래 움직임은 이 자리를 기준으로 한다.
+    private readonly Vector2 _chooseBasePosition;
     private MonsterVisualData[] _visuals = System.Array.Empty<MonsterVisualData>();
     private Image[] _icons = System.Array.Empty<Image>();
-    private Sprite[] _defaultSprites = System.Array.Empty<Sprite>();
-    private Color[] _defaultColors = System.Array.Empty<Color>();
+    private Image[] _empties = System.Array.Empty<Image>();
+    private int[] _frameIndices = System.Array.Empty<int>();
+    // 엔트리 칸은 포커스와 상관없이 모두 같은 박자로 위아래로 움직인다.
+    private bool _bobUp;
+    private float _bobTimer;
 
     public StorageEntrySlots(Image[] monsterImages, GameObject[] locks, GameObject choose, Image chooseImage, GameObject notChosen)
     {
@@ -23,6 +28,7 @@ public sealed class StorageEntrySlots
         _choose = choose;
         _chooseImage = chooseImage;
         _notChosen = notChosen;
+        _chooseBasePosition = chooseImage != null ? chooseImage.rectTransform.anchoredPosition : Vector2.zero;
     }
 
     public PlayableCharacterData Character { get; private set; }
@@ -39,14 +45,35 @@ public sealed class StorageEntrySlots
             _choose.SetActive(chosen);
         }
 
-        if (chosen && _chooseImage != null)
+        if (_chooseImage != null)
         {
-            _chooseImage.sprite = data.InGameSprite;
+            if (chosen)
+            {
+                _chooseImage.sprite = data.InGameSprite;
+            }
+
+            // 새로 고른 트레이너도 엔트리 포켓몬과 같은 높이에서 시작한다.
+            _chooseImage.rectTransform.anchoredPosition = _chooseBasePosition + (chosen ? BobPosition() : Vector2.zero);
         }
 
         if (_notChosen != null)
         {
             _notChosen.SetActive(!chosen);
+        }
+    }
+
+    /// <summary>
+    /// 고른 트레이너와 잠기지 않은 엔트리 칸을 스토리지 포켓몬 칸처럼 위아래로 끊어 움직인다.
+    /// 빈 칸은 빈 칸 그림이 움직이고, 채워진 칸은 포켓몬 아이콘이 움직이며 프레임도 넘긴다.
+    /// </summary>
+    public void TickBob(float deltaTime)
+    {
+        EnsureState();
+        _bobTimer += deltaTime;
+        while (_bobTimer >= StorageMonsterView.DEFAULT_BOB_INTERVAL)
+        {
+            _bobTimer -= StorageMonsterView.DEFAULT_BOB_INTERVAL;
+            StepBob();
         }
     }
 
@@ -178,8 +205,8 @@ public sealed class StorageEntrySlots
         var count = _monsterImages != null ? _monsterImages.Length : 0;
         if (_visuals.Length == count
             && _icons.Length == count
-            && _defaultSprites.Length == count
-            && _defaultColors.Length == count)
+            && _empties.Length == count
+            && _frameIndices.Length == count)
         {
             ShowLocks();
             return;
@@ -187,14 +214,19 @@ public sealed class StorageEntrySlots
 
         _visuals = new MonsterVisualData[count];
         _icons = new Image[count];
-        _defaultSprites = new Sprite[count];
-        _defaultColors = new Color[count];
+        _empties = new Image[count];
+        _frameIndices = new int[count];
         for (var i = 0; i < count; i++)
         {
             var image = _monsterImages[i];
-            _defaultSprites[i] = image != null ? image.sprite : null;
-            _defaultColors[i] = image != null ? image.color : Color.white;
-            _icons[i] = image != null ? CreateIcon(image) : null;
+            if (image == null || IsLocked(i))
+            {
+                continue;
+            }
+
+            _icons[i] = CreateIcon(image);
+            _empties[i] = CreateEmpty(image);
+            ApplySprite(i, null);
         }
 
         ShowLocks();
@@ -220,6 +252,76 @@ public sealed class StorageEntrySlots
         icon.preserveAspect = false;
         go.SetActive(false);
         return icon;
+    }
+
+    /// <summary>
+    /// 칸의 빈 칸 그림을 그대로 옮긴 자식 Image를 만든다. 칸은 제자리에서 마우스를 받고 이 그림만 위아래로 움직인다.
+    /// </summary>
+    private static Image CreateEmpty(Image slot)
+    {
+        var go = new GameObject("Empty", typeof(RectTransform), typeof(Image));
+        var rect = (RectTransform)go.transform;
+        rect.SetParent(slot.transform, false);
+        // 아이콘처럼 맨 앞 형제로 두어 칸의 다른 자식이 위에 그려지게 한다.
+        rect.SetAsFirstSibling();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = slot.rectTransform.pivot;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var empty = go.GetComponent<Image>();
+        empty.raycastTarget = false;
+        empty.sprite = slot.sprite;
+        empty.color = slot.color;
+        empty.material = slot.material;
+        empty.type = slot.type;
+        empty.preserveAspect = slot.preserveAspect;
+        empty.fillCenter = slot.fillCenter;
+        empty.pixelsPerUnitMultiplier = slot.pixelsPerUnitMultiplier;
+        return empty;
+    }
+
+    private void StepBob()
+    {
+        _bobUp = !_bobUp;
+        if (Character != null && _chooseImage != null)
+        {
+            _chooseImage.rectTransform.anchoredPosition = _chooseBasePosition + BobPosition();
+        }
+
+        for (var i = 0; i < _visuals.Length; i++)
+        {
+            var empty = _empties[i];
+            if (!IsLocked(i) && empty != null)
+            {
+                empty.rectTransform.anchoredPosition = BobPosition();
+            }
+
+            var icon = _icons[i];
+            if (!HasMonster(i) || icon == null)
+            {
+                continue;
+            }
+
+            icon.rectTransform.anchoredPosition = BobPosition();
+
+            var frames = _visuals[i].Icon;
+            var next = StorageMonsterView.NextFrameIndex(frames, _frameIndices[i]);
+            if (next < 0 || next == _frameIndices[i])
+            {
+                continue;
+            }
+
+            _frameIndices[i] = next;
+            icon.sprite = frames[next];
+            icon.rectTransform.sizeDelta = StorageMonsterView.IconSize(frames[next]);
+        }
+    }
+
+    private Vector2 BobPosition()
+    {
+        return new Vector2(0f, _bobUp ? StorageMonsterView.BobHeight(StorageMonsterView.DEFAULT_BOB_PIXELS) : 0f);
     }
 
     private void ShowLocks()
@@ -251,10 +353,16 @@ public sealed class StorageEntrySlots
             return;
         }
 
-        // 채운 칸은 투명하게 두고 아이콘 자식만 보인다. 투명해도 마우스는 받는다.
+        // 칸은 늘 투명하게 두고 빈 칸 그림이나 아이콘 자식만 보인다. 투명해도 마우스는 받는다.
         var filled = portrait != null;
-        image.sprite = _defaultSprites[index];
-        image.color = filled ? Color.clear : _defaultColors[index];
+        image.color = Color.clear;
+
+        var empty = _empties[index];
+        if (empty != null)
+        {
+            empty.gameObject.SetActive(!filled);
+            empty.rectTransform.anchoredPosition = BobPosition();
+        }
 
         var icon = _icons[index];
         if (icon == null)
@@ -265,5 +373,10 @@ public sealed class StorageEntrySlots
         icon.gameObject.SetActive(filled);
         icon.sprite = portrait;
         icon.rectTransform.sizeDelta = StorageMonsterView.IconSize(portrait);
+        // 새로 넣은 포켓몬은 첫 프레임에서 시작해 다른 칸과 같은 높이로 맞춘다.
+        icon.rectTransform.anchoredPosition = filled ? BobPosition() : Vector2.zero;
+        _frameIndices[index] = filled && _visuals[index] != null
+            ? StorageMonsterView.NextFrameIndex(_visuals[index].Icon, -1)
+            : -1;
     }
 }

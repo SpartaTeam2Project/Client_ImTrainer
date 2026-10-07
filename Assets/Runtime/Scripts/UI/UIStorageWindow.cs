@@ -135,6 +135,8 @@ public class UIStorageWindow : MonoBehaviour
 
     private void Update()
     {
+        Entry.TickBob(Time.unscaledDeltaTime);
+
         if (_introScene != null && _introScene.IsOpen)
         {
             return;
