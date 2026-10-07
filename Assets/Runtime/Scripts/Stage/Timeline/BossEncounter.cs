@@ -357,7 +357,8 @@ public class BossEncounterBehaviour : PlayableBehaviour
 
     public override void OnBehaviourPlay(Playable playable, FrameData info)
     {
-        if (_started || !Application.isPlaying || info.evaluationType != FrameData.EvaluationType.Playback)
+        // 에디터 스크럽은 플레이 중이 아니라서 막힌다. 보스전 뒤에는 Evaluate로 시각이 가므로 Playback만 허용하면 다음 보스가 안 나온다.
+        if (_started || !Application.isPlaying)
         {
             return;
         }
