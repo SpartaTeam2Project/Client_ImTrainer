@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 스토리지 포켓몬 칸. 잠금, 획득 그림, 포커스를 프리팹 자식으로 켠다.
 /// </summary>
-public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler
+public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler, IStorageSlotView<StorageMonsterView, MonsterVisualData>
 {
     // 아이콘 픽셀 배율. 정수라야 픽셀이 고르게 보인다.
     private const int ICON_PIXEL_SCALE = 3;

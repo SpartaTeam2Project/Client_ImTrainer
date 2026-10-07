@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 스토리지 트레이너 칸. 잠금, 획득 그림, 포커스를 프리팹 자식으로 켠다.
 /// </summary>
-public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler
+public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler, IStorageSlotView<StorageCharacterView, PlayableCharacterData>
 {
     // 초상화 픽셀 배율. 정수라야 픽셀이 고르게 보인다.
     private const int PORTRAIT_PIXEL_SCALE = 3;
