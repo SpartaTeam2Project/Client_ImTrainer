@@ -131,7 +131,6 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         _gold.Unsubscribe();
-        _scrollFollow.Stop();
     }
 
     private void Update()
@@ -552,14 +551,12 @@ public class UIStorageWindow : MonoBehaviour
 
     private void SetScrolls()
     {
-        _scrollFollow.Stop();
         _characters.SetVisible(!_showingMonsters);
         _monsters.SetVisible(_showingMonsters);
     }
 
     private void LayoutSlots()
     {
-        _scrollFollow.Stop();
         StorageSlotLayout.Layout(ActiveList);
     }
 
@@ -591,7 +588,7 @@ public class UIStorageWindow : MonoBehaviour
     private void ScrollToFocus()
     {
         var list = ActiveList;
-        _scrollFollow.ScrollTo(list.Scroll, list.RectAt(list.FocusIndex), gameObject);
+        _scrollFollow.ScrollTo(list.Scroll, list.RectAt(list.FocusIndex));
     }
 
     private void ShowInfo(StorageCharacterView slot)

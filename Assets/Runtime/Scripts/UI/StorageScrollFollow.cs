@@ -1,4 +1,3 @@
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -8,20 +7,18 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class StorageScrollFollow
 {
-    private const float SCROLL_FOLLOW_DURATION = 0.1f;
     // 포커스 테두리가 칸 밖으로 나오는 만큼 뷰포트 가장자리에서 띄운다.
     private const float SCROLL_FOLLOW_MARGIN = 10f;
 
-    private Tween _scrollTween;
     // 키보드로 스크롤하면 가만히 있는 커서 아래로 칸이 지나가며 호버가 포커스를 빼앗는다. 커서가 움직일 때까지 호버를 막는다.
     private bool _hoverLocked;
     private Vector2 _hoverLockPointer;
 
     /// <summary>
-    /// 칸이 뷰포트 밖이면 딱 보일 만큼만 스크롤을 부드럽게 옮긴다.
+    /// 칸이 뷰포트 밖이면 딱 보일 만큼만 스크롤을 한 번에 옮긴다. 레트로 게임처럼 중간 프레임 없이 끊어 움직인다.
     /// 마우스로 고른 칸은 이미 보이고, 스크롤하면 호버가 바뀌어서 부르지 않는다.
     /// </summary>
-    public void ScrollTo(ScrollRect scroll, RectTransform slot, GameObject link)
+    public void ScrollTo(ScrollRect scroll, RectTransform slot)
     {
         if (scroll == null || slot == null || scroll.content == null)
         {
@@ -56,21 +53,11 @@ public sealed class StorageScrollFollow
         var maxY = Mathf.Max(0f, content.rect.height - view.height);
         var targetY = Mathf.Clamp(content.anchoredPosition.y - delta, 0f, maxY);
 
-        Stop();
         scroll.StopMovement();
         LockHoverUntilPointerMoves();
-        _scrollTween = content.DOAnchorPosY(targetY, SCROLL_FOLLOW_DURATION)
-            .SetUpdate(true)
-            .SetLink(link);
-    }
-
-    public void Stop()
-    {
-        if (_scrollTween != null)
-        {
-            _scrollTween.Kill();
-            _scrollTween = null;
-        }
+        var position = content.anchoredPosition;
+        position.y = targetY;
+        content.anchoredPosition = position;
     }
 
     /// <summary>
