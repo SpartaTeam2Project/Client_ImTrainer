@@ -321,6 +321,9 @@ public class PlayerWeapon : MonoBehaviour
         }
 
         weapon.Unbind();
+        // Destroy는 프레임 끝에 일어나므로, 같은 프레임 Equip의 CreateWeapon이 이 오브젝트를 다시 쓰지 않게 칸에서 뗀다.
+        weapon.gameObject.SetActive(false);
+        weapon.transform.SetParent(null, false);
         Destroy(weapon.gameObject);
     }
 
