@@ -16,7 +16,7 @@ public class ShopOffer
     public bool Locked;
 
     /// <summary>
-    /// 파는 성. 지금은 늘 1성이고, 높은 성 진열 규칙은 RollOffers에서 정한다.
+    /// 파는 성. ItemShop.RollOffers가 레벨 구간의 성 가중치로 정한다.
     /// </summary>
     public int Star = Item.STAR_MIN;
 

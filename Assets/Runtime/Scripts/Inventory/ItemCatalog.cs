@@ -15,9 +15,32 @@ public class ItemCatalog
     public IReadOnlyList<Item> Items => _items;
 
     /// <summary>
-    /// 상점에 진열할 수 있는 종. 다른 종에서 진화해 오지 않는 종만 들어간다.
+    /// 상점에 진열할 수 있는 종. 시작 가능이면서 다른 종에서 진화해 오지 않는 종만 들어간다.
+    /// 스테이지 세대 제한 전의 전체 후보다. 판에서 쓰는 풀은 CollectShopPool로 거른다.
     /// </summary>
     public IReadOnlyList<int> ShopPool => _shopPool;
+
+    /// <summary>
+    /// 상점 후보 중 세대 마스크에 드는 종만 담는다. 하나도 없으면 경고하고 전체 후보를 담는다.
+    /// </summary>
+    public void CollectShopPool(ShopGeneration generations, List<int> result)
+    {
+        result.Clear();
+        for (var i = 0; i < _shopPool.Count; i++)
+        {
+            var uid = _shopPool[i];
+            if (ShopGenerationMask.Contains(generations, _visuals[uid].Generation))
+            {
+                result.Add(uid);
+            }
+        }
+
+        if (result.Count == 0 && _shopPool.Count > 0)
+        {
+            UnityEngine.Debug.LogWarning($"상점 세대 {generations}에 진열할 포켓몬이 없어 전체 세대로 진열합니다.");
+            result.AddRange(_shopPool);
+        }
+    }
 
     /// <summary>
     /// 데이터베이스 순서로 uid를 다시 매긴다.
@@ -45,6 +68,7 @@ public class ItemCatalog
                 upgradeLevel = Item.STAR_MIN,
                 maxiumStack = ItemManager.MAX_STACK,
                 price = visual.ShopPrice,
+                currencyId = visual.ShopCurrencyId,
                 evolutionUid = Item.NO_EVOLUTION
             });
         }
@@ -62,7 +86,7 @@ public class ItemCatalog
 
         for (var i = 0; i < _items.Count; i++)
         {
-            if (_items[i] != null && FindPreEvolutionUid(i) < 0)
+            if (_items[i] != null && _visuals[i].Startable && FindPreEvolutionUid(i) < 0)
             {
                 _shopPool.Add(i);
             }

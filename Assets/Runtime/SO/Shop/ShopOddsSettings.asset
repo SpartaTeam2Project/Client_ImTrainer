@@ -1,0 +1,131 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1af59fa258b284f1f12f5c6eca1492cb, type: 3}
+  m_Name: ShopOddsSettings
+  m_EditorClassIdentifier: Assembly-CSharp::ShopOddsSettings
+  _tierThresholds:
+  - 320
+  - 400
+  - 480
+  _brackets:
+  - _minLevel: 1
+    _tierWeights:
+    - 70
+    - 25
+    - 5
+    - 0
+    - 0
+    _starWeights:
+    - 100
+    - 0
+    - 0
+  - _minLevel: 10
+    _tierWeights:
+    - 55
+    - 30
+    - 13
+    - 2
+    - 0
+    _starWeights:
+    - 95
+    - 5
+    - 0
+  - _minLevel: 20
+    _tierWeights:
+    - 45
+    - 33
+    - 17
+    - 5
+    - 0
+    _starWeights:
+    - 90
+    - 10
+    - 0
+  - _minLevel: 30
+    _tierWeights:
+    - 35
+    - 35
+    - 22
+    - 8
+    - 0
+    _starWeights:
+    - 85
+    - 14
+    - 1
+  - _minLevel: 40
+    _tierWeights:
+    - 28
+    - 33
+    - 27
+    - 11
+    - 1
+    _starWeights:
+    - 80
+    - 18
+    - 2
+  - _minLevel: 50
+    _tierWeights:
+    - 22
+    - 30
+    - 30
+    - 16
+    - 2
+    _starWeights:
+    - 74
+    - 22
+    - 4
+  - _minLevel: 60
+    _tierWeights:
+    - 17
+    - 27
+    - 32
+    - 21
+    - 3
+    _starWeights:
+    - 68
+    - 26
+    - 6
+  - _minLevel: 70
+    _tierWeights:
+    - 13
+    - 24
+    - 33
+    - 26
+    - 4
+    _starWeights:
+    - 62
+    - 30
+    - 8
+  - _minLevel: 80
+    _tierWeights:
+    - 10
+    - 20
+    - 33
+    - 31
+    - 6
+    _starWeights:
+    - 55
+    - 34
+    - 11
+  - _minLevel: 100
+    _tierWeights:
+    - 8
+    - 17
+    - 30
+    - 37
+    - 8
+    _starWeights:
+    - 45
+    - 40
+    - 15
+  _ownedWeightMultiplier: 1.5
+  _legendaryAlwaysOneStar: 1

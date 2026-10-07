@@ -143,7 +143,7 @@ public class StageController : MonoBehaviour
         var playerId = playerManager.SpawnLocal();
         if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
         {
-            itemManager.BeginRun(playerId);
+            itemManager.BeginRun(playerId, _stageData.ShopGenerations);
         }
 
         playerManager.EquipStarting(playerId);

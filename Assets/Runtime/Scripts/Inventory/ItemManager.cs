@@ -17,16 +17,18 @@ public class ItemManager : BaseManager
     public const int SYNTHESIS_COUNT = 3;
 
     /// <summary>
-    /// 판매 때 돌려주는 몬스터볼 비율. 구매가에 곱하고 내린다. 최소 1개.
+    /// 판매 때 돌려주는 화폐 비율. 구매가에 곱하고 내린다. 최소 1개.
     /// </summary>
     public const float SELL_PRICE_RATE = 0.5f;
     public const int MIN_SELL_PRICE = 1;
     public const int MIN_EQUIPPED = 1;
     public const int SHOP_OFFER_COUNT = 4;
     public const int SHOP_REFRESH_PRICE = 1;
+    private const int DEFAULT_PLAYER_LEVEL = 1;
 
     [SerializeField] private MonsterDatabase _monsters;
     [SerializeField] private InventoryUi _inventoryWindow;
+    [SerializeField] private ShopOddsSettings _shopOdds;
 
     private InventoryUi _window;
     private readonly ItemCatalog _catalog = new ItemCatalog();
@@ -129,9 +131,9 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 시작 포켓몬 한 마리를 비용 없이 넣고 시작 칸에 장착한다.
+    /// 시작 포켓몬 한 마리를 비용 없이 넣고 시작 칸에 장착한다. 상점은 shopGenerations 세대만 진열한다.
     /// </summary>
-    public void BeginRun(int playerId)
+    public void BeginRun(int playerId, ShopGeneration shopGenerations = ShopGenerationMask.ALL)
     {
         if (_catalog.Items.Count == 0)
         {
@@ -139,14 +141,15 @@ public class ItemManager : BaseManager
         }
 
         var run = RunInventory.Create();
+        _catalog.CollectShopPool(shopGenerations, run.ShopPool);
         _runs[playerId] = run;
-        ItemShop.RollOffers(run, _catalog.ShopPool);
         var visual = ResolveStartingVisual();
         var uid = _catalog.FindUid(visual);
         if (uid < 0)
         {
             LastMessage = "시작 포켓몬을 찾지 못했습니다.";
             Debug.LogWarning(LastMessage);
+            RollShop(playerId, run);
             FinishBag(playerId);
             PublishAllEquipment(playerId);
             return;
@@ -162,6 +165,8 @@ public class ItemManager : BaseManager
             Debug.LogWarning(LastMessage);
         }
 
+        // 시작 포켓몬이 들어간 뒤에 뽑아야 보유 계통 가중치가 붙는다.
+        RollShop(playerId, run);
         FinishBag(playerId);
         PublishAllEquipment(playerId);
     }
@@ -203,7 +208,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 한 마리를 팔 때 돌려받는 몬스터볼.
+    /// 한 마리를 팔 때 돌려받는 화폐 수. 화폐는 item.currencyId다.
     /// </summary>
     public static int GetSellPrice(Item item)
     {
@@ -229,7 +234,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        ItemShop.RollOffers(run, _catalog.ShopPool);
+        RollShop(playerId, run);
         LastMessage = "상점을 새로 고쳤습니다.";
         PublishInventory(playerId);
         return true;
@@ -247,7 +252,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 상점 칸의 포켓몬 한 마리를 몬스터볼로 사서 가방에 넣는다. 산 칸은 Purchased로 표시한다.
+    /// 상점 칸의 포켓몬 한 마리를 그 종의 화폐로 사서 가방에 넣는다. 산 칸은 Purchased로 표시한다.
     /// </summary>
     public bool TryPurchase(int playerId, int offerIndex)
     {
@@ -258,10 +263,14 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        if (!Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies)
-            || !currencies.TryWithdraw(playerId, CurrenciesManager.MONSTER_BALL_ID, created.price, false))
+        if (!Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
         {
-            LastMessage = "몬스터볼이 부족합니다.";
+            return false;
+        }
+
+        if (!currencies.TryWithdraw(playerId, created.currencyId, created.price, false))
+        {
+            LastMessage = currencies.GetName(created.currencyId) + "이 부족합니다.";
             return false;
         }
 
@@ -450,7 +459,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 가방 칸을 비우고 가격만큼 몬스터볼을 돌려준다.
+    /// 가방 칸을 비우고 판매가만큼 그 종의 화폐를 돌려준다.
     /// </summary>
     public bool TrySell(int playerId, int bagIndex)
     {
@@ -461,7 +470,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        Refund(playerId, GetSellPrice(item) * number);
+        Refund(playerId, item.currencyId, GetSellPrice(item) * number);
         LastMessage = "판매했습니다.";
         FinishBag(playerId);
         return true;
@@ -485,7 +494,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 장착 칸을 팔아 몬스터볼을 돌려준다. 마지막 한 마리는 팔 수 없다.
+    /// 장착 칸을 팔아 그 종의 화폐를 돌려준다. 마지막 한 마리는 팔 수 없다.
     /// </summary>
     public bool TrySellEquipped(int playerId, int slot)
     {
@@ -496,7 +505,7 @@ public class ItemManager : BaseManager
         }
 
         run.Equipment.ClearSlot(slot);
-        Refund(playerId, GetSellPrice(item));
+        Refund(playerId, item.currencyId, GetSellPrice(item));
         LastMessage = "판매했습니다.";
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
@@ -620,14 +629,39 @@ public class ItemManager : BaseManager
         return account.ResolveStarterVisual();
     }
 
-    private void Refund(int playerId, int amount)
+    /// <summary>
+    /// 플레이어 레벨에 맞는 확률로 상점 칸을 다시 뽑는다.
+    /// </summary>
+    private void RollShop(int playerId, RunInventory run)
+    {
+        ItemShop.RollOffers(run, _catalog, _shopOdds, GetPlayerLevel(playerId));
+    }
+
+    /// <summary>
+    /// 플레이어 레벨. 플레이어가 없으면 시작 레벨.
+    /// </summary>
+    private static int GetPlayerLevel(int playerId)
+    {
+        if (Managers.Instance == null
+            || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager)
+            || !playerManager.TryGetPlayer(playerId, out var player)
+            || player == null
+            || player.Experience == null)
+        {
+            return DEFAULT_PLAYER_LEVEL;
+        }
+
+        return player.Experience.Level;
+    }
+
+    private void Refund(int playerId, string currencyId, int amount)
     {
         if (amount <= 0 || Managers.Instance == null || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
         {
             return;
         }
 
-        currencies.Deposit(playerId, CurrenciesManager.MONSTER_BALL_ID, amount);
+        currencies.Deposit(playerId, currencyId, amount);
     }
 
     private void FinishBag(int playerId)

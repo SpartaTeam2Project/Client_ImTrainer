@@ -14,52 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _endsOnTime: 1
   _clearTimeSeconds: 30
-  _enemyHpMultiplier: 1
-  _enemyDamageMultiplier: 1
   _stageType: 0
   _fieldData: {fileID: 11400000, guid: ffa4cfe8a95498240b99899d57df6726, type: 2}
   _spawnProp: 0
   _timeline: {fileID: 11400000, guid: b7e1c4a2908f4d6eb3a15c7d9e2f4810, type: 2}
-  _waves:
-  - _monster: {fileID: 11400000, guid: e4b8d2a16c5f49a0b7e3d1f8c6a09543, type: 2}
-    _enemies:
-    - _visual: {fileID: 0}
-      _weight: 1
-    _kind: 2
-    _startSeconds: 0
-    _endSeconds: 600
-    _count: 8
-    _spawnInterval: 1.2
-    _id: 19
-    _maxHealth: 12
-    _contactDamage: 4
-    _moveSpeed: 1.6
-    _attackKind: 0
-    _attackRange: 4
-    _attackInterval: 1.4
-    _projectileSpeed: 6
-    _hitRadius: 0.75
-    _attackDistance: 0.45
-    _overrideScale: 0
-    _scale: 2.7
-  - _monster: {fileID: 11400000, guid: e4b8d2a16c5f49a0b7e3d1f8c6a09543, type: 2}
-    _enemies:
-    - _visual: {fileID: 0}
-      _weight: 1
-    _kind: 2
-    _startSeconds: 0
-    _endSeconds: 9999
-    _count: 8
-    _spawnInterval: 1.2
-    _id: 19
-    _maxHealth: 12
-    _contactDamage: 4
-    _moveSpeed: 1.6
-    _attackKind: 0
-    _attackRange: 4
-    _attackInterval: 1.4
-    _projectileSpeed: 6
-    _hitRadius: 0.75
-    _attackDistance: 0.45
-    _overrideScale: 0
-    _scale: 2.7
+  _enemyHpMultiplier: 1
+  _enemyDamageMultiplier: 1
+  _shopGenerations: 1

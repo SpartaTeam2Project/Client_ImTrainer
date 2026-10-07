@@ -28,9 +28,14 @@ public class Item
     public int maxiumStack = 99;
 
     /// <summary>
-    /// 이 성의 몬스터볼 구매가. 판매가는 ItemManager.GetSellPrice가 계산한다.
+    /// 이 성의 구매가. 판매가는 ItemManager.GetSellPrice가 계산한다.
     /// </summary>
     public int price;
+
+    /// <summary>
+    /// 사고팔 때 쓰는 화폐 id.
+    /// </summary>
+    public string currencyId = CurrenciesManager.MONSTER_BALL_ID;
 
     /// <summary>
     /// 3성 합성으로 이어지는 다음 종. 없으면 -1.
@@ -49,6 +54,7 @@ public class Item
             upgradeLevel = upgradeLevel,
             maxiumStack = maxiumStack,
             price = price,
+            currencyId = currencyId,
             evolutionUid = evolutionUid
         };
     }
