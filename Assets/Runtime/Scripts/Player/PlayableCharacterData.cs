@@ -116,17 +116,32 @@ public class PlayableCharacterData : ScriptableObject
     }
 
 #if UNITY_EDITOR
-    private void OnValidate()
+    /// <summary>
+    /// 초상화 PNG 경로. 시트를 다시 자르면 에디터가 이 경로로 영향 받는 캐릭터를 찾는다.
+    /// </summary>
+    public string PortraitPath => _portrait != null ? UnityEditor.AssetDatabase.GetAssetPath(_portrait) : string.Empty;
+
+    /// <summary>
+    /// 그림 영역을 다시 잰다. 바뀌었으면 저장 대상으로 표시하고 true.
+    /// 시트만 다시 잘리면 OnValidate가 불리지 않아서 임포트 후처리도 이 함수를 부른다.
+    /// </summary>
+    public bool RefreshPortraitArea()
     {
         _croppedPortrait = null;
         var area = MeasurePortraitArea();
         if (area == _portraitArea)
         {
-            return;
+            return false;
         }
 
         _portraitArea = area;
         UnityEditor.EditorUtility.SetDirty(this);
+        return true;
+    }
+
+    private void OnValidate()
+    {
+        RefreshPortraitArea();
     }
 
     /// <summary>
