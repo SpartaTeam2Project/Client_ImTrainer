@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
@@ -28,6 +30,9 @@ public class UIStorageWindow : MonoBehaviour
     private const string FILTER_APPLY_SOUND = "select";
     private const string ENTRY_LOCKED_SOUND = "error";
     private const string STORAGE_MUSIC_NAME = "storage";
+    private const float SCROLL_FOLLOW_DURATION = 0.1f;
+    // 포커스 테두리가 칸 밖으로 나오는 만큼 뷰포트 가장자리에서 띄운다.
+    private const float SCROLL_FOLLOW_MARGIN = 10f;
 
     [SerializeField] private Transform _trainerContent;
     [SerializeField] private StorageCharacterView _slotPrefab;
@@ -67,6 +72,12 @@ public class UIStorageWindow : MonoBehaviour
     private int _focusIndex;
     private int _sideIndex = -1;
     private bool _goldSubscribed;
+    private ScrollRect _trainerScrollRect;
+    private ScrollRect _monsterScrollRect;
+    private Tween _scrollTween;
+    // 키보드로 스크롤하면 가만히 있는 커서 아래로 칸이 지나가며 호버가 포커스를 빼앗는다. 커서가 움직일 때까지 호버를 막는다.
+    private bool _hoverLocked;
+    private Vector2 _hoverLockPointer;
 
     public bool IsOpen => isActiveAndEnabled;
 
@@ -129,6 +140,7 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         UnsubscribeGold();
+        StopScrollFollow();
     }
 
     private void Update()
@@ -153,10 +165,10 @@ public class UIStorageWindow : MonoBehaviour
             FocusFilterBoard(true);
         }
 
-        var move = inputManager.ConsumeMenuMove();
+        var move = inputManager.ConsumeMenuMoveRepeat(out var repeated);
         if (move != Vector2Int.zero)
         {
-            HandleMove(move);
+            HandleMove(move, repeated);
         }
 
         if (inputManager.ConsumeMenuSubmit())
@@ -211,8 +223,16 @@ public class UIStorageWindow : MonoBehaviour
         _generationFilter.Close();
     }
 
-    private void HandleMove(Vector2Int move)
+    /// <summary>
+    /// 방향키를 처리한다. 누르고 있어서 반복된 입력은 칸 목록과 세대 목록 안에서만 움직이고 다른 메뉴로 넘어가지 않는다.
+    /// </summary>
+    private void HandleMove(Vector2Int move, bool repeated)
     {
+        if (repeated && _mode != StorageFocus.Characters && _mode != StorageFocus.Generation)
+        {
+            return;
+        }
+
         if (_mode == StorageFocus.FilterBoard)
         {
             if (move.y < 0)
@@ -251,11 +271,15 @@ public class UIStorageWindow : MonoBehaviour
 
         if (move.y > 0 && IsTopRow())
         {
-            FocusFilterBoard(true);
+            if (!repeated)
+            {
+                FocusFilterBoard(true);
+            }
+
             return;
         }
 
-        if (move.x > 0 && IsRowEnd() && FocusSide(NearestSideIndex(), true))
+        if (move.x > 0 && IsRowEnd() && (repeated || FocusSide(NearestSideIndex(), true)))
         {
             return;
         }
@@ -433,6 +457,7 @@ public class UIStorageWindow : MonoBehaviour
         if (playCursor)
         {
             PlayCursor();
+            ScrollToFocus();
         }
     }
 
@@ -832,7 +857,7 @@ public class UIStorageWindow : MonoBehaviour
 
     private void FocusSlot(StorageCharacterView slot)
     {
-        if (_showingMonsters || _mode == StorageFocus.Generation)
+        if (_showingMonsters || _mode == StorageFocus.Generation || IsHoverLocked())
         {
             return;
         }
@@ -884,6 +909,99 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         SetFocus(index, true);
+        ScrollToFocus();
+    }
+
+    /// <summary>
+    /// 키보드로 포커스한 칸이 뷰포트 밖이면 딱 보일 만큼만 스크롤을 부드럽게 옮긴다.
+    /// 마우스로 고른 칸은 이미 보이고, 스크롤하면 호버가 바뀌어서 부르지 않는다.
+    /// </summary>
+    private void ScrollToFocus()
+    {
+        var scroll = ActiveScrollRect;
+        var slot = ActiveSlotRect(_focusIndex);
+        if (scroll == null || slot == null || scroll.content == null)
+        {
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        var viewport = scroll.viewport != null ? scroll.viewport : (RectTransform)scroll.transform;
+        var content = scroll.content;
+        var corners = new Vector3[4];
+        slot.GetWorldCorners(corners);
+        var slotBottom = viewport.InverseTransformPoint(corners[0]).y;
+        var slotTop = viewport.InverseTransformPoint(corners[1]).y;
+        var view = viewport.rect;
+
+        var delta = 0f;
+        if (slotTop > view.yMax - SCROLL_FOLLOW_MARGIN)
+        {
+            delta = slotTop - (view.yMax - SCROLL_FOLLOW_MARGIN);
+        }
+        else if (slotBottom < view.yMin + SCROLL_FOLLOW_MARGIN)
+        {
+            delta = slotBottom - (view.yMin + SCROLL_FOLLOW_MARGIN);
+        }
+
+        if (Mathf.Approximately(delta, 0f))
+        {
+            return;
+        }
+
+        // content를 올리면(y +) 아래 칸이 보인다. 칸이 위로 벗어났으면 delta가 양수라서 content를 내린다.
+        var maxY = Mathf.Max(0f, content.rect.height - view.height);
+        var targetY = Mathf.Clamp(content.anchoredPosition.y - delta, 0f, maxY);
+
+        StopScrollFollow();
+        scroll.StopMovement();
+        LockHoverUntilPointerMoves();
+        _scrollTween = content.DOAnchorPosY(targetY, SCROLL_FOLLOW_DURATION)
+            .SetUpdate(true)
+            .SetLink(gameObject);
+    }
+
+    private void LockHoverUntilPointerMoves()
+    {
+        var mouse = Mouse.current;
+        if (mouse == null)
+        {
+            return;
+        }
+
+        _hoverLocked = true;
+        _hoverLockPointer = mouse.position.ReadValue();
+    }
+
+    /// <summary>
+    /// 키보드 스크롤 뒤 커서가 그대로면 true. 커서가 움직이거나 클릭하면 잠금을 푼다.
+    /// </summary>
+    private bool IsHoverLocked()
+    {
+        if (!_hoverLocked)
+        {
+            return false;
+        }
+
+        var mouse = Mouse.current;
+        if (mouse == null
+            || mouse.leftButton.wasReleasedThisFrame
+            || (mouse.position.ReadValue() - _hoverLockPointer).sqrMagnitude > 1f)
+        {
+            _hoverLocked = false;
+            return false;
+        }
+
+        return true;
+    }
+
+    private void StopScrollFollow()
+    {
+        if (_scrollTween != null)
+        {
+            _scrollTween.Kill();
+            _scrollTween = null;
+        }
     }
 
     private void SetFocus(int index, bool playCursor = false)
@@ -1084,6 +1202,7 @@ public class UIStorageWindow : MonoBehaviour
 
     private void LayoutSlots()
     {
+        StopScrollFollow();
         var grid = ActiveGrid;
         if (grid != null)
         {
@@ -1190,6 +1309,20 @@ public class UIStorageWindow : MonoBehaviour
 
     private GridLayoutGroup ActiveGrid => _showingMonsters ? _monsterGrid : _grid;
 
+    private ScrollRect ActiveScrollRect => _showingMonsters
+        ? GetScrollRect(_monsterScroll, ref _monsterScrollRect)
+        : GetScrollRect(_trainerScroll, ref _trainerScrollRect);
+
+    private static ScrollRect GetScrollRect(GameObject scroll, ref ScrollRect cached)
+    {
+        if (cached == null && scroll != null)
+        {
+            cached = scroll.GetComponent<ScrollRect>();
+        }
+
+        return cached;
+    }
+
     private RectTransform ActiveSlotRect(int index)
     {
         if (_showingMonsters)
@@ -1212,6 +1345,7 @@ public class UIStorageWindow : MonoBehaviour
 
     private void SetScrolls()
     {
+        StopScrollFollow();
         if (_trainerScroll != null)
         {
             _trainerScroll.SetActive(!_showingMonsters);
@@ -1280,7 +1414,7 @@ public class UIStorageWindow : MonoBehaviour
 
     private void FocusMonsterSlot(StorageMonsterView slot)
     {
-        if (!_showingMonsters || _mode == StorageFocus.Generation)
+        if (!_showingMonsters || _mode == StorageFocus.Generation || IsHoverLocked())
         {
             return;
         }
