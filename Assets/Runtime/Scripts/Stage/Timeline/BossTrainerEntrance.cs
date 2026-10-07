@@ -35,7 +35,8 @@ public static class BossTrainerEntrance
     private const float REVEAL_APPROACH_LIMIT = 14f;
     private const float REVEAL_BACK_STEPS = 5f;
     private const float REVEAL_STOP_GAP = 2.8f + STEP_DISTANCE * REVEAL_BACK_STEPS;
-    private const float REVEAL_FACE_SECONDS = 1.5f;
+    private const float REVEAL_FACE_SECONDS = 0.9f;
+    private const float REVEAL_MUSIC_DELAY_SECONDS = 0.6f;
     private const float REVEAL_OFFSCREEN_PAD = 0.2f;
     private const float REVEAL_OFFSCREEN_EXTRA = 0.2f;
     private const float MARK_WORLD_SCALE = 0.5f;
@@ -44,6 +45,8 @@ public static class BossTrainerEntrance
     private const int TRAINER_SORTING_ORDER = 11;
     private const int MARK_SORTING_ORDER = 14;
     private const string RIVAL_MUSIC_NAME = "RivalAppears";
+    private const string EXCLAMATION_SOUND_NAME = "ExclamationMark";
+    private const string GIOVANNI_BATTLE_MUSIC_NAME = "GiovanniBattle";
 
     private static GameObject _root;
     private static SpriteRenderer _trainer;
@@ -150,7 +153,7 @@ public static class BossTrainerEntrance
         _trainer.sprite = cast.RevealFrame;
         PlaceMarkAbove(playerPosition);
         _mark.SetActive(true);
-        PlayMusic(RIVAL_MUSIC_NAME);
+        PlaySound(EXCLAMATION_SOUND_NAME);
         await UniTask.Delay(System.TimeSpan.FromSeconds(REVEAL_HOLD_SECONDS));
         if (!IsCurrent(token))
         {
@@ -167,13 +170,28 @@ public static class BossTrainerEntrance
 
         _trainer.sprite = cast.SideFrame;
         playerManager.SetLookDirection(Vector2.right);
-        await UniTask.Delay(System.TimeSpan.FromSeconds(REVEAL_FACE_SECONDS));
+        await UniTask.Delay(System.TimeSpan.FromSeconds(REVEAL_MUSIC_DELAY_SECONDS));
         if (!IsCurrent(token))
         {
             return;
         }
 
-        var startBattle = await BossTrainerVersus.PlayAsync(token, cast.Versus);
+        // 비주기는 마주친 뒤 0.6초에 배틀 곡으로 바꾼다. VS가 뜰 때까지 기다리지 않는다.
+        PlayMusic(GIOVANNI_BATTLE_MUSIC_NAME);
+        var faceRemain = REVEAL_FACE_SECONDS - REVEAL_MUSIC_DELAY_SECONDS;
+        if (faceRemain > 0f)
+        {
+            await UniTask.Delay(System.TimeSpan.FromSeconds(faceRemain));
+            if (!IsCurrent(token))
+            {
+                return;
+            }
+        }
+
+        var versus = cast.Versus;
+        // 마주칠 때 이미 튼 곡이라 VS에서 다시 재생하지 않는다.
+        versus.SkipBattleMusic = true;
+        var startBattle = await BossTrainerVersus.PlayAsync(token, versus);
         if (!startBattle || !IsCurrent(token))
         {
             return;
@@ -336,6 +354,16 @@ public static class BossTrainerEntrance
         }
 
         audioManager.PlayMusic(musicName);
+    }
+
+    private static void PlaySound(string soundName)
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        {
+            return;
+        }
+
+        audioManager.PlaySound(soundName);
     }
 
     private static void SetWeaponsPaused(bool paused)

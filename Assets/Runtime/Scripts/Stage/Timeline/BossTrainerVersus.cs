@@ -13,6 +13,8 @@ public struct BossTrainerVersusCast
     public Sprite[] RivalFrames;
     public Sprite[] SlashFrames;
     public Sprite Versus;
+    public string BattleMusic;
+    public bool SkipBattleMusic;
 }
 
 /// <summary>
@@ -111,7 +113,12 @@ public static class BossTrainerVersus
             return false;
         }
 
-        PlayMusic(LAST_BATTLE_MUSIC_NAME);
+        if (!cast.SkipBattleMusic)
+        {
+            var musicName = string.IsNullOrEmpty(cast.BattleMusic) ? LAST_BATTLE_MUSIC_NAME : cast.BattleMusic;
+            PlayMusic(musicName);
+        }
+
         return await WaitForBattleStartAsync(token);
     }
 
