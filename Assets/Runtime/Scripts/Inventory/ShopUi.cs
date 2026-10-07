@@ -240,6 +240,8 @@ public class ShopUi : MonoBehaviour
         KillStamp(index);
         var pose = _poses[index];
         row.Captured.SetActive(true);
+        // 커진 도장이 아래 칸에 가리지 않게 이 칸을 맨 위에 그린다.
+        row.Captured.transform.parent.SetAsLastSibling();
 
         var sequence = DOTween.Sequence();
         if (row.Dim != null)

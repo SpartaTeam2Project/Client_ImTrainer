@@ -1628,6 +1628,30 @@ public class UIStorageWindow : MonoBehaviour
         }
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // 테스트용 임시 버튼. 보관함이 열려 있을 때만 오른쪽 위에 뜬다. 정식 UI가 생기면 지운다.
+    private static readonly Rect TEST_UNLOCK_BUTTON_RECT = new Rect(-220f, 10f, 210f, 40f);
+
+    private void OnGUI()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var account))
+        {
+            return;
+        }
+
+        var rect = TEST_UNLOCK_BUTTON_RECT;
+        rect.x += Screen.width;
+        var label = account.UnlockAllForTest ? "[테스트] 전체 해금 끄기" : "[테스트] 전체 해금";
+        if (!GUI.Button(rect, label))
+        {
+            return;
+        }
+
+        account.SetUnlockAllForTest(!account.UnlockAllForTest);
+        Rebuild(false);
+    }
+#endif
+
     private static AccountManager GetAccount()
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var account))
