@@ -233,13 +233,16 @@ public sealed class UpgradeManager : BaseManager
     [SerializeField] private bool _logAppliedValues = true;
     [SerializeField]private AudioClip _levelUpFanfare;
 
+    [Header("UI")]
+    [SerializeField] private AugmentWindowBehavior _augmentWindow;
+
     private readonly Dictionary<string, int> _levels = new Dictionary<string, int>();
     private readonly List<UpgradeDefinition> _choices = new List<UpgradeDefinition>(CHOICE_COUNT);
     private readonly List<UpgradeDefinition> _candidates = new List<UpgradeDefinition>();
     private PlayerManager _playerManager;
     private bool _active;
     private int _offerNumber;
-    private AugmentWindowBehavior _augmentWindow;
+    private AugmentWindowBehavior _window;
     public IReadOnlyList<UpgradeDefinition> CurrentChoices => _choices;
 
     /// <summary>
@@ -342,11 +345,16 @@ public sealed class UpgradeManager : BaseManager
             _active = false;
             return;
         }
+        var window = EnsureAugmentWindow();
+        if (window == null)
+        {
+            _active = false;
+            return;
+        }
+
         PlayLevelUpSound();
 
         Time.timeScale = 0f;
-        var window = EnsureAugmentWindow();
-
         window.Open(
             _playerManager.LocalPlayerId,
             _playerManager.Level,
@@ -657,18 +665,18 @@ public sealed class UpgradeManager : BaseManager
     }
     private AugmentWindowBehavior EnsureAugmentWindow()
     {
-        if (_augmentWindow != null)
+        if (_window != null)
         {
-            return _augmentWindow;
+            return _window;
         }
-
-        _augmentWindow = GetComponent<AugmentWindowBehavior>();
 
         if (_augmentWindow == null)
         {
-            _augmentWindow = gameObject.AddComponent<AugmentWindowBehavior>();
+            Debug.LogError("[증강] 증강 창 프리팹이 없습니다.", this);
+            return null;
         }
 
-        return _augmentWindow;
+        _window = Instantiate(_augmentWindow, transform);
+        return _window;
     }
 }
