@@ -7,6 +7,10 @@ using UnityEngine;
 public class PlayableCharacterData : ScriptableObject
 {
     private const int MIN_GENERATION = 1;
+#if UNITY_EDITOR
+    // 그림 경계 바깥 여백. 유니티 자동 자르기와 같은 1픽셀이라 _portraitSize 값을 그대로 쓴다.
+    private const int PORTRAIT_AREA_PADDING = 1;
+#endif
 
     [SerializeField] private string _characterName = string.Empty;
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
@@ -16,6 +20,8 @@ public class PlayableCharacterData : ScriptableObject
     [SerializeField] private Sprite _inGameSprite;
     [SerializeField] private Sprite _portrait;
     [SerializeField] private Vector2 _portraitSize;
+    // _portrait 칸 안에서 그림이 있는 영역. 픽셀 단위이고 칸 왼쪽 아래가 원점이다. 에디터가 _portrait를 바꿀 때 채운다.
+    [SerializeField, HideInInspector] private Rect _portraitArea;
 
     [Header("Versus")]
     [Tooltip("보스 VS 화면 왼쪽에 나오는 등 사진.")]
@@ -33,6 +39,8 @@ public class PlayableCharacterData : ScriptableObject
     [SerializeField] private Sprite[] _walkLeft = System.Array.Empty<Sprite>();
     [SerializeField] private Sprite[] _walkRight = System.Array.Empty<Sprite>();
 
+    [System.NonSerialized] private Sprite _croppedPortrait;
+
     public string CharacterName => _characterName ?? string.Empty;
 
     public int Generation => _generation < MIN_GENERATION ? MIN_GENERATION : _generation;
@@ -48,7 +56,22 @@ public class PlayableCharacterData : ScriptableObject
 
     public Sprite InGameSprite => _inGameSprite;
 
-    public Sprite Portrait => _portrait;
+    /// <summary>
+    /// 초상화 시트는 같은 크기 칸으로 잘려 있어서 그림 둘레에 여백이 있다.
+    /// 여백을 뺀 그림 영역만 담은 스프라이트를 돌려준다. 보관함 칸은 아랫변을 발끝으로 쓴다.
+    /// </summary>
+    public Sprite Portrait
+    {
+        get
+        {
+            if (_croppedPortrait == null)
+            {
+                _croppedPortrait = CropPortrait();
+            }
+
+            return _croppedPortrait;
+        }
+    }
 
     public Vector2 PortraitSize => _portraitSize;
 
@@ -69,4 +92,111 @@ public class PlayableCharacterData : ScriptableObject
     public Sprite[] WalkLeft => _walkLeft;
 
     public Sprite[] WalkRight => _walkRight;
+
+    private Sprite CropPortrait()
+    {
+        if (_portrait == null)
+        {
+            return null;
+        }
+
+        var cell = _portrait.rect;
+        var area = _portraitArea;
+        if (area.width <= 0f || area.height <= 0f || (area.width >= cell.width && area.height >= cell.height))
+        {
+            return _portrait;
+        }
+
+        // 같은 텍스처의 일부를 가리키는 스프라이트라 텍스처를 새로 만들지 않는다.
+        var rect = new Rect(cell.x + area.x, cell.y + area.y, area.width, area.height);
+        var sprite = Sprite.Create(_portrait.texture, rect, new Vector2(0.5f, 0.5f), _portrait.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+        sprite.name = _portrait.name;
+        sprite.hideFlags = HideFlags.DontSave;
+        return sprite;
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        _croppedPortrait = null;
+        var area = MeasurePortraitArea();
+        if (area == _portraitArea)
+        {
+            return;
+        }
+
+        _portraitArea = area;
+        UnityEditor.EditorUtility.SetDirty(this);
+    }
+
+    /// <summary>
+    /// 원본 PNG를 읽어서 칸 안의 불투명 픽셀 경계에 여백을 더해 잰다. 텍스처가 Read/Write 꺼져 있어도 된다.
+    /// </summary>
+    private Rect MeasurePortraitArea()
+    {
+        if (_portrait == null)
+        {
+            return default;
+        }
+
+        var path = UnityEditor.AssetDatabase.GetAssetPath(_portrait);
+        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+        {
+            return _portraitArea;
+        }
+
+        var texture = new Texture2D(2, 2);
+        try
+        {
+            if (!texture.LoadImage(System.IO.File.ReadAllBytes(path)))
+            {
+                return _portraitArea;
+            }
+
+            var cell = _portrait.rect;
+            var cellX = (int)cell.x;
+            var cellY = (int)cell.y;
+            var width = (int)cell.width;
+            var height = (int)cell.height;
+            if (cellX + width > texture.width || cellY + height > texture.height)
+            {
+                return _portraitArea;
+            }
+
+            var pixels = texture.GetPixels32();
+            int minX = width, minY = height, maxX = -1, maxY = -1;
+            for (var y = 0; y < height; y++)
+            {
+                var row = (cellY + y) * texture.width + cellX;
+                for (var x = 0; x < width; x++)
+                {
+                    if (pixels[row + x].a == 0)
+                    {
+                        continue;
+                    }
+
+                    minX = Mathf.Min(minX, x);
+                    maxX = Mathf.Max(maxX, x);
+                    minY = Mathf.Min(minY, y);
+                    maxY = Mathf.Max(maxY, y);
+                }
+            }
+
+            if (maxX < 0)
+            {
+                return default;
+            }
+
+            minX = Mathf.Max(0, minX - PORTRAIT_AREA_PADDING);
+            minY = Mathf.Max(0, minY - PORTRAIT_AREA_PADDING);
+            maxX = Mathf.Min(width - 1, maxX + PORTRAIT_AREA_PADDING);
+            maxY = Mathf.Min(height - 1, maxY + PORTRAIT_AREA_PADDING);
+            return new Rect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+        }
+        finally
+        {
+            DestroyImmediate(texture);
+        }
+    }
+#endif
 }
