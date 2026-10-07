@@ -9,7 +9,17 @@ public enum BossSkillKind
     [InspectorName("없음")]
     None = 0,
     [InspectorName("상승 연사")]
-    RisingVolley = 1
+    RisingVolley = 1,
+    [InspectorName("돌진")]
+    ChargeDash = 2,
+    [InspectorName("내리찍기")]
+    Slam = 3,
+    [InspectorName("몸통박치기")]
+    Lunge = 4,
+    [InspectorName("원형 연타")]
+    CircleVolley = 5,
+    [InspectorName("니드킹 몸통박치기")]
+    NidokingLunge = 6
 }
 
 /// <summary>
@@ -22,10 +32,12 @@ public class BossSpawnEntry
     [SerializeField] private int _id;
     [SerializeField] private float _maxHealth = 30f;
     [SerializeField] private float _contactDamage = 4f;
+    [Tooltip("스킬이 플레이어에게 주는 피해.")]
+    [SerializeField] private float _skillDamage = 4f;
     [SerializeField] private float _moveSpeed = 1.2f;
     [SerializeField] private EnemyAttackKind _attackKind = EnemyAttackKind.Contact;
     [SerializeField] private BossSkillKind _skill = BossSkillKind.None;
-    [Tooltip("상승 연사 쿨타임. 나타난 뒤 이 시간이 지나야 첫 스킬을 쓰고, 시전이 끝난 뒤에도 이 시간을 기다린다.")]
+    [Tooltip("스킬 쿨타임. 나타난 뒤 이 시간이 지나야 첫 스킬을 쓰고, 시전이 끝난 뒤에도 이 시간을 기다린다.")]
     [SerializeField, Min(0.05f)] private float _skillCooldown = 4f;
     [Tooltip("보스 스킬 탄 그림. 플레이어 무기 탄과는 따로다.")]
     [SerializeField] private Sprite _projectileSprite;
@@ -34,8 +46,30 @@ public class BossSpawnEntry
     [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
     [SerializeField, Min(0f)] private float _hitRadius = 0.75f;
     [SerializeField, Min(0.01f)] private float _attackDistance = 0.45f;
+    [HideInInspector]
     [SerializeField] private bool _overrideScale;
+    [Tooltip("보스 몸 크기. 몬스터 SO의 크기는 쓰지 않는다.")]
     [SerializeField, Min(0.01f)] private float _scale = MonsterVisualData.DEFAULT_SCALE;
+    [SerializeField, Min(0.05f)] private float _chargeSeconds = 0.9f;
+    [SerializeField, Min(0.01f)] private float _dashSpeed = 3.6f;
+    [Tooltip("돌진이 끝난 뒤 그 방향을 유지하는 시간.")]
+    [SerializeField, Min(0f)] private float _dashRecoverSeconds = 0.5f;
+    [SerializeField, Min(0.05f)] private float _slamChargeSeconds = 1.5f;
+    [SerializeField, Min(0.1f)] private float _skillRange = 2.5f;
+    [Tooltip("내리찍기 착지 뒤 스탬프 마지막 그림을 유지하는 시간.")]
+    [SerializeField, Min(0f)] private float _slamRecoverSeconds = 0.5f;
+    [Tooltip("이 거리 안에 플레이어가 있고 쿨타임이 끝났을 때만 몸통박치기를 한다.")]
+    [SerializeField, Min(0.1f)] private float _lungeRange = 2.5f;
+    [Tooltip("몸통박치기 뒤 Strike 마지막 그림을 유지하는 시간.")]
+    [SerializeField, Min(0f)] private float _lungeRecoverSeconds = 0.5f;
+    [Tooltip("몸통박치기로 플레이어에게 다가가는 속도.")]
+    [SerializeField, Min(0.01f)] private float _lungeSpeed = 3f;
+    [Tooltip("원형 연타가 공격 사이에 걸어가는 속도.")]
+    [SerializeField, Min(0.01f)] private float _circleMoveSpeed = 3f;
+    [Tooltip("원형 연타 원의 반경.")]
+    [SerializeField, Min(0.1f)] private float _circleRange = 2.5f;
+    [Tooltip("원형 연타의 공격과 공격 사이 걷는 시간.")]
+    [SerializeField, Min(0f)] private float _circleGapSeconds = 0.75f;
 
     public MonsterVisualData Monster => _monster;
 
@@ -66,6 +100,7 @@ public class BossSpawnEntry
         _id = party.Monster.DexNumber;
         _maxHealth = source._maxHealth;
         _contactDamage = source._contactDamage;
+        _skillDamage = source._skillDamage;
         _moveSpeed = source._moveSpeed;
         _attackKind = source._attackKind;
         _skill = party.Skill;
@@ -78,6 +113,18 @@ public class BossSpawnEntry
         _attackDistance = source._attackDistance;
         _overrideScale = source._overrideScale;
         _scale = source._scale;
+        _chargeSeconds = source._chargeSeconds;
+        _dashSpeed = source._dashSpeed;
+        _dashRecoverSeconds = source._dashRecoverSeconds;
+        _slamChargeSeconds = source._slamChargeSeconds;
+        _skillRange = source._skillRange;
+        _slamRecoverSeconds = source._slamRecoverSeconds;
+        _lungeRange = source._lungeRange;
+        _lungeRecoverSeconds = source._lungeRecoverSeconds;
+        _lungeSpeed = source._lungeSpeed;
+        _circleMoveSpeed = source._circleMoveSpeed;
+        _circleRange = source._circleRange;
+        _circleGapSeconds = source._circleGapSeconds;
     }
 
     /// <summary>
@@ -91,6 +138,7 @@ public class BossSpawnEntry
             Id = _id,
             MaxHealth = _maxHealth,
             ContactDamage = _contactDamage,
+            SkillDamage = _skillDamage,
             MoveSpeed = _moveSpeed,
             AttackKind = _attackKind,
             Skill = _skill,
@@ -101,7 +149,19 @@ public class BossSpawnEntry
             ProjectileSpeed = _projectileSpeed,
             HitRadius = _hitRadius,
             AttackDistance = _attackDistance,
-            OverrideScale = _overrideScale,
+            ChargeSeconds = _chargeSeconds,
+            DashSpeed = _dashSpeed,
+            DashRecoverSeconds = _dashRecoverSeconds,
+            SlamChargeSeconds = _slamChargeSeconds,
+            SkillRange = _skillRange,
+            SlamRecoverSeconds = _slamRecoverSeconds,
+            LungeRange = _lungeRange,
+            LungeRecoverSeconds = _lungeRecoverSeconds,
+            LungeSpeed = _lungeSpeed,
+            CircleMoveSpeed = _circleMoveSpeed,
+            CircleRange = _circleRange,
+            CircleGapSeconds = _circleGapSeconds,
+            OverrideScale = true,
             Scale = _scale > 0f ? _scale : MonsterVisualData.DEFAULT_SCALE,
             DisableOffscreenTeleport = true
         };
@@ -139,6 +199,7 @@ public class BossSpawnEntry
 
         _maxHealth = stats.MaxHealth;
         _contactDamage = stats.ContactDamage;
+        _skillDamage = stats.SkillDamage;
         _moveSpeed = stats.MoveSpeed;
         _attackKind = stats.AttackKind;
         _skillCooldown = stats.SkillCooldown;
@@ -149,6 +210,18 @@ public class BossSpawnEntry
         _attackDistance = stats.AttackDistance;
         _overrideScale = stats.OverrideScale;
         _scale = stats.Scale;
+        _chargeSeconds = stats.ChargeSeconds;
+        _dashSpeed = stats.DashSpeed;
+        _dashRecoverSeconds = stats.DashRecoverSeconds;
+        _slamChargeSeconds = stats.SlamChargeSeconds;
+        _skillRange = stats.SkillRange;
+        _slamRecoverSeconds = stats.SlamRecoverSeconds;
+        _lungeRange = stats.LungeRange;
+        _lungeRecoverSeconds = stats.LungeRecoverSeconds;
+        _lungeSpeed = stats.LungeSpeed;
+        _circleMoveSpeed = stats.CircleMoveSpeed;
+        _circleRange = stats.CircleRange;
+        _circleGapSeconds = stats.CircleGapSeconds;
     }
 }
 
@@ -160,17 +233,41 @@ public class BossFightStats
 {
     [SerializeField] private float _maxHealth = 30f;
     [SerializeField] private float _contactDamage = 4f;
+    [Tooltip("스킬이 플레이어에게 주는 피해.")]
+    [SerializeField] private float _skillDamage = 4f;
     [SerializeField] private float _moveSpeed = 1.2f;
     [SerializeField] private EnemyAttackKind _attackKind = EnemyAttackKind.Contact;
-    [Tooltip("상승 연사 쿨타임. 나타난 뒤 이 시간이 지나야 첫 스킬을 쓰고, 시전이 끝난 뒤에도 이 시간을 기다린다.")]
+    [Tooltip("스킬 쿨타임. 나타난 뒤 이 시간이 지나야 첫 스킬을 쓰고, 시전이 끝난 뒤에도 이 시간을 기다린다.")]
     [SerializeField, Min(0.05f)] private float _skillCooldown = 4f;
     [SerializeField, Min(0.5f)] private float _attackRange = 4f;
     [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
     [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
     [SerializeField, Min(0f)] private float _hitRadius = 0.75f;
     [SerializeField, Min(0.01f)] private float _attackDistance = 0.45f;
+    [HideInInspector]
     [SerializeField] private bool _overrideScale;
+    [Tooltip("보스 몸 크기. 몬스터 SO의 크기는 쓰지 않는다.")]
     [SerializeField, Min(0.01f)] private float _scale = MonsterVisualData.DEFAULT_SCALE;
+    [SerializeField, Min(0.05f)] private float _chargeSeconds = 0.9f;
+    [SerializeField, Min(0.01f)] private float _dashSpeed = 3.6f;
+    [Tooltip("돌진이 끝난 뒤 그 방향을 유지하는 시간.")]
+    [SerializeField, Min(0f)] private float _dashRecoverSeconds = 0.5f;
+    [SerializeField, Min(0.05f)] private float _slamChargeSeconds = 1.5f;
+    [SerializeField, Min(0.1f)] private float _skillRange = 2.5f;
+    [Tooltip("내리찍기 착지 뒤 스탬프 마지막 그림을 유지하는 시간.")]
+    [SerializeField, Min(0f)] private float _slamRecoverSeconds = 0.5f;
+    [Tooltip("이 거리 안에 플레이어가 있고 쿨타임이 끝났을 때만 몸통박치기를 한다.")]
+    [SerializeField, Min(0.1f)] private float _lungeRange = 2.5f;
+    [Tooltip("몸통박치기 뒤 Strike 마지막 그림을 유지하는 시간.")]
+    [SerializeField, Min(0f)] private float _lungeRecoverSeconds = 0.5f;
+    [Tooltip("몸통박치기로 플레이어에게 다가가는 속도.")]
+    [SerializeField, Min(0.01f)] private float _lungeSpeed = 3f;
+    [Tooltip("원형 연타가 공격 사이에 걸어가는 속도.")]
+    [SerializeField, Min(0.01f)] private float _circleMoveSpeed = 3f;
+    [Tooltip("원형 연타 원의 반경.")]
+    [SerializeField, Min(0.1f)] private float _circleRange = 2.5f;
+    [Tooltip("원형 연타의 공격과 공격 사이 걷는 시간.")]
+    [SerializeField, Min(0f)] private float _circleGapSeconds = 0.75f;
 
     public BossFightStats()
     {
@@ -192,6 +289,7 @@ public class BossFightStats
     {
         _maxHealth = maxHealth;
         _contactDamage = contactDamage;
+        _skillDamage = 4f;
         _moveSpeed = moveSpeed;
         _attackKind = attackKind;
         _skillCooldown = skillCooldown;
@@ -207,6 +305,8 @@ public class BossFightStats
     public float MaxHealth => _maxHealth;
 
     public float ContactDamage => _contactDamage;
+
+    public float SkillDamage => _skillDamage;
 
     public float MoveSpeed => _moveSpeed;
 
@@ -227,4 +327,28 @@ public class BossFightStats
     public bool OverrideScale => _overrideScale;
 
     public float Scale => _scale;
+
+    public float ChargeSeconds => _chargeSeconds > 0f ? _chargeSeconds : 0.9f;
+
+    public float DashSpeed => _dashSpeed > 0f ? _dashSpeed : 3.6f;
+
+    public float DashRecoverSeconds => Mathf.Max(0f, _dashRecoverSeconds);
+
+    public float SlamChargeSeconds => _slamChargeSeconds > 0f ? _slamChargeSeconds : 1.5f;
+
+    public float SkillRange => _skillRange > 0f ? _skillRange : 2.5f;
+
+    public float SlamRecoverSeconds => Mathf.Max(0f, _slamRecoverSeconds);
+
+    public float LungeRange => _lungeRange > 0f ? _lungeRange : 2.5f;
+
+    public float LungeRecoverSeconds => Mathf.Max(0f, _lungeRecoverSeconds);
+
+    public float LungeSpeed => _lungeSpeed > 0f ? _lungeSpeed : 3f;
+
+    public float CircleMoveSpeed => _circleMoveSpeed > 0f ? _circleMoveSpeed : 3f;
+
+    public float CircleRange => _circleRange > 0f ? _circleRange : 2.5f;
+
+    public float CircleGapSeconds => Mathf.Max(0f, _circleGapSeconds);
 }

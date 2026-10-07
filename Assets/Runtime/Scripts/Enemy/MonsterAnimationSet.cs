@@ -9,6 +9,7 @@ using UnityEngine;
 public class MonsterAnimationSet : ScriptableObject
 {
     [SerializeField] private EightDirectionFrames _walk = new EightDirectionFrames();
+    [SerializeField] private EightDirectionFrames _idle = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _sleep = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _hurt = new EightDirectionFrames();
     [SerializeField] private EightDirectionFrames _attack = new EightDirectionFrames();
@@ -28,6 +29,8 @@ public class MonsterAnimationSet : ScriptableObject
     [SerializeField] private List<MonsterSkillAnimation> _skills = new List<MonsterSkillAnimation>();
 
     public EightDirectionFrames Walk => _walk;
+
+    public EightDirectionFrames Idle => _idle;
 
     public EightDirectionFrames Sleep => _sleep;
 
@@ -87,6 +90,7 @@ public class MonsterAnimationSet : ScriptableObject
     private void OnEnable()
     {
         _walk ??= new EightDirectionFrames();
+        _idle ??= new EightDirectionFrames();
         _sleep ??= new EightDirectionFrames();
         _hurt ??= new EightDirectionFrames();
         _attack ??= new EightDirectionFrames();

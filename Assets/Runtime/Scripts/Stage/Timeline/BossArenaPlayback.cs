@@ -3,11 +3,13 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 보스 클립이 울타리를 세우고, 고정 보스 다음 후보 한 마리를 이어서 낸다.
+/// 보스 클립이 울타리를 세우고, 파티에서 고른 두 마리를 같이 낸다.
 /// </summary>
 public static class BossArenaPlayback
 {
+    private const int PAIR_COUNT = 2;
     private const float RIGHT_SPAWN_INSET = 1.5f;
+    private const float PAIR_VERTICAL_OFFSET = 2.5f;
     private const float APPROACH_DELAY_SECONDS = 1f;
 
     private static int _generation;
@@ -17,7 +19,6 @@ public static class BossArenaPlayback
     private static BossSpawnEntry _fixedBoss;
     private static BossSpawnEntry[] _candidates;
     private static BossFenceSpec _fenceSpec;
-    private static MonsterWaveProfile _nextBoss;
 
     /// <summary>
     /// 지금 연출이나 보스전이 이 토큰이면 true.
@@ -42,7 +43,6 @@ public static class BossArenaPlayback
         _bossesLeft = 0;
         _fixedBoss = fixedBoss;
         _candidates = candidates;
-        _nextBoss = null;
         _fenceSpec = fence;
         if (!TryGetEnemyManager(out var enemyManager))
         {
@@ -61,7 +61,7 @@ public static class BossArenaPlayback
     }
 
     /// <summary>
-    /// 연출이 끝난 뒤 울타리를 세우고 클립에 넣은 보스를 낸다.
+    /// 연출이 끝난 뒤 울타리를 세우고 고른 보스들을 같이 낸다.
     /// </summary>
     public static void StartFight(int token)
     {
@@ -80,7 +80,6 @@ public static class BossArenaPlayback
     {
         _generation++;
         _bossesLeft = 0;
-        _nextBoss = null;
         BossTrainerEntrance.Stop();
         SetClockPaused(false);
         ClearFence();
@@ -103,9 +102,10 @@ public static class BossArenaPlayback
         }
 
         enemyManager.DismissAlive();
-        if (fixedBoss == null || fixedBoss.Monster == null)
+        var pool = CollectPool(fixedBoss, candidates);
+        if (pool.Count == 0)
         {
-            Debug.LogError("보스 클립에 고정 몬스터가 없어 보스전을 건너뜁니다.");
+            Debug.LogError("보스 클립에 몬스터가 없어 보스전을 건너뜁니다.");
             Finish(token);
             return;
         }
@@ -133,9 +133,19 @@ public static class BossArenaPlayback
             return;
         }
 
-        _nextBoss = PickNextBoss(candidates);
+        var picked = PickBosses(pool);
         _bossesLeft = 0;
-        if (!TrySpawnBoss(enemyManager, playerId, fixedBoss.CreateProfile(), true))
+        var spawned = 0;
+        for (var i = 0; i < picked.Count; i++)
+        {
+            var offset = ResolveVerticalOffset(i, picked.Count);
+            if (TrySpawnBoss(enemyManager, playerId, picked[i].CreateProfile(), offset))
+            {
+                spawned++;
+            }
+        }
+
+        if (spawned == 0)
         {
             Debug.LogError("보스를 스폰하지 못해 보스전을 건너뜁니다.");
             Finish(token);
@@ -155,16 +165,6 @@ public static class BossArenaPlayback
             return;
         }
 
-        if (_nextBoss != null
-            && TryGetEnemyManager(out var enemyManager)
-            && TryGetPlayerId(out var playerId)
-            && TrySpawnBoss(enemyManager, playerId, _nextBoss))
-        {
-            _nextBoss = null;
-            return;
-        }
-
-        _nextBoss = null;
         if (TryGetStage(out var stage))
         {
             stage.MarkBossCleared();
@@ -181,7 +181,6 @@ public static class BossArenaPlayback
         }
 
         _bossesLeft = 0;
-        _nextBoss = null;
         ClearFence();
         SetClockPaused(false);
         PlayStageMusic();
@@ -210,14 +209,19 @@ public static class BossArenaPlayback
         }
     }
 
-    private static MonsterWaveProfile PickNextBoss(BossSpawnEntry[] candidates)
+    private static List<BossSpawnEntry> CollectPool(BossSpawnEntry fixedBoss, BossSpawnEntry[] candidates)
     {
-        if (candidates == null)
+        var pool = new List<BossSpawnEntry>();
+        if (fixedBoss != null && fixedBoss.Monster != null)
         {
-            return null;
+            pool.Add(fixedBoss);
         }
 
-        var pool = new List<BossSpawnEntry>();
+        if (candidates == null)
+        {
+            return pool;
+        }
+
         for (var i = 0; i < candidates.Length; i++)
         {
             var candidate = candidates[i];
@@ -227,39 +231,59 @@ public static class BossArenaPlayback
             }
         }
 
-        if (pool.Count == 0)
-        {
-            return null;
-        }
-
-        return pool[Random.Range(0, pool.Count)].CreateProfile();
+        return pool;
     }
 
-    private static bool TrySpawnBoss(EnemyManager enemyManager, int playerId, MonsterWaveProfile profile, bool holdApproach = false)
+    /// <summary>
+    /// 풀에서 서로 다른 보스를 최대 두 마리 고른다. 한 마리뿐이면 그 마리만 반환한다.
+    /// </summary>
+    private static List<BossSpawnEntry> PickBosses(List<BossSpawnEntry> pool)
     {
-        var enemy = enemyManager.SpawnBoss(playerId, profile, ResolveSpawnPosition(), OnBossDied);
+        var count = Mathf.Min(PAIR_COUNT, pool.Count);
+        for (var i = 0; i < count; i++)
+        {
+            var swap = Random.Range(i, pool.Count);
+            var chosen = pool[i];
+            pool[i] = pool[swap];
+            pool[swap] = chosen;
+        }
+
+        return pool.GetRange(0, count);
+    }
+
+    private static float ResolveVerticalOffset(int index, int count)
+    {
+        if (count <= 1)
+        {
+            return 0f;
+        }
+
+        return index == 0 ? PAIR_VERTICAL_OFFSET : -PAIR_VERTICAL_OFFSET;
+    }
+
+    private static bool TrySpawnBoss(EnemyManager enemyManager, int playerId, MonsterWaveProfile profile, float verticalOffset)
+    {
+        var enemy = enemyManager.SpawnBoss(playerId, profile, ResolveSpawnPosition(verticalOffset), OnBossDied);
         if (enemy == null)
         {
             return false;
         }
 
-        if (holdApproach)
-        {
-            enemy.HoldApproach(APPROACH_DELAY_SECONDS);
-        }
-
+        enemy.HoldApproach(APPROACH_DELAY_SECONDS);
         _bossesLeft++;
         return true;
     }
 
-    private static Vector2 ResolveSpawnPosition()
+    private static Vector2 ResolveSpawnPosition(float verticalOffset)
     {
         if (_fence == null)
         {
             return Vector2.zero;
         }
 
-        return _fence.RightInnerPosition(RIGHT_SPAWN_INSET);
+        var position = _fence.RightInnerPosition(RIGHT_SPAWN_INSET);
+        position.y += verticalOffset;
+        return _fence.ClampPosition(position);
     }
 
     private static bool TryGetPlayerId(out int playerId)

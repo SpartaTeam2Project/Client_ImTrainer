@@ -19,6 +19,29 @@ public class Enemy : MonoBehaviour
     private const float VOLLEY_RISE_SECONDS = 0.95f;
     private const float VOLLEY_SHOT_GAP = 0.28f;
     private const float VOLLEY_RANGE = 30f;
+    private const float CHARGE_SECONDS = 0.9f;
+    private const float CHARGE_DASH_OVERSHOOT = 1.5f;
+    private const int DASH_END_FRAME_COUNT = 3;
+    private const float CHARGE_DASH_SPEED = 3f;
+    private const float CHARGE_MARK_ALPHA_START = 0.28f;
+    private const float CHARGE_MARK_ALPHA_END = 0.92f;
+    private const float CHARGE_MARK_MIN_THICKNESS = 0.35f;
+    private const float CHARGE_MARK_THICKNESS = 0.15f;
+    private const int CHARGE_MARK_SORTING_ORDER = 4;
+    private const float SLAM_WINDUP_SECONDS = 0.5f;
+    private const float SLAM_JUMP_SECONDS = 0.4f;
+    private const float SLAM_JUMP_HEIGHT = 1.2f;
+    private const float SLAM_MARK_ALPHA_START = 0.28f;
+    private const float SLAM_MARK_ALPHA_END = 0.9f;
+    private const int SLAM_MARK_SORTING_ORDER = 3;
+    private const int SLAM_RING_SORTING_ORDER = 4;
+    private const float SLAM_RING_ALPHA = 0.45f;
+    // 부드러운 원 그림은 가장자리가 일찍 투명해진다. 이 비율이 테두리에 닿는다.
+    private const float SLAM_FILL_EDGE = 0.8f;
+    private const float DEFAULT_LUNGE_SPEED = 3f;
+    private const int CIRCLE_ATTACK_COUNT = 3;
+    private const float DEFAULT_CIRCLE_MOVE_SPEED = 3f;
+    private const float DEFAULT_CIRCLE_RANGE = 2.5f;
     private const float DAMAGE_TEXT_INTERVAL = 0.2f;
     private const float DAMAGE_TEXT_MIN_VALUE = 1f;
     private const float DAMAGE_TEXT_OFFSET = 0.1f;
@@ -35,6 +58,7 @@ public class Enemy : MonoBehaviour
     [SerializeField, Range(0f, 100f)] private float _pocketDollarChance;
     [SerializeField] private CoinDropBehavior _monsterBallDrop;
     [SerializeField, Range(0f, 100f)] private float _monsterBallChance;
+    [SerializeField] private Sprite _slamCircleSprite;
 
     private EnemyManager _owner;
     private EnemyView _view;
@@ -42,6 +66,7 @@ public class Enemy : MonoBehaviour
     private int _playerId;
     private float _health;
     private float _contactDamage;
+    private float _skillDamage;
     private float _moveSpeed;
     private float _nextContactTime;
     private EnemyAttackKind _attackKind;
@@ -63,6 +88,43 @@ public class Enemy : MonoBehaviour
     private float _approachAt;
     private MonsterType[] _defenderTypes = DEFAULT_DEFENDER_TYPES;
     private BossSkillKind _skill;
+    private ChargeDashPhase _chargePhase;
+    private float _chargeUntil;
+    private float _chargeSeconds;
+    private float _dashSpeed;
+    private float _dashRecoverSeconds;
+    private Vector2 _dashDirection;
+    private Vector2 _dashStop;
+    private SpriteRenderer _chargeMark;
+    private SlamPhase _slamPhase;
+    private float _slamUntil;
+    private float _slamChargeSeconds;
+    private float _skillRange;
+    private float _slamRecoverSeconds;
+    private float _lungeRange;
+    private float _lungeRecoverSeconds;
+    private float _lungeSpeed;
+    private LungePhase _lungePhase;
+    private float _lungeUntil;
+    private Vector2 _lungeDirection;
+    private Vector2 _lungeStop;
+    private bool _lungeHit;
+    private bool _lungeArrived;
+    private CirclePhase _circlePhase;
+    private int _circleAttacks;
+    private bool _circleHit;
+    private float _circleUntil;
+    private float _circleMoveSpeed;
+    private float _circleRange;
+    private float _circleGapSeconds;
+    private Vector2 _circleLook;
+    private Vector2 _circleCenter;
+    private float _slamJumpStart;
+    private Vector2 _slamLook;
+    private Vector2 _slamOrigin;
+    private Vector2 _slamCenter;
+    private SpriteRenderer _slamMark;
+    private SpriteRenderer _slamRing;
     private VolleyPhase _volleyPhase;
     private int _volleyReleased;
     private float _nextVolleyShotTime;
@@ -77,6 +139,37 @@ public class Enemy : MonoBehaviour
         None = 0,
         Rising = 1,
         Firing = 2
+    }
+
+    private enum SlamPhase
+    {
+        None = 0,
+        Windup = 1,
+        Filling = 2,
+        Jumping = 3,
+        Recovering = 4
+    }
+
+    private enum ChargeDashPhase
+    {
+        None = 0,
+        Charging = 1,
+        Dashing = 2,
+        Recovering = 3
+    }
+
+    private enum LungePhase
+    {
+        None = 0,
+        Dashing = 1,
+        Recovering = 2
+    }
+
+    private enum CirclePhase
+    {
+        None = 0,
+        Attacking = 1,
+        Moving = 2
     }
 
     public int Id => _id;
@@ -130,6 +223,8 @@ public class Enemy : MonoBehaviour
 
     private void OnDestroy()
     {
+        HideChargeMark();
+        HideSlamMark();
         if (_owner == null)
         {
             return;
@@ -232,14 +327,30 @@ public class Enemy : MonoBehaviour
         float hitRadius = 0f,
         float attackDistance = 0.45f,
         BossSkillKind skill = BossSkillKind.None,
-        float skillCooldown = 0f)
+        float skillCooldown = 0f,
+        float chargeSeconds = 0f,
+        float dashSpeed = 0f,
+        float skillDamage = 0f,
+        float slamChargeSeconds = 0f,
+        float skillRange = 0f,
+        float dashRecoverSeconds = 0f,
+        float slamRecoverSeconds = 0f,
+        float lungeRange = 0f,
+        float lungeRecoverSeconds = 0f,
+        float lungeSpeed = 0f,
+        float circleMoveSpeed = 0f,
+        float circleRange = 0f,
+        float circleGapSeconds = 0f)
     {
         CancelUnfiredVolley();
+        HideChargeMark();
+        HideSlamMark();
         _playerId = playerId;
         _waveIndex = waveIndex;
         _id = id;
         _health = maxHealth;
         _contactDamage = contactDamage;
+        _skillDamage = skillDamage;
         _moveSpeed = moveSpeed;
         _attackKind = attackKind;
         _attackRange = attackRange;
@@ -252,10 +363,26 @@ public class Enemy : MonoBehaviour
         _skill = skill;
         _volleyPhase = VolleyPhase.None;
         _volleyReleased = 0;
+        _chargePhase = ChargeDashPhase.None;
+        _chargeSeconds = chargeSeconds > 0f ? chargeSeconds : CHARGE_SECONDS;
+        _dashSpeed = dashSpeed > 0f ? dashSpeed : moveSpeed * CHARGE_DASH_SPEED;
+        _dashRecoverSeconds = Mathf.Max(0f, dashRecoverSeconds);
+        _slamPhase = SlamPhase.None;
+        _slamChargeSeconds = slamChargeSeconds > 0f ? slamChargeSeconds : 1.5f;
+        _skillRange = skillRange > 0f ? skillRange : 2.5f;
+        _slamRecoverSeconds = Mathf.Max(0f, slamRecoverSeconds);
+        _lungeRange = lungeRange > 0f ? lungeRange : 2.5f;
+        _lungeRecoverSeconds = Mathf.Max(0f, lungeRecoverSeconds);
+        _lungeSpeed = lungeSpeed > 0f ? lungeSpeed : DEFAULT_LUNGE_SPEED;
+        _lungePhase = LungePhase.None;
+        _circlePhase = CirclePhase.None;
+        _circleAttacks = 0;
+        _circleHit = false;
+        _circleMoveSpeed = circleMoveSpeed > 0f ? circleMoveSpeed : DEFAULT_CIRCLE_MOVE_SPEED;
+        _circleRange = circleRange > 0f ? circleRange : DEFAULT_CIRCLE_RANGE;
+        _circleGapSeconds = Mathf.Max(0f, circleGapSeconds);
         _nextContactTime = 0f;
-        _nextShotTime = skill == BossSkillKind.RisingVolley
-            ? Time.time + _skillCooldown
-            : 0f;
+        _nextShotTime = UsesSkillCooldown(skill) ? Time.time + _skillCooldown : 0f;
         _shootPoseUntil = 0f;
         _disableOffscreenTeleport = false;
         _isRushing = false;
@@ -273,6 +400,7 @@ public class Enemy : MonoBehaviour
 
         if (_view != null)
         {
+            _view.SetIdleMove(skill == BossSkillKind.CircleVolley);
             _view.SetVisual(false, Vector2.down);
         }
     }
@@ -318,6 +446,26 @@ public class Enemy : MonoBehaviour
         if (_isRushing)
         {
             return TickRush(playerPosition);
+        }
+
+        if (_skill == BossSkillKind.Slam)
+        {
+            return TickSlam(playerPosition);
+        }
+
+        if (_skill == BossSkillKind.Lunge || _skill == BossSkillKind.NidokingLunge)
+        {
+            return TickLunge(playerPosition);
+        }
+
+        if (_skill == BossSkillKind.CircleVolley)
+        {
+            return TickCircleVolley(playerPosition);
+        }
+
+        if (_skill == BossSkillKind.ChargeDash)
+        {
+            return TickChargeDash(playerPosition);
         }
 
         if (_skill == BossSkillKind.RisingVolley)
@@ -367,6 +515,8 @@ public class Enemy : MonoBehaviour
             return;
         }
 
+        HideChargeMark();
+        HideSlamMark();
         if (_owner != null)
         {
             _owner.NotifyDied(this);
@@ -571,7 +721,7 @@ public class Enemy : MonoBehaviour
         var shot = _volley[_volleyReleased];
         var origin = (Vector2)shot.transform.position;
         var toPlayer = playerPosition - origin;
-        shot.Release(toPlayer, _projectileSpeed, VOLLEY_RANGE, _contactDamage, _hitRadius);
+        shot.Release(toPlayer, _projectileSpeed, VOLLEY_RANGE, _skillDamage, _hitRadius);
         _volley[_volleyReleased] = null;
         _volleyReleased++;
         if (_volleyReleased >= _volley.Length)
@@ -589,9 +739,508 @@ public class Enemy : MonoBehaviour
         _nextShotTime = Time.time + _skillCooldown;
     }
 
+    private bool TickChargeDash(Vector2 playerPosition)
+    {
+        if (_chargePhase == ChargeDashPhase.None)
+        {
+            if (Time.time < _nextShotTime)
+            {
+                return TickContact(playerPosition);
+            }
+
+            BeginCharge();
+        }
+
+        if (_chargePhase == ChargeDashPhase.Charging)
+        {
+            TickCharge(playerPosition);
+        }
+        else if (_chargePhase == ChargeDashPhase.Dashing)
+        {
+            TickDash();
+        }
+
+        if (_chargePhase == ChargeDashPhase.Recovering)
+        {
+            TickDashRecover();
+            return TryContactDamage(playerPosition);
+        }
+
+        if (_chargePhase == ChargeDashPhase.Dashing)
+        {
+            return TryContactDamage(playerPosition, _skillDamage);
+        }
+
+        return TryContactDamage(playerPosition);
+    }
+
+    private void BeginCharge()
+    {
+        _chargePhase = ChargeDashPhase.Charging;
+        _chargeUntil = Time.time + _chargeSeconds;
+    }
+
+    private void TickCharge(Vector2 playerPosition)
+    {
+        var look = playerPosition - (Vector2)transform.position;
+        SetChargeView(look);
+        UpdateChargeMark(playerPosition);
+        if (Time.time < _chargeUntil)
+        {
+            return;
+        }
+
+        BeginDash(playerPosition);
+    }
+
+    private void BeginDash(Vector2 playerPosition)
+    {
+        var origin = (Vector2)transform.position;
+        var toPlayer = playerPosition - origin;
+        _dashDirection = toPlayer.sqrMagnitude > MOVE_SQR_EPSILON ? toPlayer.normalized : Vector2.right;
+        _dashStop = origin + _dashDirection * (toPlayer.magnitude + CHARGE_DASH_OVERSHOOT);
+        _chargePhase = ChargeDashPhase.Dashing;
+        HideChargeMark();
+        HideSlamMark();
+    }
+
+    private void TickDash()
+    {
+        var position = (Vector2)transform.position;
+        var toStop = _dashStop - position;
+        var step = _dashSpeed * Time.deltaTime;
+        if (toStop.sqrMagnitude <= step * step || Vector2.Dot(toStop, _dashDirection) <= 0f)
+        {
+            transform.position = _dashStop;
+            BeginDashRecover();
+            return;
+        }
+
+        transform.position = position + _dashDirection * step;
+        SetAttackView(_dashDirection);
+    }
+
+    private void BeginDashRecover()
+    {
+        _chargePhase = ChargeDashPhase.Recovering;
+        var poseSeconds = _view != null ? _view.BeginAttackTail(_dashDirection, DASH_END_FRAME_COUNT) : 0f;
+        _chargeUntil = Time.time + Mathf.Max(_dashRecoverSeconds, poseSeconds);
+    }
+
+    private void TickDashRecover()
+    {
+        SetAttackView(_dashDirection);
+        if (Time.time < _chargeUntil)
+        {
+            return;
+        }
+
+        FinishChargeDash();
+    }
+
+    private void FinishChargeDash()
+    {
+        _chargePhase = ChargeDashPhase.None;
+        _nextShotTime = Time.time + _skillCooldown;
+    }
+
+    private void SetChargeView(Vector2 lookDirection)
+    {
+        if (_view == null)
+        {
+            return;
+        }
+
+        _view.SetVisual(false, lookDirection, false, false, true);
+    }
+
+    private void UpdateChargeMark(Vector2 playerPosition)
+    {
+        var origin = (Vector2)transform.position;
+        var toPlayer = playerPosition - origin;
+        var direction = toPlayer.sqrMagnitude > MOVE_SQR_EPSILON ? toPlayer.normalized : Vector2.right;
+        var length = toPlayer.magnitude + CHARGE_DASH_OVERSHOOT;
+        var mark = EnsureChargeMark();
+        mark.transform.position = origin;
+        var angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        mark.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        var thickness = Mathf.Max(CHARGE_MARK_MIN_THICKNESS, Mathf.Abs(transform.lossyScale.x) * CHARGE_MARK_THICKNESS);
+        mark.transform.localScale = new Vector3(length / PrototypeSprite.CHARGE_LANE_WIDTH, thickness, 1f);
+        var blend = 1f - Mathf.Clamp01((_chargeUntil - Time.time) / _chargeSeconds);
+        mark.color = new Color(1f, 1f, 1f, Mathf.Lerp(CHARGE_MARK_ALPHA_START, CHARGE_MARK_ALPHA_END, blend));
+    }
+
+    private SpriteRenderer EnsureChargeMark()
+    {
+        if (_chargeMark != null)
+        {
+            return _chargeMark;
+        }
+
+        var markObject = new GameObject("ChargeDashMark");
+        _chargeMark = markObject.AddComponent<SpriteRenderer>();
+        _chargeMark.sprite = PrototypeSprite.ChargeLane;
+        _chargeMark.sortingOrder = CHARGE_MARK_SORTING_ORDER;
+        return _chargeMark;
+    }
+
+    private bool TickLunge(Vector2 playerPosition)
+    {
+        if (_lungePhase == LungePhase.None)
+        {
+            if (Time.time < _nextShotTime || Vector2.Distance(transform.position, playerPosition) > _lungeRange)
+            {
+                return TickContact(playerPosition);
+            }
+
+            BeginLunge(playerPosition);
+        }
+
+        if (_lungePhase == LungePhase.Dashing)
+        {
+            TickLungeDash();
+            if (!TryLungeHit(playerPosition))
+            {
+                return false;
+            }
+        }
+
+        if (_lungePhase == LungePhase.Recovering)
+        {
+            TickLungeRecover();
+            return TryContactDamage(playerPosition);
+        }
+
+        return true;
+    }
+
+    private void BeginLunge(Vector2 playerPosition)
+    {
+        var origin = (Vector2)transform.position;
+        var toPlayer = playerPosition - origin;
+        _lungeDirection = toPlayer.sqrMagnitude > MOVE_SQR_EPSILON ? toPlayer.normalized : Vector2.down;
+        _lungeStop = playerPosition;
+        _lungeHit = false;
+        _lungeArrived = false;
+        _lungePhase = LungePhase.Dashing;
+    }
+
+    private void TickLungeDash()
+    {
+        if (!_lungeArrived)
+        {
+            var position = (Vector2)transform.position;
+            var toStop = _lungeStop - position;
+            var step = _lungeSpeed * Time.deltaTime;
+            if (toStop.sqrMagnitude <= step * step || Vector2.Dot(toStop, _lungeDirection) <= 0f)
+            {
+                transform.position = _lungeStop;
+                _lungeArrived = true;
+            }
+            else
+            {
+                transform.position = position + _lungeDirection * step;
+            }
+        }
+
+        PlayLungeClip(_lungeDirection, !_lungeArrived);
+        if (_view == null || _view.IsStrikeFinished)
+        {
+            BeginLungeRecover();
+        }
+    }
+
+    private void BeginLungeRecover()
+    {
+        _lungePhase = LungePhase.Recovering;
+        _lungeUntil = Time.time + _lungeRecoverSeconds;
+        HoldLungeClip(_lungeDirection);
+    }
+
+    private void TickLungeRecover()
+    {
+        HoldLungeClip(_lungeDirection);
+        if (Time.time < _lungeUntil)
+        {
+            return;
+        }
+
+        _lungePhase = LungePhase.None;
+        _nextShotTime = Time.time + _skillCooldown;
+    }
+
+    private bool TryLungeHit(Vector2 playerPosition)
+    {
+        if (_lungeHit || Vector2.Distance(transform.position, playerPosition) > ContactReach)
+        {
+            return true;
+        }
+
+        _lungeHit = true;
+        DealSkillDamage();
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return true;
+        }
+
+        return playerManager.IsAlive;
+    }
+
+    private void PlayLungeClip(Vector2 lookDirection, bool isMoving)
+    {
+        if (_view == null)
+        {
+            return;
+        }
+
+        if (_skill == BossSkillKind.NidokingLunge)
+        {
+            _view.PlayAttackLunge(lookDirection, isMoving);
+            return;
+        }
+
+        _view.PlayStrike(lookDirection, isMoving);
+    }
+
+    private void HoldLungeClip(Vector2 lookDirection)
+    {
+        if (_view == null)
+        {
+            return;
+        }
+
+        if (_skill == BossSkillKind.NidokingLunge)
+        {
+            _view.HoldAttackLunge(lookDirection);
+            return;
+        }
+
+        _view.HoldStrike(lookDirection);
+    }
+
+    private bool TickSlam(Vector2 playerPosition)
+    {
+        if (_slamPhase == SlamPhase.None)
+        {
+            if (Time.time < _nextShotTime)
+            {
+                return TickContact(playerPosition);
+            }
+
+            BeginSlamWindup(playerPosition);
+        }
+
+        if (_slamPhase == SlamPhase.Windup)
+        {
+            TickSlamWindup(playerPosition);
+            return TryContactDamage(playerPosition);
+        }
+
+        if (_slamPhase == SlamPhase.Filling)
+        {
+            TickSlamFill();
+            return TryContactDamage(playerPosition);
+        }
+
+        if (_slamPhase == SlamPhase.Recovering)
+        {
+            TickSlamRecover();
+            return TryContactDamage(playerPosition);
+        }
+
+        TickSlamJump(playerPosition);
+        return true;
+    }
+
+    private void BeginSlamWindup(Vector2 playerPosition)
+    {
+        _slamPhase = SlamPhase.Windup;
+        _slamUntil = Time.time + SLAM_WINDUP_SECONDS;
+        var look = playerPosition - (Vector2)transform.position;
+        _slamLook = look.sqrMagnitude > MOVE_SQR_EPSILON ? look.normalized : Vector2.down;
+    }
+
+    private void TickSlamWindup(Vector2 playerPosition)
+    {
+        SetChargeView(_slamLook);
+        if (Time.time < _slamUntil)
+        {
+            return;
+        }
+
+        _slamCenter = playerPosition;
+        _slamPhase = SlamPhase.Filling;
+        _slamUntil = Time.time + _slamChargeSeconds;
+        UpdateSlamMark(0f);
+    }
+
+    private void TickSlamFill()
+    {
+        SetChargeView(_slamLook);
+        var blend = 1f - Mathf.Clamp01((_slamUntil - Time.time) / _slamChargeSeconds);
+        UpdateSlamMark(blend);
+        if (Time.time < _slamUntil)
+        {
+            return;
+        }
+
+        BeginSlamJump();
+    }
+
+    private void BeginSlamJump()
+    {
+        _slamOrigin = transform.position;
+        var look = _slamCenter - _slamOrigin;
+        if (look.sqrMagnitude > MOVE_SQR_EPSILON)
+        {
+            _slamLook = look.normalized;
+        }
+
+        _slamJumpStart = Time.time;
+        _slamPhase = SlamPhase.Jumping;
+        UpdateSlamMark(1f);
+    }
+
+    private void TickSlamJump(Vector2 playerPosition)
+    {
+        var blend = Mathf.Clamp01((Time.time - _slamJumpStart) / SLAM_JUMP_SECONDS);
+        var flat = Vector2.Lerp(_slamOrigin, _slamCenter, blend);
+        var height = Mathf.Sin(blend * Mathf.PI) * SLAM_JUMP_HEIGHT;
+        transform.position = flat + Vector2.up * height;
+        SetAttackView(_slamLook);
+        if (blend < 1f)
+        {
+            return;
+        }
+
+        transform.position = _slamCenter;
+        BeginSlamRecover(playerPosition);
+    }
+
+    private void BeginSlamRecover(Vector2 playerPosition)
+    {
+        HideSlamMark();
+        if (Vector2.Distance(playerPosition, _slamCenter) <= _skillRange)
+        {
+            DealSkillDamage();
+        }
+
+        _slamPhase = SlamPhase.Recovering;
+        var poseSeconds = _view != null ? _view.BeginAttackTail(_slamLook, 1) : 0f;
+        _slamUntil = Time.time + Mathf.Max(_slamRecoverSeconds, poseSeconds);
+    }
+
+    private void TickSlamRecover()
+    {
+        SetAttackView(_slamLook);
+        if (Time.time < _slamUntil)
+        {
+            return;
+        }
+
+        _slamPhase = SlamPhase.None;
+        _nextShotTime = Time.time + _skillCooldown;
+    }
+
+    private void DealSkillDamage()
+    {
+        if (Managers.Instance == null || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            return;
+        }
+
+        playerManager.TakeDamage(_playerId, _skillDamage);
+    }
+
+    private void UpdateSlamMark(float blend)
+    {
+        var mark = EnsureSlamMark();
+        var ring = EnsureSlamRing();
+        var amount = Mathf.Clamp01(blend);
+        var fullDiameter = _skillRange * 2f;
+        mark.transform.position = _slamCenter;
+        ring.transform.position = _slamCenter;
+        mark.transform.localScale = SlamMarkScale(mark.sprite, fullDiameter * amount / SLAM_FILL_EDGE);
+        ring.transform.localScale = SlamMarkScale(ring.sprite, fullDiameter);
+        var alpha = Mathf.Lerp(SLAM_MARK_ALPHA_START, SLAM_MARK_ALPHA_END, amount);
+        mark.color = new Color(1f, 0.18f, 0.12f, alpha);
+        ring.color = new Color(1f, 0.18f, 0.12f, SLAM_RING_ALPHA);
+    }
+
+    private SpriteRenderer EnsureSlamMark()
+    {
+        if (_slamMark != null)
+        {
+            return _slamMark;
+        }
+
+        var markObject = new GameObject("SlamCircle");
+        _slamMark = markObject.AddComponent<SpriteRenderer>();
+        _slamMark.sprite = _slamCircleSprite != null ? _slamCircleSprite : PrototypeSprite.SlamCircle;
+        _slamMark.sortingOrder = SLAM_MARK_SORTING_ORDER;
+        return _slamMark;
+    }
+
+    private SpriteRenderer EnsureSlamRing()
+    {
+        if (_slamRing != null)
+        {
+            return _slamRing;
+        }
+
+        var ringObject = new GameObject("SlamRing");
+        _slamRing = ringObject.AddComponent<SpriteRenderer>();
+        _slamRing.sprite = PrototypeSprite.SlamRing;
+        _slamRing.sortingOrder = SLAM_RING_SORTING_ORDER;
+        return _slamRing;
+    }
+
+    private static Vector3 SlamMarkScale(Sprite sprite, float diameter)
+    {
+        var spriteWidth = sprite != null ? sprite.bounds.size.x : 1f;
+        var scale = spriteWidth > 0f ? diameter / spriteWidth : diameter;
+        return new Vector3(scale, scale, 1f);
+    }
+
+    private void HideSlamMark()
+    {
+        if (_slamMark != null)
+        {
+            Destroy(_slamMark.gameObject);
+            _slamMark = null;
+        }
+
+        if (_slamRing != null)
+        {
+            Destroy(_slamRing.gameObject);
+            _slamRing = null;
+        }
+    }
+
+    private void HideChargeMark()
+    {
+        if (_chargeMark == null)
+        {
+            return;
+        }
+
+        Destroy(_chargeMark.gameObject);
+        _chargeMark = null;
+    }
+
+    private static bool UsesSkillCooldown(BossSkillKind skill)
+    {
+        return skill == BossSkillKind.RisingVolley
+            || skill == BossSkillKind.ChargeDash
+            || skill == BossSkillKind.Slam
+            || skill == BossSkillKind.Lunge
+            || skill == BossSkillKind.NidokingLunge
+            || skill == BossSkillKind.CircleVolley;
+    }
+
     private static float ResolveSkillCooldown(BossSkillKind skill, float attackInterval, float skillCooldown)
     {
-        if (skill != BossSkillKind.RisingVolley)
+        if (!UsesSkillCooldown(skill))
         {
             return 0f;
         }
@@ -626,6 +1275,169 @@ public class Enemy : MonoBehaviour
         _view.SetVisual(false, lookDirection, false, true);
     }
 
+    private bool TickCircleVolley(Vector2 playerPosition)
+    {
+        if (_circlePhase == CirclePhase.Attacking)
+        {
+            return TickCircleAttack(playerPosition);
+        }
+
+        if (_circlePhase == CirclePhase.Moving)
+        {
+            return TickCircleMove(playerPosition);
+        }
+
+        if (Time.time >= _nextShotTime)
+        {
+            _circleAttacks = 0;
+            BeginCircleBurrow(playerPosition);
+            return true;
+        }
+
+        if (_view != null)
+        {
+            _view.SetIdleMove(true);
+        }
+
+        return TickContact(playerPosition);
+    }
+
+    private void BeginCircleBurrow(Vector2 playerPosition)
+    {
+        _circleCenter = ClampToField(playerPosition);
+        _circlePhase = CirclePhase.Moving;
+        _circleUntil = Time.time + _circleGapSeconds;
+        _circleHit = false;
+        if (_view != null)
+        {
+            _view.SetIdleMove(false);
+        }
+
+        ShowSkillCircle(_circleCenter, _circleRange);
+    }
+
+    private void BeginCircleAttack(Vector2 playerPosition)
+    {
+        var side = playerPosition.x >= _circleCenter.x ? 1f : -1f;
+        _circleLook = new Vector2(side, 0f);
+        _circlePhase = CirclePhase.Attacking;
+        _circleHit = false;
+        if (_view != null)
+        {
+            _view.SetIdleMove(false);
+        }
+
+        ShowSkillCircle(_circleCenter, _circleRange);
+        PlayPose(_circleLook);
+    }
+
+    private bool TickCircleAttack(Vector2 playerPosition)
+    {
+        ShowSkillCircle(_circleCenter, _circleRange);
+        PlayPose(_circleLook);
+        if (!_circleHit && Vector2.Distance(_circleCenter, playerPosition) <= _circleRange)
+        {
+            _circleHit = true;
+            DealSkillDamage();
+            if (!IsPlayerAlive())
+            {
+                return false;
+            }
+        }
+
+        if (_view != null && !_view.IsPoseFinished)
+        {
+            return true;
+        }
+
+        HideSlamMark();
+        _circleAttacks++;
+        if (_circleAttacks >= CIRCLE_ATTACK_COUNT)
+        {
+            _circlePhase = CirclePhase.None;
+            _circleAttacks = 0;
+            _nextShotTime = Time.time + _skillCooldown;
+            if (_view != null)
+            {
+                _view.SetIdleMove(true);
+            }
+
+            return true;
+        }
+
+        BeginCircleBurrow(playerPosition);
+        return true;
+    }
+
+    private bool TickCircleMove(Vector2 playerPosition)
+    {
+        ShowSkillCircle(_circleCenter, _circleRange);
+        if (_view != null)
+        {
+            _view.SetIdleMove(false);
+        }
+
+        if (!HasReachedCircle())
+        {
+            MoveToward(_circleCenter, Time.deltaTime, _circleMoveSpeed);
+        }
+
+        if (HasReachedCircle() && Time.time >= _circleUntil)
+        {
+            BeginCircleAttack(playerPosition);
+            return true;
+        }
+
+        return TryContactDamage(playerPosition);
+    }
+
+    private bool HasReachedCircle()
+    {
+        var toCenter = _circleCenter - (Vector2)transform.position;
+        var step = Mathf.Max(_circleMoveSpeed * Time.deltaTime, 0.05f);
+        return toCenter.sqrMagnitude <= step * step;
+    }
+
+    private Vector2 ClampToField(Vector2 position)
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            return fieldManager.ValidatePosition(position);
+        }
+
+        return position;
+    }
+
+    private bool IsPlayerAlive()
+    {
+        return Managers.Instance != null
+            && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager)
+            && playerManager.IsAlive;
+    }
+
+    private void PlayPose(Vector2 lookDirection)
+    {
+        if (_view == null)
+        {
+            return;
+        }
+
+        _view.PlayPose(lookDirection);
+    }
+
+    private void ShowSkillCircle(Vector2 center, float radius)
+    {
+        var mark = EnsureSlamMark();
+        var ring = EnsureSlamRing();
+        var diameter = Mathf.Max(0.1f, radius) * 2f;
+        mark.transform.position = center;
+        ring.transform.position = center;
+        mark.transform.localScale = SlamMarkScale(mark.sprite, diameter / SLAM_FILL_EDGE);
+        ring.transform.localScale = SlamMarkScale(ring.sprite, diameter);
+        mark.color = new Color(1f, 0.18f, 0.12f, SLAM_MARK_ALPHA_END);
+        ring.color = new Color(1f, 0.18f, 0.12f, SLAM_RING_ALPHA);
+    }
+
     private bool TickContact(Vector2 playerPosition)
     {
         MoveToward(playerPosition, Time.deltaTime);
@@ -633,6 +1445,11 @@ public class Enemy : MonoBehaviour
     }
 
     private bool TryContactDamage(Vector2 playerPosition)
+    {
+        return TryContactDamage(playerPosition, _contactDamage);
+    }
+
+    private bool TryContactDamage(Vector2 playerPosition, float damage)
     {
         if (Vector2.Distance(transform.position, playerPosition) > ContactReach)
         {
@@ -650,7 +1467,7 @@ public class Enemy : MonoBehaviour
             return true;
         }
 
-        playerManager.TakeDamage(_playerId, _contactDamage);
+        playerManager.TakeDamage(_playerId, damage);
         return playerManager.IsAlive;
     }
 
@@ -709,15 +1526,16 @@ public class Enemy : MonoBehaviour
         _view.SetVisual(isMoving, lookDirection, shooting);
     }
 
-    private void MoveToward(Vector2 target, float deltaTime)
+    private void MoveToward(Vector2 target, float deltaTime, float speed = -1f)
     {
         if (Time.time < _approachAt)
         {
             return;
         }
 
+        var stepSpeed = speed >= 0f ? speed : _moveSpeed;
         var current = (Vector2)transform.position;
-        var next = Vector2.MoveTowards(current, target, _moveSpeed * deltaTime);
+        var next = Vector2.MoveTowards(current, target, stepSpeed * deltaTime);
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
             next = fieldManager.ValidatePosition(next);

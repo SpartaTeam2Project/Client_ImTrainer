@@ -8,6 +8,8 @@ using UnityEngine;
 public class EnemyView : MonoBehaviour
 {
     private const float DEFAULT_FRAMES_PER_SECOND = 8f;
+    private const float STRIKE_FRAMES_PER_SECOND = 12f;
+    private const float POSE_FRAMES_PER_SECOND = 16f;
     private const float HURT_HOLD_SECONDS = 0.45f;
     private const float HURT_SHORT_LIMIT_SECONDS = 1f;
     private const float HURT_MIN_SECONDS = 1.4f;
@@ -51,7 +53,14 @@ public class EnemyView : MonoBehaviour
     private MonsterAnimationSet _animations;
     private bool _isMoving;
     private bool _isShooting;
+    private bool _holdLastFrame;
     private bool _isAttacking;
+    private bool _isStriking;
+    private bool _lungeUsesAttack;
+    private bool _isPosing;
+    private bool _poseFacesLeft;
+    private bool _useIdleMove;
+    private bool _isCharging;
     private bool _hasVisual;
     private bool _facesLeft;
     private EightWay _eightWay = EightWay.Right;
@@ -153,9 +162,9 @@ public class EnemyView : MonoBehaviour
     }
 
     /// <summary>
-    /// 이동 중이면 걷기 프레임을 돌린다. 8방향 모드는 추적 방향 그림을 고른다.
+    /// 이동 중이면 걷기 프레임을 돌린다. 차지는 차지 그림, 공격은 공격 그림을 고른다.
     /// </summary>
-    public void SetVisual(bool isMoving, Vector2 lookDirection, bool shooting = false, bool attacking = false)
+    public void SetVisual(bool isMoving, Vector2 lookDirection, bool shooting = false, bool attacking = false, bool charging = false, bool striking = false, bool posing = false)
     {
         if (_hurtPlaying)
         {
@@ -163,16 +172,28 @@ public class EnemyView : MonoBehaviour
         }
 
         var directionChanged = ApplyDirection(lookDirection);
-        var motionChanged = !_hasVisual || isMoving != _isMoving || shooting != _isShooting || attacking != _isAttacking;
+        var motionChanged = !_hasVisual
+            || isMoving != _isMoving
+            || shooting != _isShooting
+            || attacking != _isAttacking
+            || charging != _isCharging
+            || striking != _isStriking
+            || posing != _isPosing;
+        var strikeContinues = _isStriking && striking;
+        var poseContinues = _isPosing && posing;
         _hasVisual = true;
         _isMoving = isMoving;
         _isShooting = shooting;
         _isAttacking = attacking;
+        _isCharging = charging;
+        _isStriking = striking;
+        _isPosing = posing;
 
-        if (motionChanged)
+        if (motionChanged && !strikeContinues && !poseContinues)
         {
             _frameIndex = 0;
             _frameTimer = 0f;
+            _holdLastFrame = false;
         }
         else if (directionChanged)
         {
@@ -239,17 +260,50 @@ public class EnemyView : MonoBehaviour
     private void AdvanceFrames()
     {
         var frames = CurrentFrames();
-        var playing = _isMoving || _isAttacking;
+        var playing = _isMoving || _isAttacking || _isCharging || _isShooting || _isStriking || _isPosing;
         if (!playing || !HasFrames(frames) || frames.Length <= 1 || _framesPerSecond <= 0f)
         {
             return;
         }
 
+        if (_isPosing && _frameIndex >= frames.Length - 1)
+        {
+            _frameTimer += Time.deltaTime;
+            _frameIndex = frames.Length - 1;
+            return;
+        }
+
+        if ((_holdLastFrame || _isStriking) && _frameIndex >= frames.Length - 1)
+        {
+            _frameIndex = frames.Length - 1;
+            return;
+        }
+
         _frameTimer += Time.deltaTime;
-        var frameDuration = 1f / _framesPerSecond;
+        var framesPerSecond = _framesPerSecond;
+        if (_isStriking)
+        {
+            framesPerSecond = STRIKE_FRAMES_PER_SECOND;
+        }
+        else if (_isPosing)
+        {
+            framesPerSecond = POSE_FRAMES_PER_SECOND;
+        }
+        var frameDuration = 1f / framesPerSecond;
         while (_frameTimer >= frameDuration)
         {
             _frameTimer -= frameDuration;
+            if ((_holdLastFrame || _isStriking || _isPosing) && _frameIndex >= frames.Length - 1)
+            {
+                _frameIndex = frames.Length - 1;
+                if (!_isPosing)
+                {
+                    _frameTimer = 0f;
+                }
+
+                break;
+            }
+
             _frameIndex = (_frameIndex + 1) % frames.Length;
         }
     }
@@ -412,7 +466,7 @@ public class EnemyView : MonoBehaviour
             return null;
         }
 
-        var playing = _isMoving || _isAttacking;
+        var playing = _isMoving || _isAttacking || _isCharging || _isShooting || _isStriking || _isPosing;
         if (!playing || _frameIndex < 0 || _frameIndex >= frames.Length)
         {
             return frames[0];
@@ -423,6 +477,33 @@ public class EnemyView : MonoBehaviour
 
     private Sprite[] CurrentFrames()
     {
+        if (_isPosing)
+        {
+            var pose = PoseFrames();
+            if (HasFrames(pose))
+            {
+                return pose;
+            }
+        }
+
+        if (_isCharging)
+        {
+            var charge = GetDirectionFrames(_animations != null ? _animations.Charge : null, _eightWay);
+            if (HasFrames(charge))
+            {
+                return charge;
+            }
+        }
+
+        if (_isStriking)
+        {
+            var strike = StrikeFrames();
+            if (HasFrames(strike))
+            {
+                return strike;
+            }
+        }
+
         if (_isAttacking)
         {
             var attack = GetDirectionFrames(_animations != null ? _animations.Attack : null, _eightWay);
@@ -444,10 +525,162 @@ public class EnemyView : MonoBehaviour
         return CurrentWalk();
     }
 
+    /// <summary>
+    /// 평소 이동에 걷기 대신 아이들 장을 쓴다. 스킬 이동은 끄고 걷기를 재생한다.
+    /// </summary>
+    public void SetIdleMove(bool enabled)
+    {
+        _useIdleMove = enabled;
+    }
+
+    /// <summary>
+    /// 플레이어가 있는 좌우의 포즈 0~3을 한 번 재생한다.
+    /// </summary>
+    public void PlayPose(Vector2 lookDirection)
+    {
+        if (Mathf.Abs(lookDirection.x) > FLIP_X_EPSILON)
+        {
+            _poseFacesLeft = lookDirection.x < 0f;
+        }
+
+        SetVisual(false, lookDirection, posing: true);
+    }
+
+    /// <summary>
+    /// 포즈 마지막 장을 한 장 시간만큼 보여 준 뒤인가.
+    /// </summary>
+    public bool IsPoseFinished
+    {
+        get
+        {
+            var frames = PoseFrames();
+            if (!HasFrames(frames) || frames.Length <= 1)
+            {
+                return true;
+            }
+
+            var duration = 1f / POSE_FRAMES_PER_SECOND;
+            return _frameIndex >= frames.Length - 1 && _frameTimer >= duration;
+        }
+    }
+
+    /// <summary>
+    /// 지금 방향의 Strike를 한 번 재생한다. 마지막 장에 닿으면 그 장을 유지한다.
+    /// </summary>
+    public void PlayStrike(Vector2 lookDirection, bool isMoving)
+    {
+        _lungeUsesAttack = false;
+        SetVisual(isMoving, lookDirection, false, false, false, true);
+    }
+
+    /// <summary>
+    /// 몸통박치기와 같이 움직이되, Strike 대신 지금 방향의 Attack을 한 번 재생한다.
+    /// </summary>
+    public void PlayAttackLunge(Vector2 lookDirection, bool isMoving)
+    {
+        _lungeUsesAttack = true;
+        SetVisual(isMoving, lookDirection, false, false, false, true);
+    }
+
+    /// <summary>
+    /// Strike를 첫 장부터 마지막 장까지 재생했는가.
+    /// </summary>
+    public bool IsStrikeFinished
+    {
+        get
+        {
+            var frames = StrikeFrames();
+            return !HasFrames(frames) || _frameIndex >= frames.Length - 1;
+        }
+    }
+
+    /// <summary>
+    /// Strike 마지막 장에서 멈춘다.
+    /// </summary>
+    public void HoldStrike(Vector2 lookDirection)
+    {
+        _lungeUsesAttack = false;
+        HoldLungeFrame(lookDirection);
+    }
+
+    /// <summary>
+    /// Attack 마지막 장에서 멈춘다.
+    /// </summary>
+    public void HoldAttackLunge(Vector2 lookDirection)
+    {
+        _lungeUsesAttack = true;
+        HoldLungeFrame(lookDirection);
+    }
+
+    private void HoldLungeFrame(Vector2 lookDirection)
+    {
+        SetVisual(false, lookDirection, false, false, false, true);
+        var frames = StrikeFrames();
+        if (!HasFrames(frames))
+        {
+            return;
+        }
+
+        _frameIndex = frames.Length - 1;
+        _frameTimer = 0f;
+        _holdLastFrame = true;
+        ApplyCurrentSprite();
+    }
+
+    private Sprite[] StrikeFrames()
+    {
+        if (_lungeUsesAttack)
+        {
+            return GetDirectionFrames(_animations != null ? _animations.Attack : null, _eightWay);
+        }
+
+        var strike = GetDirectionFrames(_animations != null ? _animations.Strike : null, _eightWay);
+        if (HasFrames(strike))
+        {
+            return strike;
+        }
+
+        return GetDirectionFrames(_animations != null ? _animations.Attack : null, _eightWay);
+    }
+
+    /// <summary>
+    /// 지금 방향 공격 그림의 끝 프레임만 한 번 재생하고, 그 시간을 반환한다.
+    /// </summary>
+    public float BeginAttackTail(Vector2 lookDirection, int tailCount)
+    {
+        SetVisual(false, lookDirection, false, true);
+        var frames = GetDirectionFrames(_animations != null ? _animations.Attack : null, _eightWay);
+        if (!HasFrames(frames) || _framesPerSecond <= 0f)
+        {
+            return 0f;
+        }
+
+        var count = Mathf.Clamp(tailCount, 1, frames.Length);
+        _frameIndex = frames.Length - count;
+        _frameTimer = 0f;
+        _holdLastFrame = true;
+        return count / _framesPerSecond;
+    }
+
+    private Sprite[] PoseFrames()
+    {
+        if (_animations == null)
+        {
+            return null;
+        }
+
+        return _poseFacesLeft ? _animations.PoseLeft : _animations.PoseRight;
+    }
+
     private Sprite[] CurrentWalk()
     {
         if (UsesEightDirection)
         {
+            if (_useIdleMove && _animations != null && _animations.Idle != null && _animations.Idle.HasFrames())
+            {
+                return GetDirectionFrames(_animations.Idle, _eightWay);
+            }
+
             return GetDirectionFrames(_animations != null ? _animations.Walk : null, _eightWay);
         }
 

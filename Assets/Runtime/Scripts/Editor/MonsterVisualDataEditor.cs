@@ -27,12 +27,12 @@ public class MonsterVisualDataEditor : Editor
 
     private static readonly string[] EIGHT_DIRECTION_ACTION_FIELDS =
     {
-        "_walk", "_sleep", "_hurt", "_attack", "_charge", "_shoot", "_strike", "_swing", "_rotate", "_hop",
+        "_walk", "_idle", "_sleep", "_hurt", "_attack", "_charge", "_shoot", "_strike", "_swing", "_rotate", "_hop",
     };
 
     private static readonly string[] EIGHT_DIRECTION_ACTION_LABELS =
     {
-        "걷기 (Walk)", "잠 (Sleep)", "피격 (Hurt)", "공격 (Attack)", "차지 (Charge)",
+        "걷기 (Walk)", "아이들 (Idle)", "잠 (Sleep)", "피격 (Hurt)", "공격 (Attack)", "차지 (Charge)",
         "사격 (Shoot)", "타격 (Strike)", "휘두르기 (Swing)", "회전 (Rotate)", "점프 (Hop)",
     };
 

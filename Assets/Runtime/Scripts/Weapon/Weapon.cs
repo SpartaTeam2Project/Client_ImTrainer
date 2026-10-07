@@ -190,12 +190,18 @@ public class Weapon : MonoBehaviour
     }
 
     /// <summary>
-    /// 연출이 멈춘 동안을 빼고 걷기 그림을 재생한다.
+    /// 주인 방향의 걷기 그림을 재생한다. 연출 중에는 공격만 멈추고 걸음은 따라간다.
     /// </summary>
     public void Tick(float deltaTime)
     {
-        if (Managers.Instance == null || !Managers.Instance.IsSimulationRunning || WeaponAbilityManager.IsCombatPaused())
+        if (Managers.Instance == null || !Managers.Instance.IsSimulationRunning)
         {
+            return;
+        }
+
+        if (WeaponAbilityManager.IsCombatPaused())
+        {
+            FollowOwner(deltaTime, true);
             return;
         }
 
@@ -211,6 +217,27 @@ public class Weapon : MonoBehaviour
             {
                 ApplyFacing(_owner.Movement.LookDirection);
             }
+        }
+
+        AdvanceIdle(deltaTime);
+    }
+
+    /// <summary>
+    /// 연출 중에도 주인 방향을 보고, 주인이 걸을 때는 같이 걷는다. 공격은 하지 않는다.
+    /// </summary>
+    private void FollowOwner(float deltaTime, bool walkWithOwner)
+    {
+        _shotPose = false;
+        _attackFacingTimer = 0f;
+        if (_owner == null)
+        {
+            return;
+        }
+
+        ApplyFacing(_owner.Movement.LookDirection);
+        if (!walkWithOwner || !_owner.Movement.IsMoving)
+        {
+            return;
         }
 
         AdvanceIdle(deltaTime);
