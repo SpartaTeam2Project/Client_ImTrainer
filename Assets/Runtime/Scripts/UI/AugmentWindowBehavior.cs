@@ -1,3 +1,4 @@
+using DG.Tweening;
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -14,11 +15,30 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
     private const int CANVAS_SORT_ORDER = 500;
 
     private Canvas _canvas;
+
+    [Header("Card Slot")]
     private readonly List<Button> _cards = new List<Button>();
     private readonly List<Image> _cardIcons = new List<Image>();
     private readonly List<TextMeshProUGUI> _cardLabels = new List<TextMeshProUGUI>();
 
+    [Header("Anim")]
+    private const float CARD_POP_DURATION = 0.28f;
+    private const float CARD_POP_INTERVAL = 0.08f;
+    private const float CARD_START_SCALE = 0.7f;
+
+    private readonly List<CanvasGroup> _cardCanvasGroups = new List<CanvasGroup>();
+
+    // 창이 다시 열릴 때 이전 Animation이 남지 않도록 현재 Sequence를 보관한다.
+    private Sequence _openSequence;
+
     private Action _onChosen;
+
+
+    private void OnDestroy()
+    {
+        _openSequence?.Kill();
+    }
+
 
     public override void Open(int playerId, int level, Action onChosen)
     {
@@ -28,6 +48,8 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
         FillCards();
 
         _canvas.gameObject.SetActive(true);
+
+        PlayOpenAnimation();
     }
 
     private void EnsureUi()
@@ -225,6 +247,9 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
             cardRect.gameObject.AddComponent<Button>();
 
 
+        var canvasGroup =
+            cardRect.gameObject.AddComponent<CanvasGroup>();
+
         // =========================================================
         // 이미지 영역
         //
@@ -306,6 +331,67 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
         _cards.Add(button);
         _cardIcons.Add(iconImage);
         _cardLabels.Add(description);
+        _cardCanvasGroups.Add(canvasGroup);
+    }
+
+    /// <summary>
+    /// 증강 선택창이 열릴 때 활성화된 카드들을 왼쪽부터 순차적으로 Pop-up한다.
+    ///
+    /// flow:
+    /// Card 초기화
+    /// => Scale 0.7 / Alpha 0
+    /// => 카드별 0.08초 간격
+    /// => Scale 1 / Alpha 1
+    /// </summary>
+    private void PlayOpenAnimation()
+    {
+        // 이전 창의 Tween이 아직 살아 있다면 제거한다.
+        _openSequence?.Kill();
+
+        _openSequence = DOTween.Sequence();
+
+        // 현재 Upgrade 선택 중에는 Time.timeScale == 0이다.
+        // 따라서 실제 시간 기준으로 Tween이 동작하도록 한다.
+        _openSequence.SetUpdate(true);
+
+        for (var i = 0; i < _cards.Count; i++)
+        {
+            var card = _cards[i];
+
+            if (!card.gameObject.activeSelf)
+            {
+                continue;
+            }
+
+            var rect = card.transform as RectTransform;
+            var canvasGroup = _cardCanvasGroups[i];
+
+            // Animation 시작 상태
+            rect.localScale = Vector3.one * CARD_START_SCALE;
+            canvasGroup.alpha = 0f;
+
+            var delay = i * CARD_POP_INTERVAL;
+
+            // Scale:
+            // 0.7 → 1.0
+            // OutBack을 사용해서 목표 크기를 살짝 넘었다 돌아오는 Pop 느낌을 낸다.
+            _openSequence.Insert(
+                delay,
+                rect.DOScale(
+                        Vector3.one,
+                        CARD_POP_DURATION)
+                    .SetEase(Ease.OutBack)
+            );
+
+            // Fade:
+            // Scale Animation과 동시에 투명도도 올린다.
+            _openSequence.Insert(
+                delay,
+                canvasGroup.DOFade(
+                    1f,
+                    CARD_POP_DURATION * 0.65f)
+            );
+        }
     }
 
     private static TextMeshProUGUI CreateText(
