@@ -539,7 +539,20 @@ public class EnemyManager : BaseManager
             profile.HitRadius,
             profile.AttackDistance,
             profile.Skill,
-            profile.SkillCooldown);
+            profile.SkillCooldown,
+            profile.ChargeSeconds,
+            profile.DashSpeed,
+            profile.SkillDamage,
+            profile.SlamChargeSeconds,
+            profile.SkillRange,
+            profile.DashRecoverSeconds,
+            profile.SlamRecoverSeconds,
+            profile.LungeRange,
+            profile.LungeRecoverSeconds,
+            profile.LungeSpeed,
+            profile.CircleMoveSpeed,
+            profile.CircleRange,
+            profile.CircleGapSeconds);
         enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
         enemy.SetDropGem(onDied != null ? _bossExperienceGem : null);
         if (onDied != null)

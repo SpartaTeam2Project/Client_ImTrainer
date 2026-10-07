@@ -11,8 +11,11 @@ public class PlayerMovement : MonoBehaviour
     private PlayerHealth _health;
     private PlayerView _view;
     private Vector2 _lookDirection = Vector2.right;
+    private bool _isMoving;
 
     public Vector2 LookDirection => _lookDirection;
+
+    public bool IsMoving => _isMoving;
 
     #region Public Methods
 
@@ -59,6 +62,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         var isMoving = movement.sqrMagnitude > MOVE_SQR_EPSILON;
+        _isMoving = isMoving;
         if (isMoving)
         {
             _lookDirection = movement.normalized;

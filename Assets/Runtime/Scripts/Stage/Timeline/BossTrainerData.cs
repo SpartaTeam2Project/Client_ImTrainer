@@ -95,13 +95,13 @@ public class BossTrainerData : ScriptableObject
 public class BossPartyMember
 {
     [SerializeField] private MonsterVisualData _monster;
-    [SerializeField] private BossSkillKind _skill = BossSkillKind.None;
+    [SerializeField] private BossSkillData _skill;
     [Tooltip("보스 스킬 탄 그림. 비어 있으면 타임라인 클립의 탄을 쓴다.")]
     [SerializeField] private Sprite _projectileSprite;
 
     public MonsterVisualData Monster => _monster;
 
-    public BossSkillKind Skill => _skill;
+    public BossSkillKind Skill => _skill != null ? _skill.Kind : BossSkillKind.None;
 
     public Sprite ProjectileSprite => _projectileSprite;
 }

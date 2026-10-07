@@ -13,6 +13,8 @@ public sealed class MonsterWaveProfile
 
     public float ContactDamage { get; set; }
 
+    public float SkillDamage { get; set; }
+
     public float MoveSpeed { get; set; }
 
     public EnemyAttackKind AttackKind { get; set; }
@@ -32,6 +34,30 @@ public sealed class MonsterWaveProfile
     public float HitRadius { get; set; }
 
     public float AttackDistance { get; set; }
+
+    public float ChargeSeconds { get; set; }
+
+    public float DashSpeed { get; set; }
+
+    public float DashRecoverSeconds { get; set; }
+
+    public float SlamChargeSeconds { get; set; }
+
+    public float SkillRange { get; set; }
+
+    public float SlamRecoverSeconds { get; set; }
+
+    public float LungeRange { get; set; }
+
+    public float LungeRecoverSeconds { get; set; }
+
+    public float LungeSpeed { get; set; }
+
+    public float CircleMoveSpeed { get; set; }
+
+    public float CircleRange { get; set; }
+
+    public float CircleGapSeconds { get; set; }
 
     public bool OverrideScale { get; set; }
 

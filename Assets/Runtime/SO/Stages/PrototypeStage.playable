@@ -288,9 +288,60 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BossEncounter
   _boss: {fileID: 11400000, guid: efefbe1ce2025814fbc84f976330dad0, type: 2}
   _partyStats:
-  - _maxHealth: 30
+  - _maxHealth: 180
     _contactDamage: 4
+    _skillDamage: 4
+    _moveSpeed: 2
+    _attackKind: 0
+    _skillCooldown: 3
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 6.3
+    _chargeSeconds: 0.9
+    _dashSpeed: 5
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1
+    _skillRange: 3
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 7
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 7
+    _circleMoveSpeed: 4
+    _circleRange: 2.5
+    _circleGapSeconds: 0.5
+  - _maxHealth: 180
+    _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
+    _attackKind: 0
+    _skillCooldown: 5
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 6
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 5
+    _circleRange: 2.5
+    _circleGapSeconds: 0.5
+  - _maxHealth: 180
+    _contactDamage: 4
+    _skillDamage: 4
+    _moveSpeed: 3
     _attackKind: 0
     _skillCooldown: 4
     _attackRange: 4
@@ -299,12 +350,75 @@ MonoBehaviour:
     _hitRadius: 0.75
     _attackDistance: 0.45
     _overrideScale: 0
-    _scale: 2.7
+    _scale: 5
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 10
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 8
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
+  - _maxHealth: 180
+    _contactDamage: 4
+    _skillDamage: 4
+    _moveSpeed: 2
+    _attackKind: 0
+    _skillCooldown: 4
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 6.3
+    _chargeSeconds: 1
+    _dashSpeed: 7
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
+  - _maxHealth: 180
+    _contactDamage: 4
+    _skillDamage: 4
+    _moveSpeed: 2
+    _attackKind: 0
+    _skillCooldown: 4
+    _attackRange: 4
+    _attackInterval: 1.4
+    _projectileSpeed: 6
+    _hitRadius: 0.75
+    _attackDistance: 0.45
+    _overrideScale: 0
+    _scale: 6.3
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1
+    _skillRange: 3.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   _fixedBoss:
     _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -317,11 +431,24 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   _candidates:
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -334,10 +461,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -350,10 +490,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -366,10 +519,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -382,10 +548,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -398,6 +577,18 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   _spawnCount: 1
   _fence:
     _width: 19
@@ -693,7 +884,7 @@ MonoBehaviour:
   m_Children: []
   m_Clips:
   - m_Version: 1
-    m_Start: 5
+    m_Start: 10
     m_ClipIn: 0
     m_Asset: {fileID: -2707185418244136181}
     m_Duration: 5
@@ -1400,6 +1591,7 @@ MonoBehaviour:
   _partyStats:
   - _maxHealth: 180
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skillCooldown: 3
@@ -1410,8 +1602,21 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 10
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skillCooldown: 4
@@ -1422,11 +1627,24 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   _fixedBoss:
     _monster: {fileID: 11400000, guid: 08d59cce9609425dbee57361332d7038, type: 2}
     _id: 3
     _maxHealth: 180
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 1
@@ -1439,11 +1657,24 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 10
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   _candidates:
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -1456,10 +1687,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -1472,10 +1716,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -1488,10 +1745,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -1504,10 +1774,23 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
     _contactDamage: 4
+    _skillDamage: 4
     _moveSpeed: 1.2
     _attackKind: 0
     _skill: 0
@@ -1520,6 +1803,18 @@ MonoBehaviour:
     _attackDistance: 0.45
     _overrideScale: 0
     _scale: 2.7
+    _chargeSeconds: 0.9
+    _dashSpeed: 3.6
+    _dashRecoverSeconds: 0.5
+    _slamChargeSeconds: 1.5
+    _skillRange: 2.5
+    _slamRecoverSeconds: 0.5
+    _lungeRange: 2.5
+    _lungeRecoverSeconds: 0.5
+    _lungeSpeed: 3
+    _circleMoveSpeed: 3
+    _circleRange: 2.5
+    _circleGapSeconds: 0.75
   _spawnCount: 1
   _fence:
     _width: 19
