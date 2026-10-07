@@ -224,6 +224,8 @@ public class MonsterVisualDataEditor : Editor
         {
             DrawField("_shopPrice", "1성 구매가 (Price)", "상점 1성 가격. 2성은 3배, 3성은 9배. 판매가는 구매가에 판매 배율을 곱한다");
             DrawField("_shopCurrencyId", "화폐 (Currency)", "사고팔 때 쓰는 화폐 id. monster_ball, master_ball 등. 비우면 몬스터볼");
+            DrawField("_baseStatTotal", "종족값 합 (BST)", "상점 등급을 나누는 종족값 합. 경계는 ShopOddsSettings에 있다");
+            DrawField("_legendary", "전설·환상 (Legendary)", "켜면 종족값과 상관없이 상점 전설 등급으로 뽑힌다");
         }
 
         EndCategory(expanded);

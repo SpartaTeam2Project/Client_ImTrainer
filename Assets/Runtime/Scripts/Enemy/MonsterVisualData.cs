@@ -39,6 +39,8 @@ public class MonsterVisualData : ScriptableObject
 
     [SerializeField, Min(MIN_SHOP_PRICE)] private int _shopPrice = DEFAULT_SHOP_PRICE;
     [SerializeField] private string _shopCurrencyId = CurrenciesManager.MONSTER_BALL_ID;
+    [SerializeField, Min(0)] private int _baseStatTotal;
+    [SerializeField] private bool _legendary;
 
     [SerializeField] private Sprite[] _icon = new Sprite[0];
     [SerializeField, FormerlySerializedAs("_portraitSize")] private Vector2 _iconSize;
@@ -96,6 +98,16 @@ public class MonsterVisualData : ScriptableObject
     /// 상점에서 사고팔 때 쓰는 화폐 id. 비어 있으면 몬스터볼이다.
     /// </summary>
     public string ShopCurrencyId => string.IsNullOrEmpty(_shopCurrencyId) ? CurrenciesManager.MONSTER_BALL_ID : _shopCurrencyId;
+
+    /// <summary>
+    /// 종족값 합. 상점 등급을 나눌 때 쓴다.
+    /// </summary>
+    public int BaseStatTotal => _baseStatTotal < 0 ? 0 : _baseStatTotal;
+
+    /// <summary>
+    /// 전설·환상 포켓몬이면 true. 상점에서 종족값과 따로 전설 등급으로 뽑는다.
+    /// </summary>
+    public bool Legendary => _legendary;
 
     /// <summary>
     /// 스토리지 칸, 엔트리, 상점, 인벤토리에 쓰는 아이콘 애니메이션 프레임.

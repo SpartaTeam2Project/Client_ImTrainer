@@ -24,9 +24,11 @@ public class ItemManager : BaseManager
     public const int MIN_EQUIPPED = 1;
     public const int SHOP_OFFER_COUNT = 4;
     public const int SHOP_REFRESH_PRICE = 1;
+    private const int DEFAULT_PLAYER_LEVEL = 1;
 
     [SerializeField] private MonsterDatabase _monsters;
     [SerializeField] private InventoryUi _inventoryWindow;
+    [SerializeField] private ShopOddsSettings _shopOdds;
 
     private InventoryUi _window;
     private readonly ItemCatalog _catalog = new ItemCatalog();
@@ -140,13 +142,13 @@ public class ItemManager : BaseManager
 
         var run = RunInventory.Create();
         _runs[playerId] = run;
-        ItemShop.RollOffers(run, _catalog.ShopPool);
         var visual = ResolveStartingVisual();
         var uid = _catalog.FindUid(visual);
         if (uid < 0)
         {
             LastMessage = "시작 포켓몬을 찾지 못했습니다.";
             Debug.LogWarning(LastMessage);
+            RollShop(playerId, run);
             FinishBag(playerId);
             PublishAllEquipment(playerId);
             return;
@@ -162,6 +164,8 @@ public class ItemManager : BaseManager
             Debug.LogWarning(LastMessage);
         }
 
+        // 시작 포켓몬이 들어간 뒤에 뽑아야 보유 계통 가중치가 붙는다.
+        RollShop(playerId, run);
         FinishBag(playerId);
         PublishAllEquipment(playerId);
     }
@@ -229,7 +233,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        ItemShop.RollOffers(run, _catalog.ShopPool);
+        RollShop(playerId, run);
         LastMessage = "상점을 새로 고쳤습니다.";
         PublishInventory(playerId);
         return true;
@@ -622,6 +626,31 @@ public class ItemManager : BaseManager
         }
 
         return account.ResolveStarterVisual();
+    }
+
+    /// <summary>
+    /// 플레이어 레벨에 맞는 확률로 상점 칸을 다시 뽑는다.
+    /// </summary>
+    private void RollShop(int playerId, RunInventory run)
+    {
+        ItemShop.RollOffers(run, _catalog, _shopOdds, GetPlayerLevel(playerId));
+    }
+
+    /// <summary>
+    /// 플레이어 레벨. 플레이어가 없으면 시작 레벨.
+    /// </summary>
+    private static int GetPlayerLevel(int playerId)
+    {
+        if (Managers.Instance == null
+            || !Managers.Instance.TryGetManager<PlayerManager>(out var playerManager)
+            || !playerManager.TryGetPlayer(playerId, out var player)
+            || player == null
+            || player.Experience == null)
+        {
+            return DEFAULT_PLAYER_LEVEL;
+        }
+
+        return player.Experience.Level;
     }
 
     private void Refund(int playerId, string currencyId, int amount)
