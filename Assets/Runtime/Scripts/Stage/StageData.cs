@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.Timeline;
 
@@ -14,16 +13,6 @@ public enum StageType
 }
 
 /// <summary>
-/// 시간 구간에 적을 내는 방식. 몬스터 담당이 구간 데이터로 고른다.
-/// </summary>
-public enum WaveKind
-{
-    Burst = 0,
-    Maintain = 1,
-    Continuous = 2
-}
-
-/// <summary>
 /// 웨이브 몬스터의 공격. 근거리는 접촉이고, 원거리는 사거리에서 투사체를 던진다.
 /// </summary>
 public enum EnemyAttackKind
@@ -35,105 +24,25 @@ public enum EnemyAttackKind
 }
 
 /// <summary>
-/// 한 시간 구간의 스폰 수와 적 수치.
-/// </summary>
-[Serializable]
-public class WaveSpawn
-{
-    [Tooltip("이 구간에 나올 몬스터 그림. Monster0001 같은 에셋을 넣는다.")]
-    [SerializeField] private MonsterVisualData _monster;
-    [SerializeField] private EnemySpawnEntry[] _enemies = Array.Empty<EnemySpawnEntry>();
-    [SerializeField] private WaveKind _kind = WaveKind.Continuous;
-    [SerializeField] private float _startSeconds;
-    [SerializeField] private float _endSeconds = 60f;
-    [SerializeField] private int _count = 1;
-    [SerializeField] private float _spawnInterval = 1.5f;
-    [SerializeField] private int _id;
-    [SerializeField] private float _maxHealth = 10f;
-    [Tooltip("근거리의 접촉 피해, 또는 원거리 투사체의 피해.")]
-    [SerializeField] private float _contactDamage = 2f;
-    [SerializeField] private float _moveSpeed = 1.5f;
-    [Tooltip("이 구간 몬스터의 공격. 원거리는 아래 사거리, 간격, 속도로 투사체를 던진다.")]
-    [SerializeField] private EnemyAttackKind _attackKind = EnemyAttackKind.Contact;
-    [SerializeField, Min(0.5f)] private float _attackRange = 4f;
-    [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
-    [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
-    [SerializeField, Min(0f)] private float _hitRadius = 0.75f;
-    [SerializeField, Min(0.01f)] private float _attackDistance = 0.45f;
-    [Tooltip("켜면 이 구간 몬스터만 종 크기 대신 아래 크기를 쓴다. 엘리트와 중간보스에 쓴다.")]
-    [SerializeField] private bool _overrideScale;
-    [SerializeField, Min(0.01f)] private float _scale = MonsterVisualData.DEFAULT_SCALE;
-
-
-    public MonsterVisualData Monster => _monster;
-
-    public EnemySpawnEntry[] Enemies => _enemies;
-
-    public WaveKind Kind => _kind;
-
-    public float StartSeconds => _startSeconds;
-
-    public float EndSeconds => _endSeconds;
-
-    public int Count => _count;
-
-    public float SpawnInterval => _spawnInterval;
-
-    public int Id => _id;
-
-    public float MaxHealth => _maxHealth;
-
-    public float ContactDamage => _contactDamage;
-
-    public float MoveSpeed => _moveSpeed;
-
-    public EnemyAttackKind AttackKind => _attackKind;
-
-    public float AttackRange => _attackRange;
-
-    public float AttackInterval => _attackInterval;
-
-    public float ProjectileSpeed => _projectileSpeed;
-
-    public float HitRadius => Mathf.Max(0f, _hitRadius);
-
-    public float AttackDistance => Mathf.Max(0.01f, _attackDistance);
-
-    public bool OverrideScale => _overrideScale;
-
-    public float Scale => _scale > 0f ? _scale : MonsterVisualData.DEFAULT_SCALE;
-}
-
-/// <summary>
-/// 웨이브에서 스폰할 몬스터 그림과 등장 가중치.
-/// </summary>
-[Serializable]
-public class EnemySpawnEntry
-{
-    [SerializeField] private MonsterVisualData _visual;
-    [SerializeField, Min(1)] private int _weight = 1;
-
-    public MonsterVisualData Visual => _visual;
-
-    public int Weight => _weight;
-}
-
-/// <summary>
 /// 스테이지의 제한 시간과 적 배율, 스폰 타임라인.
 /// </summary>
 [CreateAssetMenu(fileName = "StageData", menuName = "Stage/Stage Data")]
 public class StageData : ScriptableObject
 {
+    [Header("진행")]
     [SerializeField] private bool _endsOnTime = true;
     [SerializeField] private float _clearTimeSeconds = 45f;
-    [SerializeField] private float _enemyHpMultiplier = 1f;
-    [SerializeField] private float _enemyDamageMultiplier = 1f;
+
+    [Header("맵")]
     [SerializeField] private StageType _stageType = StageType.Endless;
     [SerializeField] private StageFieldData _fieldData;
+    [Tooltip("켜면 필드 데이터의 PropChances에 따라 배경 칸에 장식을 깐다.")]
     [SerializeField] private bool _spawnProp;
+
+    [Header("스폰")]
     [SerializeField] private TimelineAsset _timeline;
-    [Tooltip("예전 구간 데이터다. 스폰은 타임라인이 맡는다.")]
-    [SerializeField] private WaveSpawn[] _waves = Array.Empty<WaveSpawn>();
+    [SerializeField] private float _enemyHpMultiplier = 1f;
+    [SerializeField] private float _enemyDamageMultiplier = 1f;
 
     public bool EndsOnTime => _endsOnTime;
 
@@ -150,6 +59,4 @@ public class StageData : ScriptableObject
     public bool SpawnProp => _spawnProp;
 
     public TimelineAsset Timeline => _timeline;
-
-    public WaveSpawn[] Waves => _waves;
 }
