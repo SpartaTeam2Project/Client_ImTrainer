@@ -7,9 +7,16 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class InputManager : BaseManager
 {
+    // 메뉴 방향키를 누르고 있으면 이 시간 뒤부터 반복 간격마다 한 번씩 다시 움직인다.
+    private const float MENU_REPEAT_DELAY = 0.35f;
+    private const float MENU_REPEAT_INTERVAL = 0.08f;
+
     private Vector2 _movementValue;
     private bool _pausePressed;
     private Vector2Int _menuMove;
+    private Vector2Int _menuRepeatMove;
+    private Vector2Int _menuHeld;
+    private float _menuRepeatTimer;
     private bool _menuSubmit;
     private bool _menuCancel;
     private bool _storageFilter;
@@ -53,6 +60,19 @@ public class InputManager : BaseManager
     {
         var move = _menuMove;
         _menuMove = Vector2Int.zero;
+        _menuRepeatMove = Vector2Int.zero;
+        return move;
+    }
+
+    /// <summary>
+    /// 메뉴 방향키를 반환하고 소비한다. 누르고 있으면 반복 입력도 돌려주고, 그때 repeated가 true다.
+    /// </summary>
+    public Vector2Int ConsumeMenuMoveRepeat(out bool repeated)
+    {
+        repeated = _menuMove == Vector2Int.zero && _menuRepeatMove != Vector2Int.zero;
+        var move = repeated ? _menuRepeatMove : _menuMove;
+        _menuMove = Vector2Int.zero;
+        _menuRepeatMove = Vector2Int.zero;
         return move;
     }
 
@@ -147,6 +167,7 @@ public class InputManager : BaseManager
     {
         _pausePressed = false;
         _menuMove = Vector2Int.zero;
+        _menuRepeatMove = Vector2Int.zero;
         _menuSubmit = false;
         _menuCancel = false;
         _storageFilter = false;
@@ -157,6 +178,7 @@ public class InputManager : BaseManager
         if (keyboard == null)
         {
             _movementValue = Vector2.zero;
+            _menuHeld = Vector2Int.zero;
             return;
         }
 
@@ -240,6 +262,7 @@ public class InputManager : BaseManager
         }
 
         _menuMove = new Vector2Int(moveX, moveY);
+        ReadMenuRepeat(keyboard);
         if (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame)
         {
             _menuSubmit = true;
@@ -264,5 +287,53 @@ public class InputManager : BaseManager
         {
             _shopRefreshPressed = true;
         }
+    }
+
+    /// <summary>
+    /// 새로 누른 방향을 기억하고, 그 방향을 계속 누르고 있으면 반복 입력을 만든다. 메뉴는 화면이 멈춰도 움직여서 실제 시간을 쓴다.
+    /// </summary>
+    private void ReadMenuRepeat(Keyboard keyboard)
+    {
+        if (_menuMove != Vector2Int.zero)
+        {
+            _menuHeld = _menuMove;
+            _menuRepeatTimer = MENU_REPEAT_DELAY;
+            return;
+        }
+
+        if (_menuHeld == Vector2Int.zero || !IsMenuHeld(keyboard, _menuHeld))
+        {
+            _menuHeld = Vector2Int.zero;
+            return;
+        }
+
+        _menuRepeatTimer -= Time.unscaledDeltaTime;
+        if (_menuRepeatTimer > 0f)
+        {
+            return;
+        }
+
+        _menuRepeatTimer += MENU_REPEAT_INTERVAL;
+        _menuRepeatMove = _menuHeld;
+    }
+
+    private static bool IsMenuHeld(Keyboard keyboard, Vector2Int direction)
+    {
+        if (direction.x < 0)
+        {
+            return keyboard.leftArrowKey.isPressed;
+        }
+
+        if (direction.x > 0)
+        {
+            return keyboard.rightArrowKey.isPressed;
+        }
+
+        if (direction.y < 0)
+        {
+            return keyboard.downArrowKey.isPressed;
+        }
+
+        return direction.y > 0 && keyboard.upArrowKey.isPressed;
     }
 }

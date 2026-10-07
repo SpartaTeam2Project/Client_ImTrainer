@@ -21,6 +21,8 @@ public class PlayableCharacterData : ScriptableObject
     [SerializeField] private Sprite _inGameSprite;
     [SerializeField] private Sprite _portrait;
     [SerializeField] private Vector2 _portraitSize;
+    [Tooltip("보관함 초상화 배율 보정. 원본 그림의 픽셀 크기가 다른 트레이너와 다를 때만 바꾼다. 1이면 그대로.")]
+    [SerializeField, Min(0.1f)] private float _portraitScale = 1f;
     // _portrait 칸 안에서 그림이 있는 영역. 픽셀 단위이고 칸 왼쪽 아래가 원점이다. 에디터가 _portrait를 바꿀 때 채운다.
     [SerializeField, HideInInspector] private Rect _portraitArea;
 
@@ -81,6 +83,11 @@ public class PlayableCharacterData : ScriptableObject
     }
 
     public Vector2 PortraitSize => _portraitSize;
+
+    /// <summary>
+    /// 보관함 초상화 배율 보정. 원본 픽셀 크기가 다른 트레이너를 맞출 때 쓴다.
+    /// </summary>
+    public float PortraitScale => _portraitScale > 0f ? _portraitScale : 1f;
 
     /// <summary>
     /// 여백까지 담긴 칸 그대로의 초상화. 애니메이션 프레임과 크기와 기준점이 같다.
