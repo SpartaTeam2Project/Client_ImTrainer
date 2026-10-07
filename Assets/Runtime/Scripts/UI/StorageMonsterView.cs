@@ -27,6 +27,14 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
     public bool IsUnlocked { get; private set; }
 
     /// <summary>
+    /// 아이콘을 그릴 크기. 원래 픽셀 크기에 같은 배율을 곱한다. 엔트리 칸도 이 크기를 쓴다.
+    /// </summary>
+    public static Vector2 IconSize(Sprite icon)
+    {
+        return icon != null ? icon.rect.size * ICON_PIXEL_SCALE : Vector2.zero;
+    }
+
+    /// <summary>
     /// 포켓몬과 보유 상태를 칸에 반영한다.
     /// </summary>
     public void Bind(MonsterVisualData data, bool unlocked, Action<StorageMonsterView> onFocus, Action<StorageMonsterView> onConfirm)
@@ -124,6 +132,6 @@ public class StorageMonsterView : MonoBehaviour, IPointerEnterHandler, IPointerC
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = Vector2.zero;
-        rect.sizeDelta = icon != null ? icon.rect.size * ICON_PIXEL_SCALE : Vector2.zero;
+        rect.sizeDelta = IconSize(icon);
     }
 }

@@ -12,6 +12,7 @@ public sealed class StorageEntrySlots
     private readonly Image _chooseImage;
     private readonly GameObject _notChosen;
     private MonsterVisualData[] _visuals = System.Array.Empty<MonsterVisualData>();
+    private Image[] _icons = System.Array.Empty<Image>();
     private Sprite[] _defaultSprites = System.Array.Empty<Sprite>();
     private Color[] _defaultColors = System.Array.Empty<Color>();
 
@@ -176,6 +177,7 @@ public sealed class StorageEntrySlots
     {
         var count = _monsterImages != null ? _monsterImages.Length : 0;
         if (_visuals.Length == count
+            && _icons.Length == count
             && _defaultSprites.Length == count
             && _defaultColors.Length == count)
         {
@@ -184,6 +186,7 @@ public sealed class StorageEntrySlots
         }
 
         _visuals = new MonsterVisualData[count];
+        _icons = new Image[count];
         _defaultSprites = new Sprite[count];
         _defaultColors = new Color[count];
         for (var i = 0; i < count; i++)
@@ -191,9 +194,32 @@ public sealed class StorageEntrySlots
             var image = _monsterImages[i];
             _defaultSprites[i] = image != null ? image.sprite : null;
             _defaultColors[i] = image != null ? image.color : Color.white;
+            _icons[i] = image != null ? CreateIcon(image) : null;
         }
 
         ShowLocks();
+    }
+
+    /// <summary>
+    /// 칸 안에 포켓몬 아이콘용 자식 Image를 만든다. 칸 크기와 select 테두리는 그대로 두고 아이콘만 스토리지와 같은 크기로 그린다.
+    /// </summary>
+    private static Image CreateIcon(Image slot)
+    {
+        var go = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        var rect = (RectTransform)go.transform;
+        rect.SetParent(slot.transform, false);
+        // 맨 앞 형제로 두어 select 테두리와 잠금 표시가 아이콘 위에 그려지게 한다.
+        rect.SetAsFirstSibling();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+
+        var icon = go.GetComponent<Image>();
+        icon.raycastTarget = false;
+        icon.preserveAspect = false;
+        go.SetActive(false);
+        return icon;
     }
 
     private void ShowLocks()
@@ -225,9 +251,19 @@ public sealed class StorageEntrySlots
             return;
         }
 
+        // 채운 칸은 투명하게 두고 아이콘 자식만 보인다. 투명해도 마우스는 받는다.
         var filled = portrait != null;
-        image.sprite = filled ? portrait : _defaultSprites[index];
-        image.preserveAspect = filled;
-        image.color = filled ? Color.white : _defaultColors[index];
+        image.sprite = _defaultSprites[index];
+        image.color = filled ? Color.clear : _defaultColors[index];
+
+        var icon = _icons[index];
+        if (icon == null)
+        {
+            return;
+        }
+
+        icon.gameObject.SetActive(filled);
+        icon.sprite = portrait;
+        icon.rectTransform.sizeDelta = StorageMonsterView.IconSize(portrait);
     }
 }
