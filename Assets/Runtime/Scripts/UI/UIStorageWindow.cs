@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 타이틀 스토리지에서 플레이어블 캐릭터를 고르고, 고른 뒤에는 포켓몬을 본다.
-/// 입력과 포커스 모드 전환을 맡고, 칸 목록, 엔트리, 오른쪽 메뉴, 골드 표시는 Storage* 클래스에 맡긴다.
+/// 입력과 포커스 모드 전환을 맡고, 칸 목록, 엔트리, 오른쪽 메뉴, 세대 필터, 골드 표시는 Storage* 클래스에 맡긴다.
 /// </summary>
 public class UIStorageWindow : MonoBehaviour
 {
@@ -44,6 +44,7 @@ public class UIStorageWindow : MonoBehaviour
     private StorageSlotList<StorageMonsterView, MonsterVisualData> _monsters;
     private StorageEntrySlots _entry;
     private StorageSideMenu _side;
+    private StorageGenerationFilter _filter;
     private StorageGoldLabel _gold;
     private readonly StorageScrollFollow _scrollFollow = new StorageScrollFollow();
     private StorageFocus _mode = StorageFocus.Characters;
@@ -103,6 +104,9 @@ public class UIStorageWindow : MonoBehaviour
         _side = new StorageSideMenu(
             _trainingButton, _entryCharacter, _entryMonsters, _logoutButton, _gameStartButton, Entry,
             OnSideFocus, OnSideRelease);
+        _filter = new StorageGenerationFilter(
+            _generationCategory, _generationFilter,
+            OnCategoryFocus, OnCategoryConfirm, OnGenerationFocus, OnGenerationConfirm);
         _gold = new StorageGoldLabel(_goldText);
     }
 
@@ -197,17 +201,7 @@ public class UIStorageWindow : MonoBehaviour
         Entry.ClearMonsters();
         SetScrolls();
         _side.Prepare();
-        if (_generationCategory == null || _generationFilter == null)
-        {
-            Debug.LogError("스토리지 필터 참조가 없습니다.");
-            return;
-        }
-
-        _generationCategory.Bind(OnCategoryFocus, OnCategoryConfirm);
-        _generationCategory.SetFocused(false);
-        _generationFilter.Bind(OnGenerationFocus, OnGenerationConfirm);
-        _generationFilter.ResetFilter();
-        _generationFilter.Close();
+        _filter.Prepare();
     }
 
     /// <summary>
@@ -242,13 +236,7 @@ public class UIStorageWindow : MonoBehaviour
 
         if (_mode == StorageFocus.Generation)
         {
-            if (move.y == 0 || _generationFilter == null)
-            {
-                return;
-            }
-
-            var direction = move.y > 0 ? -1 : 1;
-            if (_generationFilter.Move(direction))
+            if (move.y != 0 && _filter.MoveList(move.y > 0 ? -1 : 1))
             {
                 StorageSounds.PlayCursor();
             }
@@ -256,7 +244,8 @@ public class UIStorageWindow : MonoBehaviour
             return;
         }
 
-        if (move.y > 0 && IsTopRow())
+        var list = ActiveList;
+        if (move.y > 0 && StorageSlotLayout.IsTopRow(list))
         {
             if (!repeated)
             {
@@ -266,7 +255,10 @@ public class UIStorageWindow : MonoBehaviour
             return;
         }
 
-        if (move.x > 0 && IsRowEnd() && (repeated || FocusSide(NearestSideIndex(), true)))
+        // 줄 끝에서 오른쪽을 누르면 포커스 칸과 높이가 가장 가까운 오른쪽 항목으로 간다.
+        if (move.x > 0
+            && StorageSlotLayout.IsRowEnd(list)
+            && (repeated || FocusSide(_side.Nearest(list.RectAt(list.FocusIndex)), true)))
         {
             return;
         }
@@ -284,7 +276,12 @@ public class UIStorageWindow : MonoBehaviour
 
         if (_mode == StorageFocus.Generation)
         {
-            ApplyGenerationFilter();
+            if (_filter.ApplyFocused())
+            {
+                StorageSounds.PlaySelect();
+                Rebuild(true);
+            }
+
             return;
         }
 
@@ -301,7 +298,9 @@ public class UIStorageWindow : MonoBehaviour
     {
         if (_mode == StorageFocus.Generation)
         {
-            CloseGeneration();
+            _filter.CloseList();
+            _mode = StorageFocus.FilterBoard;
+            _filter.SetBoardFocused(true);
             return;
         }
 
@@ -321,12 +320,10 @@ public class UIStorageWindow : MonoBehaviour
 
     private void OnCategoryFocus(FilterOptionView option)
     {
-        if (_mode != StorageFocus.Characters && _mode != StorageFocus.Side)
+        if (_mode == StorageFocus.Characters || _mode == StorageFocus.Side)
         {
-            return;
+            FocusFilterBoard(true);
         }
-
-        FocusFilterBoard(true);
     }
 
     private void OnCategoryConfirm(FilterOptionView option)
@@ -341,12 +338,7 @@ public class UIStorageWindow : MonoBehaviour
 
     private void OnGenerationFocus(FilterOptionView option)
     {
-        if (_mode != StorageFocus.Generation || _generationFilter == null)
-        {
-            return;
-        }
-
-        if (_generationFilter.FocusOption(option))
+        if (_mode == StorageFocus.Generation && _filter.FocusOption(option))
         {
             StorageSounds.PlayCursor();
         }
@@ -354,33 +346,32 @@ public class UIStorageWindow : MonoBehaviour
 
     private void OnGenerationConfirm(FilterOptionView option)
     {
-        if (_mode != StorageFocus.Generation || _generationFilter == null)
+        if (_mode != StorageFocus.Generation || !_filter.ConfirmOption(option))
         {
             return;
         }
 
-        _generationFilter.ConfirmOption(option);
         StorageSounds.PlaySelect();
         Rebuild(true);
     }
 
     private void FocusFilterBoard(bool playCursor)
     {
-        if (_generationCategory == null)
+        if (!_filter.HasBoard)
         {
             return;
         }
 
-        if (_mode == StorageFocus.Generation && _generationFilter != null)
+        if (_mode == StorageFocus.Generation)
         {
-            _generationFilter.Close();
+            _filter.CloseList();
         }
 
         var entered = _mode != StorageFocus.FilterBoard;
         _mode = StorageFocus.FilterBoard;
         ClearSlotSelect();
         _side.ClearHighlight();
-        _generationCategory.SetFocused(true);
+        _filter.SetBoardFocused(true);
         if (playCursor && entered)
         {
             StorageSounds.PlayCursor();
@@ -389,55 +380,20 @@ public class UIStorageWindow : MonoBehaviour
 
     private void OpenGeneration()
     {
-        if (_generationFilter == null || _generationCategory == null)
+        if (!_filter.CanOpen)
         {
             return;
         }
 
         _mode = StorageFocus.Generation;
-        _generationCategory.SetFocused(true);
-        _generationFilter.Open();
+        _filter.OpenList();
         StorageSounds.PlaySelect();
-    }
-
-    private void CloseGeneration()
-    {
-        if (_generationFilter != null)
-        {
-            _generationFilter.Close();
-        }
-
-        _mode = StorageFocus.FilterBoard;
-        if (_generationCategory != null)
-        {
-            _generationCategory.SetFocused(true);
-        }
-    }
-
-    private void ApplyGenerationFilter()
-    {
-        if (_generationFilter == null)
-        {
-            return;
-        }
-
-        _generationFilter.ApplyFocused();
-        StorageSounds.PlaySelect();
-        Rebuild(true);
     }
 
     private void ReturnToCharacters(bool playCursor)
     {
-        if (_generationFilter != null)
-        {
-            _generationFilter.Close();
-        }
-
-        if (_generationCategory != null)
-        {
-            _generationCategory.SetFocused(false);
-        }
-
+        _filter.CloseList();
+        _filter.SetBoardFocused(false);
         _mode = StorageFocus.Characters;
         _side.ClearHighlight();
         SetFocus(ActiveList.FocusIndex, false);
@@ -454,57 +410,12 @@ public class UIStorageWindow : MonoBehaviour
         _monsters.ClearFocus();
     }
 
-    private bool IsTopRow()
-    {
-        var list = ActiveList;
-        return list.Count > 0 && list.FocusIndex < StorageSlotLayout.ColumnCount(list);
-    }
-
-    private bool IsRowEnd()
-    {
-        var list = ActiveList;
-        var count = list.Count;
-        if (count == 0)
-        {
-            return true;
-        }
-
-        Canvas.ForceUpdateCanvases();
-        var columns = StorageSlotLayout.ColumnCount(list);
-        return list.FocusIndex % columns == columns - 1 || list.FocusIndex >= count - 1;
-    }
-
-    // 포커스된 엔트리 칸이 비면 아래, 없으면 위의 항목으로 옮기고, 둘 다 없으면 스토리지로 돌아간다.
-    private void RefreshSideFocus()
-    {
-        if (_mode != StorageFocus.Side || _side.IsAvailable(_side.Index))
-        {
-            return;
-        }
-
-        var next = _side.Next(_side.Index, 1);
-        if (next < 0)
-        {
-            next = _side.Next(_side.Index, -1);
-        }
-
-        if (next >= 0)
-        {
-            FocusSide(next, false);
-            return;
-        }
-
-        ReturnToCharacters(false);
-    }
-
     private void OnSideFocus(FilterOptionView view)
     {
-        if (_mode == StorageFocus.Generation)
+        if (_mode != StorageFocus.Generation)
         {
-            return;
+            FocusSide(_side.IndexOf(view), true);
         }
-
-        FocusSide(_side.IndexOf(view), true);
     }
 
     private void OnSideRelease(FilterOptionView view)
@@ -529,7 +440,20 @@ public class UIStorageWindow : MonoBehaviour
             Entry.ReleaseMonster(_side.MonsterEntryAt(index));
         }
 
-        RefreshSideFocus();
+        // 포커스된 엔트리 칸이 비면 아래, 없으면 위의 항목으로 옮기고, 둘 다 없으면 스토리지로 돌아간다.
+        if (_mode != StorageFocus.Side || _side.IsAvailable(_side.Index))
+        {
+            return;
+        }
+
+        var next = _side.NextOrPrevious(_side.Index);
+        if (next >= 0)
+        {
+            FocusSide(next, false);
+            return;
+        }
+
+        ReturnToCharacters(false);
     }
 
     private bool FocusSide(int index, bool playCursor)
@@ -539,11 +463,7 @@ public class UIStorageWindow : MonoBehaviour
             return false;
         }
 
-        if (_generationCategory != null)
-        {
-            _generationCategory.SetFocused(false);
-        }
-
+        _filter.SetBoardFocused(false);
         var changed = _mode != StorageFocus.Side || index != _side.Index;
         _mode = StorageFocus.Side;
         ClearSlotSelect();
@@ -580,38 +500,6 @@ public class UIStorageWindow : MonoBehaviour
         }
     }
 
-    // 포커스된 칸과 높이가 가장 가까운 오른쪽 항목을 고른다.
-    private int NearestSideIndex()
-    {
-        var list = ActiveList;
-        return _side.Nearest(list.RectAt(list.FocusIndex));
-    }
-
-    // 확정 소리가 이미 나므로 커서 소리는 내지 않는다.
-    private void FocusGameStart()
-    {
-        if (_gameStartButton == null)
-        {
-            return;
-        }
-
-        var index = _side.IndexOf(_gameStartButton);
-        if (index >= 0)
-        {
-            FocusSide(index, false);
-        }
-    }
-
-    private bool PassesGeneration(int generation)
-    {
-        if (_generationFilter == null || _generationFilter.AppliedGeneration == FilterGenerationView.ALL_GENERATION)
-        {
-            return true;
-        }
-
-        return generation == _generationFilter.AppliedGeneration;
-    }
-
     private void Rebuild(bool keepEntry)
     {
         if (_showingMonsters)
@@ -630,7 +518,7 @@ public class UIStorageWindow : MonoBehaviour
         var characters = account != null ? account.Playables : System.Array.Empty<PlayableCharacterData>();
         var filled = _characters.Fill(
             characters,
-            character => PassesGeneration(character.Generation),
+            character => _filter.Passes(character.Generation),
             character => account != null && account.IsPlayableUnlocked(character));
         if (!filled)
         {
@@ -651,7 +539,7 @@ public class UIStorageWindow : MonoBehaviour
         var monsters = account != null ? account.Monsters : System.Array.Empty<MonsterVisualData>();
         var filled = _monsters.Fill(
             monsters,
-            monster => monster.Startable && PassesGeneration(monster.Generation),
+            monster => monster.Startable && _filter.Passes(monster.Generation),
             monster => account != null && account.IsMonsterUnlocked(monster));
         if (!filled)
         {
@@ -660,14 +548,6 @@ public class UIStorageWindow : MonoBehaviour
 
         SetFocus(_monsters.IndexOf(previousFocus));
         LayoutSlots();
-    }
-
-    private void EnterMonsterScroll()
-    {
-        _showingMonsters = true;
-        ClearSlotSelect();
-        SetScrolls();
-        RebuildMonsters();
     }
 
     private void SetScrolls()
@@ -696,31 +576,12 @@ public class UIStorageWindow : MonoBehaviour
     private void MoveFocus(Vector2Int move)
     {
         var list = ActiveList;
-        var count = list.Count;
-        if (count == 0)
+        if (list.Count == 0)
         {
             return;
         }
 
-        Canvas.ForceUpdateCanvases();
-        var columns = StorageSlotLayout.ColumnCount(list);
-        var index = list.FocusIndex;
-        if (move.x != 0)
-        {
-            var rowStart = index - index % columns;
-            var rowEnd = Mathf.Min(rowStart + columns, count) - 1;
-            index = Mathf.Clamp(index + move.x, rowStart, rowEnd);
-        }
-        else if (move.y != 0)
-        {
-            var next = index - move.y * columns;
-            if (next >= 0 && next < count)
-            {
-                index = next;
-            }
-        }
-
-        SetFocus(index, true);
+        SetFocus(StorageSlotLayout.MoveIndex(list, move), true);
         ScrollToFocus();
     }
 
@@ -815,11 +676,11 @@ public class UIStorageWindow : MonoBehaviour
         account.SelectPlayable(slot.Data);
         Entry.SetCharacter(slot.Data);
         StorageSounds.PlaySelect();
-        EnterMonsterScroll();
-        if (Entry.IsFull())
-        {
-            FocusGameStart();
-        }
+        _showingMonsters = true;
+        ClearSlotSelect();
+        SetScrolls();
+        RebuildMonsters();
+        FocusGameStartIfFull();
     }
 
     private void ConfirmMonsterSlot(StorageMonsterView slot)
@@ -836,10 +697,7 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         StorageSounds.PlaySelect();
-        if (Entry.IsFull())
-        {
-            FocusGameStart();
-        }
+        FocusGameStartIfFull();
     }
 
     /// <summary>
@@ -859,6 +717,15 @@ public class UIStorageWindow : MonoBehaviour
         }
 
         return true;
+    }
+
+    // 엔트리가 다 차면 게임 시작 버튼으로 간다. 확정 소리가 이미 나므로 커서 소리는 내지 않는다.
+    private void FocusGameStartIfFull()
+    {
+        if (Entry.IsFull())
+        {
+            FocusSide(_side.GameStartIndex, false);
+        }
     }
 
     private void ClearEntry()

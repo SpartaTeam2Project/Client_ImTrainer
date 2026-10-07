@@ -95,6 +95,11 @@ public sealed class StorageSideMenu
         return -1;
     }
 
+    /// <summary>
+    /// 게임 시작 버튼 항목 번호. 없으면 -1.
+    /// </summary>
+    public int GameStartIndex => _gameStartButton != null ? IndexOf(_gameStartButton) : -1;
+
     public bool IsCharacterEntry(int index)
     {
         return index >= 0 && index < _items.Count && _items[index].IsCharacter;
@@ -146,6 +151,15 @@ public sealed class StorageSideMenu
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// from 아래에서 포커스할 수 있는 항목, 없으면 위의 항목. 둘 다 없으면 -1.
+    /// </summary>
+    public int NextOrPrevious(int from)
+    {
+        var next = Next(from, 1);
+        return next >= 0 ? next : Next(from, -1);
     }
 
     /// <summary>
