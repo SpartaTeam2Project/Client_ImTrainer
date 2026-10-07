@@ -8,8 +8,12 @@ using UnityEngine.UI;
 /// </summary>
 public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler
 {
-    private const float PORTRAIT_TO_SLOT_SCALE = 3.2f;
+    // 초상화 픽셀 배율. 정수라야 픽셀이 고르게 보인다.
+    private const int PORTRAIT_PIXEL_SCALE = 3;
     private const string LOCKED_SELECT_SOUND = "error";
+
+    // 트레이너 초상화 그림 영역(배율 보정 포함) 중 가장 큰 너비와 높이. 모든 칸을 이 크기로 맞춘다.
+    private static readonly Vector2 MAX_PORTRAIT_AREA = new Vector2(57f, 87f);
 
     [SerializeField] private Image _lockSilhouette;
     [SerializeField] private Image _unlockAnimation;
@@ -21,12 +25,13 @@ public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointe
     private bool _playing;
     private int _frameIndex;
     private float _frameTimer;
-    // 초상화 칸 1픽셀이 화면에서 차지하는 크기. 그림 영역이 칸에 꽉 차도록 맞춘 값이다.
-    private Vector2 _pixelScale = Vector2.one;
 
     public PlayableCharacterData Data { get; private set; }
 
     public bool IsUnlocked { get; private set; }
+
+    // 기본 픽셀 배율에 트레이너별 보정을 곱한 값. 원본 픽셀 크기가 다른 트레이너만 정수가 아니다.
+    private float DrawScale => PORTRAIT_PIXEL_SCALE * (Data != null ? Data.PortraitScale : 1f);
 
     /// <summary>
     /// 캐릭터와 획득 상태를 칸에 반영한다.
@@ -155,7 +160,7 @@ public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointe
         if (_lockSilhouette != null)
         {
             _lockSilhouette.gameObject.SetActive(!IsUnlocked);
-            _lockSilhouette.sprite = Data != null ? Data.Portrait : null;
+            ApplySilhouette(Data != null ? Data.Portrait : null);
         }
 
         ApplySlotSize();
@@ -170,35 +175,36 @@ public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointe
         }
     }
 
+    /// <summary>
+    /// 모든 칸을 같은 크기로 맞춘다. 칸이 같아야 줄과 열이 반듯하게 선다.
+    /// </summary>
     private void ApplySlotSize()
     {
-        if (Data == null)
-        {
-            return;
-        }
-
-        var portrait = Data.PortraitSize;
-        var width = portrait.x * PORTRAIT_TO_SLOT_SCALE;
-        var height = portrait.y * PORTRAIT_TO_SLOT_SCALE;
-        if (width <= 0f || height <= 0f)
-        {
-            return;
-        }
-
         var rect = (RectTransform)transform;
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
-        rect.sizeDelta = new Vector2(width, height);
-
-        var area = Data.PortraitArea;
-        _pixelScale = area.width > 0f && area.height > 0f
-            ? new Vector2(width / area.width, height / area.height)
-            : Vector2.one;
+        rect.sizeDelta = MAX_PORTRAIT_AREA * PORTRAIT_PIXEL_SCALE;
     }
 
     /// <summary>
-    /// 칸 그대로의 프레임을 그린다. 그림 영역이 칸에 꽉 차게 놓아서 정지 그림은 예전과 같고,
+    /// 잠긴 칸의 실루엣을 같은 배율로 칸 아래 가운데에 그린다. 실루엣은 그림 영역만 잘라 낸 스프라이트다.
+    /// </summary>
+    private void ApplySilhouette(Sprite portrait)
+    {
+        _lockSilhouette.sprite = portrait;
+        _lockSilhouette.preserveAspect = false;
+
+        var image = _lockSilhouette.rectTransform;
+        image.anchorMin = new Vector2(0.5f, 0f);
+        image.anchorMax = new Vector2(0.5f, 0f);
+        image.pivot = new Vector2(0.5f, 0f);
+        image.anchoredPosition = Vector2.zero;
+        image.sizeDelta = portrait != null ? portrait.rect.size * DrawScale : Vector2.zero;
+    }
+
+    /// <summary>
+    /// 칸 그대로의 프레임을 같은 배율로 그린다. 그림 영역의 아래 가운데를 칸 아래 가운데에 맞춰서 발끝이 한 선에 서고,
     /// 다른 프레임은 같은 기준점에서 칸 밖으로 넘친다.
     /// </summary>
     private void ShowFrame(Sprite frame)
@@ -216,10 +222,10 @@ public class StorageCharacterView : MonoBehaviour, IPointerEnterHandler, IPointe
 
         var area = Data.PortraitArea;
         var image = _unlockAnimation.rectTransform;
-        image.anchorMin = Vector2.zero;
-        image.anchorMax = Vector2.zero;
+        image.anchorMin = new Vector2(0.5f, 0f);
+        image.anchorMax = new Vector2(0.5f, 0f);
         image.pivot = Vector2.zero;
-        image.anchoredPosition = -Vector2.Scale(area.position, _pixelScale);
-        image.sizeDelta = Vector2.Scale(frame.rect.size, _pixelScale);
+        image.anchoredPosition = -new Vector2(area.center.x, area.y) * DrawScale;
+        image.sizeDelta = frame.rect.size * DrawScale;
     }
 }
