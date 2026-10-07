@@ -21,13 +21,13 @@ internal static class ItemShop
     }
 
     /// <summary>
-    /// 잠기지 않은 칸을 상점 풀에서 다시 뽑는다.
+    /// 잠기지 않은 칸을 이번 판 상점 풀에서 다시 뽑는다.
     /// 레벨 구간의 가중치로 등급을 고르고, 등급 안에서는 보유 계통의 기본형을 더 자주 고른 뒤, 성을 고른다.
     /// 설정이 없으면 풀에서 균등하게 1성을 뽑는다.
     /// </summary>
     public static void RollOffers(RunInventory run, ItemCatalog catalog, ShopOddsSettings odds, int level)
     {
-        var shopPool = catalog.ShopPool;
+        var shopPool = run.ShopPool;
         var bracket = odds != null ? odds.GetBracket(level) : null;
         int[] tiers = null;
         HashSet<int> owned = null;

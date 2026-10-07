@@ -131,9 +131,9 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 시작 포켓몬 한 마리를 비용 없이 넣고 시작 칸에 장착한다.
+    /// 시작 포켓몬 한 마리를 비용 없이 넣고 시작 칸에 장착한다. 상점은 shopGenerations 세대만 진열한다.
     /// </summary>
-    public void BeginRun(int playerId)
+    public void BeginRun(int playerId, ShopGeneration shopGenerations = ShopGenerationMask.ALL)
     {
         if (_catalog.Items.Count == 0)
         {
@@ -141,6 +141,7 @@ public class ItemManager : BaseManager
         }
 
         var run = RunInventory.Create();
+        _catalog.CollectShopPool(shopGenerations, run.ShopPool);
         _runs[playerId] = run;
         var visual = ResolveStartingVisual();
         var uid = _catalog.FindUid(visual);

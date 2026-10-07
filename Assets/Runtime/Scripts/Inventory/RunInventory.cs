@@ -9,6 +9,11 @@ internal sealed class RunInventory
     public readonly InventoryHolder Equipment;
     public readonly ShopOffer[] Offers;
 
+    /// <summary>
+    /// 이번 판 상점이 뽑는 종. 스테이지 세대로 거른 상점 후보다.
+    /// </summary>
+    public readonly List<int> ShopPool = new List<int>();
+
     private RunInventory(InventoryHolder bag, InventoryHolder equipment, ShopOffer[] offers)
     {
         Bag = bag;
