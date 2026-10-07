@@ -4,6 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// 판 안의 포켓몬 가방과 장착을 플레이어 식별자마다 들고 있다.
+/// 종 정의는 ItemCatalog, 칸 조작은 RunInventory, 상점은 ItemShop, 합성은 ItemSynthesis,
+/// 능력 레벨은 EquippedAbilityResolver가 맡고, 여기서는 재화·계정 호출과 이벤트 발행을 한다.
 /// </summary>
 public class ItemManager : BaseManager
 {
@@ -23,21 +25,17 @@ public class ItemManager : BaseManager
     public const int SHOP_OFFER_COUNT = 4;
     public const int SHOP_REFRESH_PRICE = 1;
 
-    private const int EMPTY_UID = -1;
-    private const int EVOLUTION_SEARCH_DEPTH = 8;
-
     [SerializeField] private MonsterDatabase _monsters;
     [SerializeField] private InventoryUi _inventoryWindow;
 
     private InventoryUi _window;
-    private readonly List<Item> _items = new List<Item>();
-    private readonly List<MonsterVisualData> _visuals = new List<MonsterVisualData>();
-    private readonly List<int> _shopPool = new List<int>();
+    private readonly ItemCatalog _catalog = new ItemCatalog();
     private readonly Dictionary<int, RunInventory> _runs = new Dictionary<int, RunInventory>();
+    private readonly List<int> _usedSlots = new List<int>(SYNTHESIS_COUNT);
 
     public string LastMessage { get; private set; } = string.Empty;
 
-    public IReadOnlyList<Item> Items => _items;
+    public IReadOnlyList<Item> Items => _catalog.Items;
 
     /// <summary>
     /// 종 목록으로 아이템 정의를 만든다.
@@ -63,50 +61,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public void ReInit()
     {
-        _items.Clear();
-        _visuals.Clear();
-        _shopPool.Clear();
-        var monsters = _monsters != null ? _monsters.Monsters : System.Array.Empty<MonsterVisualData>();
-        for (var i = 0; i < monsters.Length; i++)
-        {
-            var visual = monsters[i];
-            if (visual == null)
-            {
-                _visuals.Add(null);
-                _items.Add(null);
-                continue;
-            }
-
-            _visuals.Add(visual);
-            _items.Add(new Item
-            {
-                uid = i,
-                name = string.IsNullOrEmpty(visual.MonsterName) ? visual.name : visual.MonsterName,
-                upgradeLevel = Item.STAR_MIN,
-                maxiumStack = MAX_STACK,
-                price = visual.ShopPrice,
-                evolutionUid = Item.NO_EVOLUTION
-            });
-        }
-
-        for (var i = 0; i < _visuals.Count; i++)
-        {
-            var visual = _visuals[i];
-            if (visual == null || visual.Evolution == null || _items[i] == null)
-            {
-                continue;
-            }
-
-            _items[i].evolutionUid = FindUid(visual.Evolution);
-        }
-
-        for (var i = 0; i < _items.Count; i++)
-        {
-            if (_items[i] != null && FindPreEvolutionUid(i) < 0)
-            {
-                _shopPool.Add(i);
-            }
-        }
+        _catalog.ReInit(_monsters != null ? _monsters.Monsters : System.Array.Empty<MonsterVisualData>());
     }
 
     /// <summary>
@@ -114,25 +69,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public int FindPreEvolutionUid(int uid)
     {
-        if (uid < 0)
-        {
-            return EMPTY_UID;
-        }
-
-        for (var i = 0; i < _items.Count; i++)
-        {
-            if (_items[i] == null)
-            {
-                continue;
-            }
-
-            if (_items[i].evolutionUid == uid || FindMegaUid(i) == uid || FindVMaxUid(i) == uid)
-            {
-                return i;
-            }
-        }
-
-        return EMPTY_UID;
+        return _catalog.FindPreEvolutionUid(uid);
     }
 
     /// <summary>
@@ -140,58 +77,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public EvolutionLine GetEvolutionLine(int uid)
     {
-        var line = new EvolutionLine(uid);
-        if (TryGetItem(uid) == null)
-        {
-            return line;
-        }
-
-        var basic = uid;
-        for (var depth = 0; depth < EVOLUTION_SEARCH_DEPTH; depth++)
-        {
-            var previous = FindPreEvolutionUid(basic);
-            if (previous < 0)
-            {
-                break;
-            }
-
-            basic = previous;
-        }
-
-        line.Set(EvolutionStage.Basic, basic);
-        var stage1 = TryGetItem(basic) != null ? TryGetItem(basic).evolutionUid : EMPTY_UID;
-        line.Set(EvolutionStage.Stage1, stage1);
-        var stage2 = TryGetItem(stage1) != null ? TryGetItem(stage1).evolutionUid : EMPTY_UID;
-        line.Set(EvolutionStage.Stage2, stage2);
-        line.Set(EvolutionStage.Mega, FindLastBranch(line, FindMegaUid));
-        line.Set(EvolutionStage.VMax, FindLastBranch(line, FindVMaxUid));
-        return line;
-    }
-
-    private static int FindLastBranch(EvolutionLine line, System.Func<int, int> branch)
-    {
-        for (var stage = EvolutionStage.Stage2; stage >= EvolutionStage.Basic; stage--)
-        {
-            var target = branch(line.Get(stage));
-            if (target >= 0)
-            {
-                return target;
-            }
-        }
-
-        return EMPTY_UID;
-    }
-
-    private int FindMegaUid(int uid)
-    {
-        var visual = GetVisual(uid);
-        return visual != null ? FindUid(visual.MegaEvolution) : EMPTY_UID;
-    }
-
-    private int FindVMaxUid(int uid)
-    {
-        var visual = GetVisual(uid);
-        return visual != null ? FindUid(visual.VMaxEvolution) : EMPTY_UID;
+        return _catalog.GetEvolutionLine(uid);
     }
 
     /// <summary>
@@ -199,12 +85,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public Item TryGetItem(int uid)
     {
-        if (uid < 0 || uid >= _items.Count)
-        {
-            return null;
-        }
-
-        return _items[uid];
+        return _catalog.TryGetItem(uid);
     }
 
     /// <summary>
@@ -212,16 +93,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public bool IsCatalogWeaponAbility(WeaponAbilityType abilityType)
     {
-        for (var i = 0; i < _visuals.Count; i++)
-        {
-            var visual = _visuals[i];
-            if (visual != null && visual.WeaponAbility != null && visual.WeaponAbility.WeaponAbilityType == abilityType)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return _catalog.IsCatalogWeaponAbility(abilityType);
     }
 
     /// <summary>
@@ -229,12 +101,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public MonsterVisualData GetVisual(int uid)
     {
-        if (uid < 0 || uid >= _visuals.Count)
-        {
-            return null;
-        }
-
-        return _visuals[uid];
+        return _catalog.GetVisual(uid);
     }
 
     /// <summary>
@@ -266,16 +133,16 @@ public class ItemManager : BaseManager
     /// </summary>
     public void BeginRun(int playerId)
     {
-        if (_items.Count == 0)
+        if (_catalog.Items.Count == 0)
         {
             ReInit();
         }
 
-        var run = CreateRun();
+        var run = RunInventory.Create();
         _runs[playerId] = run;
-        RollOffers(run);
+        ItemShop.RollOffers(run, _catalog.ShopPool);
         var visual = ResolveStartingVisual();
-        var uid = FindUid(visual);
+        var uid = _catalog.FindUid(visual);
         if (uid < 0)
         {
             LastMessage = "시작 포켓몬을 찾지 못했습니다.";
@@ -285,11 +152,11 @@ public class ItemManager : BaseManager
             return;
         }
 
-        var created = CreateItem(uid, Item.STAR_MIN);
+        var created = _catalog.CreateItem(uid, Item.STAR_MIN);
         run.Bag.AddItem(created, 1);
         RecordObtained(playerId, uid);
         var index = run.Bag.FindIndex(uid, Item.STAR_MIN);
-        if (!TryMoveToSlot(run, index, (int)WeaponSlot.Hour3))
+        if (!run.TryMoveToSlot(index, (int)WeaponSlot.Hour3))
         {
             LastMessage = "시작 포켓몬을 장착하지 못했습니다.";
             Debug.LogWarning(LastMessage);
@@ -332,7 +199,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public Item CreateOfferItem(ShopOffer offer)
     {
-        return offer != null && offer.Uid >= 0 ? CreateItem(offer.Uid, offer.Star) : null;
+        return offer != null && offer.Uid >= 0 ? _catalog.CreateItem(offer.Uid, offer.Star) : null;
     }
 
     /// <summary>
@@ -340,13 +207,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public static int GetSellPrice(Item item)
     {
-        if (item == null)
-        {
-            return 0;
-        }
-
-        var price = Mathf.FloorToInt(item.price * SELL_PRICE_RATE);
-        return price < MIN_SELL_PRICE ? MIN_SELL_PRICE : price;
+        return ItemShop.GetSellPrice(item);
     }
 
     /// <summary>
@@ -368,7 +229,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        RollOffers(run);
+        ItemShop.RollOffers(run, _catalog.ShopPool);
         LastMessage = "상점을 새로 고쳤습니다.";
         PublishInventory(playerId);
         return true;
@@ -379,14 +240,10 @@ public class ItemManager : BaseManager
     /// </summary>
     public void ToggleShopLock(int playerId, int offerIndex)
     {
-        var run = GetRun(playerId);
-        if (run == null || offerIndex < 0 || offerIndex >= run.Offers.Length || run.Offers[offerIndex].Sold)
+        if (ItemShop.TryToggleLock(GetRun(playerId), offerIndex))
         {
-            return;
+            PublishInventory(playerId);
         }
-
-        run.Offers[offerIndex].Locked = !run.Offers[offerIndex].Locked;
-        PublishInventory(playerId);
     }
 
     /// <summary>
@@ -395,23 +252,9 @@ public class ItemManager : BaseManager
     public bool TryPurchase(int playerId, int offerIndex)
     {
         var run = GetRun(playerId);
-        if (run == null || offerIndex < 0 || offerIndex >= run.Offers.Length || run.Offers[offerIndex].Sold)
+        if (!ItemShop.TryPrepareOffer(run, _catalog, offerIndex, out var created, out var message))
         {
-            LastMessage = "살 수 없는 포켓몬입니다.";
-            return false;
-        }
-
-        var offer = run.Offers[offerIndex];
-        var created = CreateItem(offer.Uid, offer.Star);
-        if (created == null)
-        {
-            LastMessage = "살 수 없는 포켓몬입니다.";
-            return false;
-        }
-
-        if (!run.Bag.CanAccept(created, 1))
-        {
-            LastMessage = "가방이 가득 찼습니다.";
+            LastMessage = message;
             return false;
         }
 
@@ -422,10 +265,8 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        run.Bag.AddItem(created, 1);
+        ItemShop.CompletePurchase(run, offerIndex, created);
         RecordObtained(playerId, created.uid);
-        offer.Purchased = true;
-        offer.Locked = false;
         LastMessage = created.name + "을 가방에 넣었습니다.";
         FinishBag(playerId);
         return true;
@@ -446,60 +287,19 @@ public class ItemManager : BaseManager
     /// </summary>
     public bool TrySynthesize(int playerId, int uid, int upgradeLevel, int targetSlot, int sourceSlot)
     {
-        var run = GetRun(playerId);
-        var source = TryGetItem(uid);
-        if (run == null || source == null)
-        {
-            LastMessage = "합성할 포켓몬이 없습니다.";
-            return false;
-        }
-
-        if (run.Bag.GetItemNumber(uid, upgradeLevel) + run.Equipment.GetItemNumber(uid, upgradeLevel) < SYNTHESIS_COUNT)
-        {
-            LastMessage = "같은 성 세 마리가 필요합니다.";
-            return false;
-        }
-
-        if (!TryCreateSynthesisResult(source, upgradeLevel, out var result))
+        var success = ItemSynthesis.TrySynthesize(GetRun(playerId), _catalog, uid, upgradeLevel, targetSlot, sourceSlot,
+            _usedSlots, out var result, out var message);
+        LastMessage = message;
+        if (!success)
         {
             return false;
-        }
-
-        var bagSnapshot = run.Bag.Capture();
-        var usedSlots = new List<int>(SYNTHESIS_COUNT);
-        TakeEquippedMaterial(run, targetSlot, uid, upgradeLevel, usedSlots);
-        TakeEquippedMaterial(run, sourceSlot, uid, upgradeLevel, usedSlots);
-        var remaining = SYNTHESIS_COUNT - usedSlots.Count;
-        remaining -= run.Bag.RemoveItem(uid, upgradeLevel, remaining);
-        for (var i = 0; i < run.Equipment.Stacks.Count && remaining > 0; i++)
-        {
-            if (TakeEquippedMaterial(run, i, uid, upgradeLevel, usedSlots))
-            {
-                remaining--;
-            }
-        }
-
-        if (usedSlots.Count > 0)
-        {
-            run.Equipment.Stacks[usedSlots[0]].SetItem(result, 1);
-        }
-        else
-        {
-            var leftover = run.Bag.AddItem(result, 1);
-            if (!leftover.Empty)
-            {
-                run.Bag.Restore(bagSnapshot);
-                LastMessage = "가방이 가득 찼습니다.";
-                return false;
-            }
         }
 
         RecordObtained(playerId, result.uid);
-        LastMessage = result.name + " " + result.upgradeLevel + "성이 되었습니다.";
         FinishBag(playerId);
-        for (var i = 0; i < usedSlots.Count; i++)
+        for (var i = 0; i < _usedSlots.Count; i++)
         {
-            PublishEquipmentSlot(playerId, usedSlots[i]);
+            PublishEquipmentSlot(playerId, _usedSlots[i]);
         }
 
         return true;
@@ -511,7 +311,7 @@ public class ItemManager : BaseManager
     public bool TryEquip(int playerId, int bagIndex)
     {
         var run = GetRun(playerId);
-        if (run == null || bagIndex < 0 || bagIndex >= run.Bag.Stacks.Count || run.Bag.Stacks[bagIndex].Empty)
+        if (run == null || !run.HasBagItem(bagIndex))
         {
             LastMessage = "장착할 포켓몬이 없습니다.";
             return false;
@@ -524,7 +324,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        if (!TryMoveToSlot(run, bagIndex, slot))
+        if (!run.TryMoveToSlot(bagIndex, slot))
         {
             LastMessage = "장착하지 못했습니다.";
             return false;
@@ -542,24 +342,24 @@ public class ItemManager : BaseManager
     public bool TryEquipToSlot(int playerId, int bagIndex, int slot)
     {
         var run = GetRun(playerId);
-        if (run == null || bagIndex < 0 || bagIndex >= run.Bag.Stacks.Count || run.Bag.Stacks[bagIndex].Empty)
+        if (run == null || !run.HasBagItem(bagIndex))
         {
             LastMessage = "장착할 포켓몬이 없습니다.";
             return false;
         }
 
-        if (slot < 0 || slot >= run.Equipment.Stacks.Count)
+        if (!run.IsValidSlot(slot))
         {
             LastMessage = "장착하지 못했습니다.";
             return false;
         }
 
-        if (!run.Equipment.Stacks[slot].Empty)
+        if (run.HasEquipped(slot))
         {
             return TrySwapBagWithEquipped(playerId, bagIndex, slot);
         }
 
-        if (!TryMoveToSlot(run, bagIndex, slot))
+        if (!run.TryMoveToSlot(bagIndex, slot))
         {
             LastMessage = "장착하지 못했습니다.";
             return false;
@@ -577,8 +377,7 @@ public class ItemManager : BaseManager
     public bool TrySwapBagWithEquipped(int playerId, int bagIndex, int slot)
     {
         var run = GetRun(playerId);
-        if (run == null || bagIndex < 0 || bagIndex >= run.Bag.Stacks.Count || run.Bag.Stacks[bagIndex].Empty
-            || slot < 0 || slot >= run.Equipment.Stacks.Count || run.Equipment.Stacks[slot].Empty)
+        if (run == null || !run.HasBagItem(bagIndex) || !run.HasEquipped(slot))
         {
             LastMessage = "교체할 포켓몬이 없습니다.";
             return false;
@@ -600,9 +399,7 @@ public class ItemManager : BaseManager
     public bool TrySwapEquipped(int playerId, int from, int to)
     {
         var run = GetRun(playerId);
-        if (run == null || from == to
-            || from < 0 || from >= run.Equipment.Stacks.Count || run.Equipment.Stacks[from].Empty
-            || to < 0 || to >= run.Equipment.Stacks.Count)
+        if (run == null || from == to || !run.HasEquipped(from) || !run.IsValidSlot(to))
         {
             return false;
         }
@@ -658,7 +455,7 @@ public class ItemManager : BaseManager
     public bool TrySell(int playerId, int bagIndex)
     {
         var run = GetRun(playerId);
-        if (!TryTakeBag(run, bagIndex, out var item, out var number))
+        if (run == null || !run.TryTakeBag(bagIndex, out var item, out var number))
         {
             LastMessage = "판매할 포켓몬이 없습니다.";
             return false;
@@ -676,7 +473,7 @@ public class ItemManager : BaseManager
     public bool TryDiscard(int playerId, int bagIndex)
     {
         var run = GetRun(playerId);
-        if (!TryTakeBag(run, bagIndex, out _, out _))
+        if (run == null || !run.TryTakeBag(bagIndex, out _, out _))
         {
             LastMessage = "버릴 포켓몬이 없습니다.";
             return false;
@@ -729,13 +526,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public int GetEquippedAbilityLevel(int playerId, WeaponAbilityData ability)
     {
-        var star = GetHighestEquippedStar(playerId, ability);
-        if (star <= 0)
-        {
-            return 0;
-        }
-
-        return ToAbilityLevel(star, ability);
+        return EquippedAbilityResolver.GetLevel(GetRun(playerId)?.Equipment, _catalog, ability);
     }
 
     /// <summary>
@@ -743,9 +534,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public static bool IsSlotOriginAbility(WeaponAbilityData ability)
     {
-        return ability != null
-            && ability.Prefab != null
-            && ability.Prefab.GetComponent<ISlotOriginAbility>() != null;
+        return EquippedAbilityResolver.IsSlotOriginAbility(ability);
     }
 
     /// <summary>
@@ -753,58 +542,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public void CollectEquippedAbilityLevels(int playerId, List<EquippedAbilityLevel> results)
     {
-        results.Clear();
-        var run = GetRun(playerId);
-        if (run == null)
-        {
-            return;
-        }
-
-        for (var i = 0; i < run.Equipment.Stacks.Count; i++)
-        {
-            var stack = run.Equipment.Stacks[i];
-            if (stack.Empty || stack.Item == null)
-            {
-                continue;
-            }
-
-            var visual = GetVisual(stack.Item.uid);
-            var ability = visual != null ? visual.WeaponAbility : null;
-            if (ability == null)
-            {
-                continue;
-            }
-
-            var level = ToAbilityLevel(stack.Item.upgradeLevel, ability);
-            if (IsSlotOriginAbility(ability))
-            {
-                results.Add(new EquippedAbilityLevel(ability, level, i));
-                continue;
-            }
-
-            var found = false;
-            for (var u = 0; u < results.Count; u++)
-            {
-                if (results[u].Slot != EquippedAbilityLevel.UNSLOTTED
-                    || results[u].Ability.WeaponAbilityType != ability.WeaponAbilityType)
-                {
-                    continue;
-                }
-
-                found = true;
-                if (level > results[u].LevelIndex)
-                {
-                    results[u] = new EquippedAbilityLevel(ability, level, EquippedAbilityLevel.UNSLOTTED);
-                }
-
-                break;
-            }
-
-            if (!found)
-            {
-                results.Add(new EquippedAbilityLevel(ability, level, EquippedAbilityLevel.UNSLOTTED));
-            }
-        }
+        EquippedAbilityResolver.Collect(GetRun(playerId)?.Equipment, _catalog, results);
     }
 
     /// <summary>
@@ -812,19 +550,7 @@ public class ItemManager : BaseManager
     /// </summary>
     public static int ToAbilityLevel(int star, WeaponAbilityData ability)
     {
-        var index = star - Item.STAR_MIN;
-        if (index < 0)
-        {
-            index = 0;
-        }
-
-        if (ability == null || ability.LevelsCount <= 0)
-        {
-            return 0;
-        }
-
-        var last = ability.LevelsCount - 1;
-        return index > last ? last : index;
+        return EquippedAbilityResolver.ToAbilityLevel(star, ability);
     }
 
     private void EnsureWindow()
@@ -843,102 +569,23 @@ public class ItemManager : BaseManager
         _window = Instantiate(_inventoryWindow, transform);
     }
 
-    private RunInventory CreateRun()
-    {
-        var bag = new InventoryHolder
-        {
-            Name = "Inventory",
-            Type = InventoryHolder.HolderType.PlayerInventory,
-            InventorySize = INVENTORY_SIZE
-        };
-        bag.EnsureSize();
-        var equipment = new InventoryHolder
-        {
-            Name = "Equipment",
-            Type = InventoryHolder.HolderType.PlayerEquipment,
-            InventorySize = WeaponSlots.MAX_COUNT
-        };
-        equipment.EnsureSize();
-        var offers = new ShopOffer[SHOP_OFFER_COUNT];
-        for (var i = 0; i < offers.Length; i++)
-        {
-            offers[i] = new ShopOffer();
-        }
-
-        return new RunInventory
-        {
-            Bag = bag,
-            Equipment = equipment,
-            Offers = offers
-        };
-    }
-
-    private void RollOffers(RunInventory run)
-    {
-        for (var i = 0; i < run.Offers.Length; i++)
-        {
-            var offer = run.Offers[i];
-            if (offer.Locked)
-            {
-                continue;
-            }
-
-            offer.Uid = _shopPool.Count > 0 ? _shopPool[Random.Range(0, _shopPool.Count)] : ShopOffer.SOLD_UID;
-            offer.Star = Item.STAR_MIN;
-            offer.Purchased = false;
-        }
-    }
-
     private RunInventory GetRun(int playerId)
     {
         _runs.TryGetValue(playerId, out var run);
         return run;
     }
 
-    private Item CreateItem(int uid, int star)
+    private bool TryTakeEquipped(RunInventory run, int slot, out Item item)
     {
-        var source = TryGetItem(uid);
-        if (source == null)
+        item = null;
+        var message = "장착된 포켓몬이 없습니다.";
+        if (run == null || !run.TryTakeEquipped(slot, out item, out message))
         {
-            return null;
+            LastMessage = message;
+            return false;
         }
 
-        var copy = source.Copy();
-        copy.upgradeLevel = star;
-        copy.price = GetStarPrice(source.price, star);
-        return copy;
-    }
-
-    /// <summary>
-    /// 1성 가격에서 star성 구매가를 낸다. 한 성 오를 때마다 합성에 드는 마릿수만큼 곱한다.
-    /// </summary>
-    private static int GetStarPrice(int basePrice, int star)
-    {
-        var price = basePrice;
-        for (var i = Item.STAR_MIN; i < star; i++)
-        {
-            price *= SYNTHESIS_COUNT;
-        }
-
-        return price;
-    }
-
-    private int FindUid(MonsterVisualData visual)
-    {
-        if (visual == null)
-        {
-            return EMPTY_UID;
-        }
-
-        for (var i = 0; i < _visuals.Count; i++)
-        {
-            if (_visuals[i] == visual)
-            {
-                return i;
-            }
-        }
-
-        return EMPTY_UID;
+        return true;
     }
 
     /// <summary>
@@ -954,7 +601,7 @@ public class ItemManager : BaseManager
             return;
         }
 
-        account.MarkMonsterObtained(GetVisual(uid));
+        account.MarkMonsterObtained(_catalog.GetVisual(uid));
     }
 
     private MonsterVisualData ResolveStartingVisual()
@@ -973,115 +620,6 @@ public class ItemManager : BaseManager
         return account.ResolveStarterVisual();
     }
 
-    /// <summary>
-    /// 합성 결과를 만든다. 3성 미만은 같은 종 한 성 위, 3성은 다음 진화 1성이다.
-    /// </summary>
-    private bool TryCreateSynthesisResult(Item source, int upgradeLevel, out Item result)
-    {
-        result = null;
-        if (upgradeLevel < Item.STAR_MAX)
-        {
-            result = CreateItem(source.uid, upgradeLevel + 1);
-        }
-        else if (source.evolutionUid >= 0)
-        {
-            result = CreateItem(source.evolutionUid, Item.STAR_MIN);
-        }
-        else
-        {
-            LastMessage = "다음 포켓몬이 없습니다.";
-            return false;
-        }
-
-        if (result == null)
-        {
-            LastMessage = "합성 결과를 만들지 못했습니다.";
-            return false;
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// 같은 종, 같은 성인 장착 칸을 합성 재료로 비운다. 이미 쓴 칸은 다시 쓰지 않는다.
-    /// </summary>
-    private static bool TakeEquippedMaterial(RunInventory run, int slot, int uid, int upgradeLevel, List<int> usedSlots)
-    {
-        if (slot < 0 || slot >= run.Equipment.Stacks.Count || usedSlots.Count >= SYNTHESIS_COUNT || usedSlots.Contains(slot)
-            || !run.Equipment.Stacks[slot].isSameItem(uid, upgradeLevel))
-        {
-            return false;
-        }
-
-        run.Equipment.Stacks[slot].Delete();
-        usedSlots.Add(slot);
-        return true;
-    }
-
-    private bool TryMoveToSlot(RunInventory run, int bagIndex, int slot)
-    {
-        if (run == null || bagIndex < 0 || bagIndex >= run.Bag.Stacks.Count)
-        {
-            return false;
-        }
-
-        var stack = run.Bag.Stacks[bagIndex];
-        if (stack.Empty || stack.Item == null)
-        {
-            return false;
-        }
-
-        if (slot < 0 || slot >= run.Equipment.Stacks.Count || !run.Equipment.Stacks[slot].Empty)
-        {
-            return false;
-        }
-
-        var item = stack.Item.Copy();
-        stack.AddNumber(-1);
-        if (!run.Equipment.TrySetSlot(slot, item))
-        {
-            run.Bag.AddItem(item, 1);
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool TryTakeBag(RunInventory run, int bagIndex, out Item item, out int number)
-    {
-        item = null;
-        number = 0;
-        if (run == null || bagIndex < 0 || bagIndex >= run.Bag.Stacks.Count || run.Bag.Stacks[bagIndex].Empty)
-        {
-            return false;
-        }
-
-        var stack = run.Bag.Stacks[bagIndex];
-        item = stack.Item.Copy();
-        number = stack.Number;
-        stack.Delete();
-        return true;
-    }
-
-    private bool TryTakeEquipped(RunInventory run, int slot, out Item item)
-    {
-        item = null;
-        if (run == null || slot < 0 || slot >= run.Equipment.Stacks.Count || run.Equipment.Stacks[slot].Empty)
-        {
-            LastMessage = "장착된 포켓몬이 없습니다.";
-            return false;
-        }
-
-        if (run.Equipment.CountFilled() <= MIN_EQUIPPED)
-        {
-            LastMessage = "포켓몬은 한 마리 이상 장착해야 합니다.";
-            return false;
-        }
-
-        item = run.Equipment.Stacks[slot].Item.Copy();
-        return item != null;
-    }
-
     private void Refund(int playerId, int amount)
     {
         if (amount <= 0 || Managers.Instance == null || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
@@ -1090,38 +628,6 @@ public class ItemManager : BaseManager
         }
 
         currencies.Deposit(playerId, CurrenciesManager.MONSTER_BALL_ID, amount);
-    }
-
-    private int GetHighestEquippedStar(int playerId, WeaponAbilityData ability)
-    {
-        var run = GetRun(playerId);
-        if (run == null || ability == null)
-        {
-            return 0;
-        }
-
-        var star = 0;
-        for (var i = 0; i < run.Equipment.Stacks.Count; i++)
-        {
-            var stack = run.Equipment.Stacks[i];
-            if (stack.Empty || stack.Item == null || stack.Item.upgradeLevel <= star)
-            {
-                continue;
-            }
-
-            var visual = GetVisual(stack.Item.uid);
-            if (visual == null || visual.WeaponAbility == null)
-            {
-                continue;
-            }
-
-            if (visual.WeaponAbility.WeaponAbilityType == ability.WeaponAbilityType)
-            {
-                star = stack.Item.upgradeLevel;
-            }
-        }
-
-        return star;
     }
 
     private void FinishBag(int playerId)
@@ -1146,9 +652,9 @@ public class ItemManager : BaseManager
     private void PublishEquipmentSlot(int playerId, int slot)
     {
         var run = GetRun(playerId);
-        var uid = EMPTY_UID;
+        var uid = ItemCatalog.EMPTY_UID;
         var star = 0;
-        if (run != null && slot >= 0 && slot < run.Equipment.Stacks.Count && !run.Equipment.Stacks[slot].Empty)
+        if (run != null && run.HasEquipped(slot))
         {
             uid = run.Equipment.Stacks[slot].Item.uid;
             star = run.Equipment.Stacks[slot].Item.upgradeLevel;
@@ -1173,125 +679,5 @@ public class ItemManager : BaseManager
         {
             PublishEquipmentSlot(playerId, i);
         }
-    }
-
-    private sealed class RunInventory
-    {
-        public InventoryHolder Bag;
-        public InventoryHolder Equipment;
-        public ShopOffer[] Offers;
-    }
-}
-
-/// <summary>
-/// 상점 한 칸. 판 동안 플레이어마다 유지된다.
-/// </summary>
-public class ShopOffer
-{
-    public const int SOLD_UID = -1;
-
-    /// <summary>
-    /// 파는 종의 uid. 진열할 포켓몬이 없으면 SOLD_UID. 산 뒤에도 산 포켓몬을 가리킨다.
-    /// </summary>
-    public int Uid = SOLD_UID;
-
-    /// <summary>
-    /// true면 새로고침해도 바뀌지 않는다.
-    /// </summary>
-    public bool Locked;
-
-    /// <summary>
-    /// 파는 성. 지금은 늘 1성이고, 높은 성 진열 규칙은 RollOffers에서 정한다.
-    /// </summary>
-    public int Star = Item.STAR_MIN;
-
-    /// <summary>
-    /// 이번 진열에서 이미 산 칸. 새로 뽑으면 false로 돌아간다.
-    /// </summary>
-    public bool Purchased;
-
-    public bool Sold => Purchased || Uid < 0;
-}
-
-/// <summary>
-/// 진화 계통의 단계 칸. 일반 진화는 최대 3단이고 메가진화와 거다이맥스는 따로 둔다.
-/// </summary>
-public enum EvolutionStage
-{
-    Basic = 0,
-    Stage1 = 1,
-    Stage2 = 2,
-    Mega = 3,
-    VMax = 4
-}
-
-/// <summary>
-/// 한 진화 계통의 단계별 uid와 고른 종의 단계. 없는 칸은 -1이다.
-/// </summary>
-public struct EvolutionLine
-{
-    public const int STAGE_COUNT = 5;
-    public const int NONE = -1;
-
-    private readonly int[] _uids;
-
-    /// <summary>
-    /// 고른 종의 uid.
-    /// </summary>
-    public int SelectedUid { get; }
-
-    public EvolutionLine(int selectedUid)
-    {
-        SelectedUid = selectedUid;
-        _uids = new int[STAGE_COUNT];
-        for (var i = 0; i < _uids.Length; i++)
-        {
-            _uids[i] = NONE;
-        }
-    }
-
-    /// <summary>
-    /// 단계 칸의 uid. 없으면 -1.
-    /// </summary>
-    public int Get(EvolutionStage stage)
-    {
-        var index = (int)stage;
-        return _uids != null && index >= 0 && index < _uids.Length ? _uids[index] : NONE;
-    }
-
-    public void Set(EvolutionStage stage, int uid)
-    {
-        var index = (int)stage;
-        if (_uids != null && index >= 0 && index < _uids.Length)
-        {
-            _uids[index] = uid < 0 ? NONE : uid;
-        }
-    }
-
-    /// <summary>
-    /// 고른 종이 들어간 칸이면 true.
-    /// </summary>
-    public bool IsSelected(EvolutionStage stage)
-    {
-        return SelectedUid >= 0 && Get(stage) == SelectedUid;
-    }
-}
-
-/// <summary>
-/// 장착 포켓몬 하나의 무기 능력과 성으로 고른 레벨 인덱스. 점 발사는 칸을 가진다.
-/// </summary>
-public struct EquippedAbilityLevel
-{
-    public const int UNSLOTTED = -1;
-
-    public WeaponAbilityData Ability;
-    public int LevelIndex;
-    public int Slot;
-
-    public EquippedAbilityLevel(WeaponAbilityData ability, int levelIndex, int slot)
-    {
-        Ability = ability;
-        LevelIndex = levelIndex;
-        Slot = slot;
     }
 }
