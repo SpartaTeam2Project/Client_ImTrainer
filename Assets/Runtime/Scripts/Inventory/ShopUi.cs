@@ -126,7 +126,6 @@ public class ShopUi : MonoBehaviour
 
         EnsureCapturedState();
         var offers = itemManager.GetShopOffers(playerId);
-        var icon = MonsterBallIcon();
         for (var i = 0; i < _rows.Length; i++)
         {
             var row = _rows[i];
@@ -161,7 +160,7 @@ public class ShopUi : MonoBehaviour
                 continue;
             }
 
-            SetPrice(row, icon, item.price, true);
+            SetPrice(row, CurrencyIcon(item.currencyId), item.price, true);
             SetLock(row, true, offer.Locked);
             HideCaptured(i);
         }
@@ -374,7 +373,7 @@ public class ShopUi : MonoBehaviour
     }
 
     /// <summary>
-    /// 가격 버튼에 몬스터볼 그림과 가격을 넣는다. 매진이면 버튼을 끈다.
+    /// 가격 버튼에 화폐 그림과 가격을 넣는다. 매진이면 버튼을 끈다.
     /// </summary>
     private void SetPrice(OfferRow row, Sprite icon, int amount, bool available)
     {
@@ -432,13 +431,13 @@ public class ShopUi : MonoBehaviour
         return true;
     }
 
-    private static Sprite MonsterBallIcon()
+    private static Sprite CurrencyIcon(string currencyId)
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
         {
             return null;
         }
 
-        return currencies.GetIcon(CurrenciesManager.MONSTER_BALL_ID);
+        return currencies.GetIcon(currencyId);
     }
 }

@@ -7,7 +7,7 @@ using UnityEngine;
 internal static class ItemShop
 {
     /// <summary>
-    /// 한 마리를 팔 때 돌려받는 몬스터볼.
+    /// 한 마리를 팔 때 돌려받는 화폐 수. 화폐는 item.currencyId다.
     /// </summary>
     public static int GetSellPrice(Item item)
     {

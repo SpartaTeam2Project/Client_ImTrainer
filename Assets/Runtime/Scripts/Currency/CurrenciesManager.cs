@@ -112,6 +112,15 @@ public class CurrenciesManager : BaseManager
     }
 
     /// <summary>
+    /// 재화 표시 이름. 없으면 id를 그대로 돌려준다.
+    /// </summary>
+    public string GetName(string currencyId)
+    {
+        var data = FindCurrency(currencyId);
+        return data == null || string.IsNullOrEmpty(data.Name) ? currencyId : data.Name;
+    }
+
+    /// <summary>
     /// 수량이 충분하면 뺀다. meta가 true면 포켓달러 메타 잔액에서 뺀다.
     /// </summary>
     public bool TryWithdraw(int playerId, string currencyId, int amount, bool meta)

@@ -17,7 +17,7 @@ public class ItemManager : BaseManager
     public const int SYNTHESIS_COUNT = 3;
 
     /// <summary>
-    /// 판매 때 돌려주는 몬스터볼 비율. 구매가에 곱하고 내린다. 최소 1개.
+    /// 판매 때 돌려주는 화폐 비율. 구매가에 곱하고 내린다. 최소 1개.
     /// </summary>
     public const float SELL_PRICE_RATE = 0.5f;
     public const int MIN_SELL_PRICE = 1;
@@ -203,7 +203,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 한 마리를 팔 때 돌려받는 몬스터볼.
+    /// 한 마리를 팔 때 돌려받는 화폐 수. 화폐는 item.currencyId다.
     /// </summary>
     public static int GetSellPrice(Item item)
     {
@@ -247,7 +247,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 상점 칸의 포켓몬 한 마리를 몬스터볼로 사서 가방에 넣는다. 산 칸은 Purchased로 표시한다.
+    /// 상점 칸의 포켓몬 한 마리를 그 종의 화폐로 사서 가방에 넣는다. 산 칸은 Purchased로 표시한다.
     /// </summary>
     public bool TryPurchase(int playerId, int offerIndex)
     {
@@ -258,10 +258,14 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        if (!Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies)
-            || !currencies.TryWithdraw(playerId, CurrenciesManager.MONSTER_BALL_ID, created.price, false))
+        if (!Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
         {
-            LastMessage = "몬스터볼이 부족합니다.";
+            return false;
+        }
+
+        if (!currencies.TryWithdraw(playerId, created.currencyId, created.price, false))
+        {
+            LastMessage = currencies.GetName(created.currencyId) + "이 부족합니다.";
             return false;
         }
 
@@ -450,7 +454,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 가방 칸을 비우고 가격만큼 몬스터볼을 돌려준다.
+    /// 가방 칸을 비우고 판매가만큼 그 종의 화폐를 돌려준다.
     /// </summary>
     public bool TrySell(int playerId, int bagIndex)
     {
@@ -461,7 +465,7 @@ public class ItemManager : BaseManager
             return false;
         }
 
-        Refund(playerId, GetSellPrice(item) * number);
+        Refund(playerId, item.currencyId, GetSellPrice(item) * number);
         LastMessage = "판매했습니다.";
         FinishBag(playerId);
         return true;
@@ -485,7 +489,7 @@ public class ItemManager : BaseManager
     }
 
     /// <summary>
-    /// 장착 칸을 팔아 몬스터볼을 돌려준다. 마지막 한 마리는 팔 수 없다.
+    /// 장착 칸을 팔아 그 종의 화폐를 돌려준다. 마지막 한 마리는 팔 수 없다.
     /// </summary>
     public bool TrySellEquipped(int playerId, int slot)
     {
@@ -496,7 +500,7 @@ public class ItemManager : BaseManager
         }
 
         run.Equipment.ClearSlot(slot);
-        Refund(playerId, GetSellPrice(item));
+        Refund(playerId, item.currencyId, GetSellPrice(item));
         LastMessage = "판매했습니다.";
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
@@ -620,14 +624,14 @@ public class ItemManager : BaseManager
         return account.ResolveStarterVisual();
     }
 
-    private void Refund(int playerId, int amount)
+    private void Refund(int playerId, string currencyId, int amount)
     {
         if (amount <= 0 || Managers.Instance == null || !Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies))
         {
             return;
         }
 
-        currencies.Deposit(playerId, CurrenciesManager.MONSTER_BALL_ID, amount);
+        currencies.Deposit(playerId, currencyId, amount);
     }
 
     private void FinishBag(int playerId)

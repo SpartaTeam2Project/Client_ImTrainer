@@ -222,7 +222,8 @@ public class MonsterVisualDataEditor : Editor
         var expanded = BeginCategory("Shop", "상점 (Shop)");
         if (expanded)
         {
-            DrawField("_shopPrice", "1성 구매가 (Price)", "상점 1성 몬스터볼 가격. 2성은 3배, 3성은 9배. 판매가는 구매가에 판매 배율을 곱한다");
+            DrawField("_shopPrice", "1성 구매가 (Price)", "상점 1성 가격. 2성은 3배, 3성은 9배. 판매가는 구매가에 판매 배율을 곱한다");
+            DrawField("_shopCurrencyId", "화폐 (Currency)", "사고팔 때 쓰는 화폐 id. monster_ball, master_ball 등. 비우면 몬스터볼");
         }
 
         EndCategory(expanded);
