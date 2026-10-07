@@ -23,6 +23,7 @@ public class InputManager : BaseManager
     private bool _actionPressed;
     private bool _inventoryPressed;
     private bool _shopRefreshPressed;
+    private int _numberSlot = -1;
 
     public Vector2 MovementValue => _movementValue;
 
@@ -161,6 +162,16 @@ public class InputManager : BaseManager
     }
 
     /// <summary>
+    /// 이번 프레임에 눌린 숫자키 칸 번호(0~3)를 반환하고 소비한다. 1~4키와 넘버패드 1~4다. 없으면 -1이다.
+    /// </summary>
+    public int ConsumeNumberSlot()
+    {
+        var slot = _numberSlot;
+        _numberSlot = -1;
+        return slot;
+    }
+
+    /// <summary>
     /// 자리표시. 입력 담당이 장치 바인딩으로 이 읽기만 교체한다.
     /// </summary>
     private void ReadKeyboardPlaceholder()
@@ -174,6 +185,7 @@ public class InputManager : BaseManager
         _actionPressed = false;
         _inventoryPressed = false;
         _shopRefreshPressed = false;
+        _numberSlot = -1;
         var keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -287,6 +299,12 @@ public class InputManager : BaseManager
         {
             _shopRefreshPressed = true;
         }
+
+        // 한 프레임에 여러 키를 눌러도 앞 번호 하나만 받는다.
+        if (keyboard.digit1Key.wasPressedThisFrame || keyboard.numpad1Key.wasPressedThisFrame) _numberSlot = 0;
+        else if (keyboard.digit2Key.wasPressedThisFrame || keyboard.numpad2Key.wasPressedThisFrame) _numberSlot = 1;
+        else if (keyboard.digit3Key.wasPressedThisFrame || keyboard.numpad3Key.wasPressedThisFrame) _numberSlot = 2;
+        else if (keyboard.digit4Key.wasPressedThisFrame || keyboard.numpad4Key.wasPressedThisFrame) _numberSlot = 3;
     }
 
     /// <summary>

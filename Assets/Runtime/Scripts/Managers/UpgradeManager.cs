@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 
 
 
 /// <summary>
 /// 한 판의 증강 Level, 선택 weight, 효과 배율을 보관하는 프로토타입 Manager.
-/// input: Numpad 1/2/3 => 현재 선택지 선택 => Level 증가 => 배율 재계산 => 다음 선택지 출력.
+/// input: 숫자키 1/2/3 또는 카드 클릭 => 현재 선택지 선택 => Level 증가 => 배율 재계산 => 다음 선택지 출력.
 /// output: PlayerManager가 이동/피해/경험치를 전달할 때 읽는 세 배율과 Console 관찰 로그.
 /// </summary>
 [DisallowMultipleComponent]
@@ -243,25 +242,10 @@ public sealed class UpgradeManager : BaseManager
     private AugmentWindowBehavior _augmentWindow;
     public IReadOnlyList<UpgradeDefinition> CurrentChoices => _choices;
 
-    private void Update()
-    {
-        if (!CanSelect())
-        {
-            return;
-        }
-
-        var keyboard = Keyboard.current;
-        if (keyboard == null)
-        {
-            return;
-        }
-
-        // 위쪽 숫자 키가 아닌 Numpad만 읽는다. 한 프레임에 여러 키를 눌러도 한 번만 선택한다.
-        // 키 번호는 증강 종류가 아니라, 방금 Console에 출력된 선택지 순서다.
-        if (keyboard.numpad1Key.wasPressedThisFrame) TrySelectChoice(0);
-        else if (keyboard.numpad2Key.wasPressedThisFrame) TrySelectChoice(1);
-        else if (keyboard.numpad3Key.wasPressedThisFrame) TrySelectChoice(2);
-    }
+    /// <summary>
+    /// 증강 선택지가 떠 있고 고를 수 있는 상태인지. 숫자키는 AugmentWindowBehavior가 읽는다.
+    /// </summary>
+    public bool IsChoosing => CanSelect();
 
     /// <summary>
     /// Stage 시작 시 Upgrade Runtime 상태를 초기화하고,

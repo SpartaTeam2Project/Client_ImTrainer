@@ -141,6 +141,15 @@ public class InventoryUi : MonoBehaviour
             _shopUi.RefreshOffers();
         }
 
+        if (_open && _shopUi != null)
+        {
+            var slot = inputManager.ConsumeNumberSlot();
+            if (slot >= 0)
+            {
+                _shopUi.Purchase(slot);
+            }
+        }
+
         if (!inputManager.ConsumeInventoryPressed())
         {
             return;
@@ -307,6 +316,12 @@ public class InventoryUi : MonoBehaviour
         }
 
         if (Managers.Instance.SettingsWindow != null && Managers.Instance.SettingsWindow.IsOpen)
+        {
+            return false;
+        }
+
+        // 증강 선택 중에 열면 숫자키가 겹치고, 닫을 때 멈춘 시간이 풀린다.
+        if (Managers.Instance.TryGetManager<UpgradeManager>(out var upgradeManager) && upgradeManager.IsChoosing)
         {
             return false;
         }

@@ -39,6 +39,31 @@ public sealed class AugmentWindowBehavior : LevelUpChoice
         _openSequence?.Kill();
     }
 
+    /// <summary>
+    /// 창이 떠 있으면 숫자키 1~3으로 카드를 고른다. 클릭과 같은 Choose를 탄다.
+    /// </summary>
+    private void Update()
+    {
+        if (_canvas == null || !_canvas.gameObject.activeSelf)
+        {
+            return;
+        }
+
+        if (Managers.Instance == null ||
+            !Managers.Instance.TryGetManager<InputManager>(out var inputManager))
+        {
+            return;
+        }
+
+        var slot = inputManager.ConsumeNumberSlot();
+        if (slot < 0 || slot >= _cards.Count || !_cards[slot].gameObject.activeSelf)
+        {
+            return;
+        }
+
+        Choose(slot);
+    }
+
 
     public override void Open(int playerId, int level, Action onChosen)
     {

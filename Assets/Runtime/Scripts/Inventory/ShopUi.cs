@@ -189,8 +189,16 @@ public class ShopUi : MonoBehaviour
         _onChanged?.Invoke();
     }
 
-    private void Purchase(int index)
+    /// <summary>
+    /// 해당 칸 포켓몬을 산다. 버튼과 숫자키(1~4)가 같이 쓴다.
+    /// </summary>
+    public void Purchase(int index)
     {
+        if (index < 0 || index >= ItemManager.SHOP_OFFER_COUNT)
+        {
+            return;
+        }
+
         if (!TryGetContext(out var itemManager, out var playerId))
         {
             return;
