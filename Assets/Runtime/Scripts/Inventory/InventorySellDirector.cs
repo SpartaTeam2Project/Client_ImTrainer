@@ -285,8 +285,9 @@ public sealed class InventorySellDirector
 
     /// <summary>
     /// 판매 중인 장착 칸까지 빼고도 최소 장착 수보다 많이 남아야 판다.
+    /// 장착 칸을 바로 팔거나 버리거나 해제할 때도 이걸로 막아야 디졸브 중인 판매가 나중에 실패하지 않는다.
     /// </summary>
-    private bool CanSellEquipped(ItemManager itemManager, int playerId)
+    public bool CanSellEquipped(ItemManager itemManager, int playerId)
     {
         var equipment = itemManager.GetEquipment(playerId);
         if (equipment == null)

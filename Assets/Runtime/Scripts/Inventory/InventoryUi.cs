@@ -23,6 +23,9 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private const float CLOSE_FADE_DURATION = 0.15f;
     private const string OPEN_SOUND = "inventory_open";
     private const string CLOSE_SOUND = "inventory_close";
+    private const string EQUIP_SOUND = "inventory_equip";
+    private const string UNEQUIP_SOUND = "inventory_unequip";
+    private const string ERROR_SOUND = "error";
     private const string STAR_UP_SOUND = "inventory_star_up";
     private const string EVOLUTION_START_SOUND = "inventory_star_evolution_start";
     private const string EVOLUTION_END_SOUND = "inventory_star_evolution_end";
@@ -665,7 +668,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        itemManager.TryEquip(playerId, _selectedIndex);
+        if (itemManager.TryEquip(playerId, _selectedIndex))
+        {
+            PlaySound(EQUIP_SOUND);
+        }
+
         Refresh();
     }
 
@@ -676,7 +683,8 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        itemManager.TryUnequip(playerId, _selectedIndex);
+        PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TryUnequip), UNEQUIP_SOUND, ERROR_SOUND);
+
         Refresh();
     }
 
@@ -698,7 +706,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         }
         else if (_selection == SelectionKind.Equipment)
         {
-            itemManager.TrySellEquipped(playerId, _selectedIndex);
+            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TrySellEquipped), null, ERROR_SOUND);
         }
 
         Refresh();
@@ -717,7 +725,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         }
         else if (_selection == SelectionKind.Equipment)
         {
-            itemManager.TryDiscardEquipped(playerId, _selectedIndex);
+            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TryDiscardEquipped), null, ERROR_SOUND);
         }
 
         Refresh();
@@ -852,12 +860,12 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             }
             else
             {
-                itemManager.TrySellEquipped(playerId, _drag.Index);
+                PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TrySellEquipped), null, ERROR_SOUND);
             }
         }
         else if (zone == InventoryDropZone.ZoneKind.Bag && _drag.Kind == InventorySlotDrag.SlotKind.Equipment)
         {
-            itemManager.TryUnequip(playerId, _drag.Index);
+            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TryUnequip), UNEQUIP_SOUND, ERROR_SOUND);
         }
 
         EndDrag();
@@ -930,7 +938,10 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         // 가방은 자동 정렬이라 자리만 옮기는 동작은 없다. 같은 종, 같은 성 칸에 놓을 때만 합성한다.
         if (targetKind == InventorySlotDrag.SlotKind.Equipment)
         {
-            itemManager.TryEquipToSlot(playerId, bagIndex, targetIndex);
+            if (itemManager.TryEquipToSlot(playerId, bagIndex, targetIndex))
+            {
+                PlaySound(EQUIP_SOUND);
+            }
         }
     }
 
@@ -955,7 +966,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
         if (targetKind == InventorySlotDrag.SlotKind.Bag)
         {
-            itemManager.TryUnequip(playerId, _drag.Index);
+            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TryUnequip), UNEQUIP_SOUND, ERROR_SOUND);
         }
     }
 
@@ -1283,6 +1294,27 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         }
 
         return audioManager.PlaySound(name);
+    }
+
+    /// <summary>
+    /// 장착 칸을 바로 팔거나 버리거나 해제한다. 디졸브로 판매 중인 장착 칸까지 빼면 최소 장착 수가 안 남을 때는 막는다.
+    /// 막지 않으면 이 칸이 먼저 빠지고, 디졸브가 끝난 판매가 마지막 한 마리라서 실패한다.
+    /// </summary>
+    private bool TryRemoveEquipped(ItemManager itemManager, int playerId, int slot, System.Func<int, int, bool> remove)
+    {
+        return _sellDirector.CanSellEquipped(itemManager, playerId) && remove(playerId, slot);
+    }
+
+    /// <summary>
+    /// 성공하면 success, 실패하면 failure 효과음을 낸다. null이면 그쪽은 소리를 내지 않는다.
+    /// </summary>
+    private static void PlaySoundIf(bool succeeded, string success, string failure)
+    {
+        var name = succeeded ? success : failure;
+        if (name != null)
+        {
+            PlaySound(name);
+        }
     }
 
     /// <summary>
