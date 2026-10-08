@@ -14,7 +14,7 @@ public class ItemManager : BaseManager
     /// 가방 한 칸에 들어가는 마릿수. 한 마리당 한 칸을 차지한다.
     /// </summary>
     public const int MAX_STACK = 1;
-    public const int SYNTHESIS_COUNT = 3;
+    public const int SYNTHESIS_COUNT = 2;
 
     /// <summary>
     /// 판매 때 돌려주는 화폐 비율. 구매가에 곱하고 내린다. 최소 1개.

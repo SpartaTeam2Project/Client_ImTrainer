@@ -225,10 +225,11 @@ public class InventoryItem : MonoBehaviour
     }
 
     /// <summary>
-    /// 3성이 다음 포켓몬으로 진화한다. 이전 그림이 하얗게 빛나고, 가장 밝을 때 새 그림으로 바뀐 뒤 빛이 빠진다.
-    /// 끝까지 돌면 onFinished를 부르고, 중간에 다시 그려지거나 꺼지면 부르지 않는다.
+    /// 3성이 다음 포켓몬으로 진화한다. 이전 그림이 하얗게 빛난 채 revealDelay까지 머물고,
+    /// 그때 새 그림으로 바뀌며 onRevealed를 부른 뒤 빛이 빠진다.
+    /// 공개 전에 다시 그려지거나 꺼지면 onRevealed를 부르지 않는다.
     /// </summary>
-    public void PlayEvolution(Sprite from, Sprite to, Action onFinished)
+    public void PlayEvolution(Sprite from, Sprite to, float revealDelay, Action onRevealed)
     {
         StopEvolution();
         if (_icon == null || _evolutionMaterial == null)
@@ -248,15 +249,17 @@ public class InventoryItem : MonoBehaviour
         SetEvolutionBlend(0f);
         ShowStars(Item.STAR_MAX);
 
+        var hold = Mathf.Max(EVOLUTION_HOLD_DURATION, revealDelay - EVOLUTION_GLOW_IN_DURATION);
         _evolutionTween = DOTween.Sequence()
             .Append(DOVirtual.Float(0f, 1f, EVOLUTION_GLOW_IN_DURATION, SetEvolutionBlend).SetEase(Ease.InQuad))
+            .AppendInterval(hold)
             .AppendCallback(() =>
             {
                 _icon.sprite = to;
                 _icon.enabled = to != null;
                 ShowStars(Item.STAR_MIN);
+                onRevealed?.Invoke();
             })
-            .AppendInterval(EVOLUTION_HOLD_DURATION)
             .Append(DOVirtual.Float(1f, 0f, EVOLUTION_GLOW_OUT_DURATION, SetEvolutionBlend).SetEase(Ease.OutQuad))
             .SetUpdate(true)
             .SetLink(gameObject)
@@ -264,7 +267,6 @@ public class InventoryItem : MonoBehaviour
             {
                 _evolutionTween = null;
                 ResetEvolutionMaterial();
-                onFinished?.Invoke();
             });
     }
 

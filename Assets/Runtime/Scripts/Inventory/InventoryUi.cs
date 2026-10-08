@@ -1114,11 +1114,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        PlaySound(EVOLUTION_START_SOUND);
+        var startSound = PlaySound(EVOLUTION_START_SOUND);
         if (slot != null)
         {
             slot.PlayEvolution(GetPortrait(itemManager, synthesized.PreviousUid), GetPortrait(itemManager, synthesized.Uid),
-                () => PlaySound(EVOLUTION_END_SOUND));
+                GetLength(startSound), () => PlaySound(EVOLUTION_END_SOUND));
         }
     }
 
@@ -1192,14 +1192,27 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         _subscribed = false;
     }
 
-    private static void PlaySound(string name)
+    private static AudioSource PlaySound(string name)
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
         {
-            return;
+            return null;
         }
 
-        audioManager.PlaySound(name);
+        return audioManager.PlaySound(name);
+    }
+
+    /// <summary>
+    /// 재생 중인 효과음이 끝날 때까지 걸리는 실제 시간. 재생되지 않았으면 0.
+    /// </summary>
+    private static float GetLength(AudioSource source)
+    {
+        if (source == null || source.clip == null || Mathf.Approximately(source.pitch, 0f))
+        {
+            return 0f;
+        }
+
+        return source.clip.length / Mathf.Abs(source.pitch);
     }
 
     private static void AddAction(Button button, UnityEngine.Events.UnityAction action)
