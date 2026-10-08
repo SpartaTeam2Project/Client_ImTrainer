@@ -29,6 +29,10 @@ public sealed class MonsterWaveProfile
 
     public Sprite[] FlyProjectileFrames { get; set; }
 
+    public Sprite[] BeamFrames { get; set; }
+
+    public Vector2[] BeamMouthOffsets { get; set; }
+
     public float AttackRange { get; set; }
 
     public float AttackInterval { get; set; }
@@ -68,6 +72,18 @@ public sealed class MonsterWaveProfile
     public int FanCount { get; set; }
 
     public float FanDistance { get; set; }
+
+    public float BeamCastRange { get; set; }
+
+    public float BeamWidth { get; set; }
+
+    public float BeamLength { get; set; }
+
+    public float BeamSeconds { get; set; }
+
+    public float BeamHitInterval { get; set; }
+
+    public float BeamTurnSpeed { get; set; }
 
     public bool OverrideScale { get; set; }
 

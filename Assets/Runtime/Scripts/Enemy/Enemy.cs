@@ -25,6 +25,18 @@ public class Enemy : MonoBehaviour
     private const float DEFAULT_FAN_CAST_RANGE = 4f;
     private const int DEFAULT_FAN_COUNT = 5;
     private const float DEFAULT_FAN_DISTANCE = 8f;
+    private const float DEFAULT_BEAM_CAST_RANGE = 6f;
+    private const float DEFAULT_BEAM_WIDTH = 0.8f;
+    private const float DEFAULT_BEAM_LENGTH = 8f;
+    private const float DEFAULT_BEAM_SECONDS = 2.5f;
+    private const float DEFAULT_BEAM_HIT_INTERVAL = 0.25f;
+    private const float DEFAULT_BEAM_TURN_SPEED = 45f;
+    private const float BEAM_FRAME_RATE = 10f;
+    private const int BEAM_SORTING_ORDER = 6;
+    private const string REAR_UP_SKILL = "RearUp";
+    private static readonly Color BEAM_WARNING_COLOR = new Color(1f, 0.15f, 0.12f, 0.28f);
+    private static readonly Color BEAM_FILL_COLOR = new Color(1f, 0.08f, 0.08f, 0.9f);
+    private static readonly Color BEAM_FALLBACK_COLOR = new Color(0.55f, 0.9f, 1f, 0.92f);
     private const float CHARGE_SECONDS = 0.9f;
     private const float CHARGE_DASH_OVERSHOOT = 1.5f;
     private const int DASH_END_FRAME_COUNT = 3;
@@ -146,6 +158,24 @@ public class Enemy : MonoBehaviour
     private int _fanSpawned;
     private readonly List<EnemyProjectile> _fanShots = new List<EnemyProjectile>();
     private readonly List<Vector2> _fanDirections = new List<Vector2>();
+    private BeamPhase _beamPhase;
+    private float _beamCastRange;
+    private float _beamWidth;
+    private float _beamLength;
+    private float _beamSeconds;
+    private float _beamHitInterval;
+    private float _beamTurnSpeed;
+    private float _beamNextHitTime;
+    private int _beamFrameIndex;
+    private float _beamFrameTimer;
+    private Vector2 _beamAim;
+    private int _mouthSector = int.MinValue;
+    private Vector2 _mouthOffset;
+    private Sprite[] _beamFrames = System.Array.Empty<Sprite>();
+    private Vector2[] _beamMouthOffsets = System.Array.Empty<Vector2>();
+    private SpriteRenderer _beamWarning;
+    private SpriteRenderer _beamFill;
+    private SpriteRenderer _beam;
     private float _damageTextValue;
     private float _lastTimeDamageText;
     private DamageTextKind _damageTextKind;
@@ -163,6 +193,13 @@ public class Enemy : MonoBehaviour
         None = 0,
         Charging = 1,
         Attacking = 2
+    }
+
+    private enum BeamPhase
+    {
+        None = 0,
+        Charging = 1,
+        Firing = 2
     }
 
     private enum SlamPhase
@@ -249,6 +286,7 @@ public class Enemy : MonoBehaviour
     {
         HideChargeMark();
         HideSlamMark();
+        HideBeamVisuals();
         if (_owner == null)
         {
             return;
@@ -369,12 +407,21 @@ public class Enemy : MonoBehaviour
         int fanCount = 0,
         float fanDistance = 0f,
         Sprite[] chargeProjectileFrames = null,
-        Sprite[] flyProjectileFrames = null)
+        Sprite[] flyProjectileFrames = null,
+        float beamCastRange = 0f,
+        float beamWidth = 0f,
+        float beamLength = 0f,
+        float beamSeconds = 0f,
+        float beamHitInterval = 0f,
+        float beamTurnSpeed = 0f,
+        Sprite[] beamFrames = null,
+        Vector2[] beamMouthOffsets = null)
     {
         CancelUnfiredVolley();
         CancelFanShots();
         HideChargeMark();
         HideSlamMark();
+        HideBeamVisuals();
         _playerId = playerId;
         _waveIndex = waveIndex;
         _id = id;
@@ -418,6 +465,17 @@ public class Enemy : MonoBehaviour
         _fanCount = fanCount > 0 ? fanCount : DEFAULT_FAN_COUNT;
         _fanDistance = fanDistance > 0f ? fanDistance : DEFAULT_FAN_DISTANCE;
         _fanSpawned = 0;
+        _beamPhase = BeamPhase.None;
+        _beamCastRange = beamCastRange > 0f ? beamCastRange : DEFAULT_BEAM_CAST_RANGE;
+        _beamWidth = beamWidth > 0f ? beamWidth : DEFAULT_BEAM_WIDTH;
+        _beamLength = beamLength > 0f ? beamLength : DEFAULT_BEAM_LENGTH;
+        _beamSeconds = beamSeconds > 0f ? beamSeconds : DEFAULT_BEAM_SECONDS;
+        _beamHitInterval = beamHitInterval > 0f ? beamHitInterval : DEFAULT_BEAM_HIT_INTERVAL;
+        _beamTurnSpeed = beamTurnSpeed > 0f ? beamTurnSpeed : DEFAULT_BEAM_TURN_SPEED;
+        _beamFrames = beamFrames ?? System.Array.Empty<Sprite>();
+        _beamMouthOffsets = beamMouthOffsets ?? System.Array.Empty<Vector2>();
+        _mouthSector = int.MinValue;
+        _beamAim = Vector2.right;
         _nextContactTime = 0f;
         _nextShotTime = UsesSkillCooldown(skill) ? Time.time + _skillCooldown : 0f;
         _shootPoseUntil = 0f;
@@ -438,6 +496,7 @@ public class Enemy : MonoBehaviour
         if (_view != null)
         {
             _view.SetIdleMove(skill == BossSkillKind.CircleVolley);
+            _view.SetNamedSkill(null);
             _view.SetVisual(false, Vector2.down);
         }
     }
@@ -515,6 +574,11 @@ public class Enemy : MonoBehaviour
             return TickFanVolley(playerPosition);
         }
 
+        if (_skill == BossSkillKind.TrackingBeam)
+        {
+            return TickBeam(playerPosition);
+        }
+
         if (_attackKind == EnemyAttackKind.Projectile)
         {
             TickProjectile(playerPosition);
@@ -559,6 +623,7 @@ public class Enemy : MonoBehaviour
 
         HideChargeMark();
         HideSlamMark();
+        HideBeamVisuals();
         CancelFanShots();
         if (_owner != null)
         {
@@ -950,6 +1015,279 @@ public class Enemy : MonoBehaviour
         _fanSpawned = 0;
     }
 
+    /// <summary>
+    /// 추적 빔. 차지 중에는 빨간 예고만 깔고, 쏘는 동안 직선 빔으로 맞춘다.
+    /// </summary>
+    private bool TickBeam(Vector2 playerPosition)
+    {
+        if (_beamPhase == BeamPhase.Charging)
+        {
+            TickBeamCharge(playerPosition);
+            return TryContactDamage(playerPosition);
+        }
+
+        if (_beamPhase == BeamPhase.Firing)
+        {
+            TickBeamFire(playerPosition);
+            return TryContactDamage(playerPosition);
+        }
+
+        if (Time.time >= _nextShotTime && Vector2.Distance(transform.position, playerPosition) <= _beamCastRange)
+        {
+            BeginBeamCharge(playerPosition);
+            return TryContactDamage(playerPosition);
+        }
+
+        MoveToward(playerPosition, Time.deltaTime);
+        return TryContactDamage(playerPosition);
+    }
+
+    private void BeginBeamCharge(Vector2 playerPosition)
+    {
+        _beamAim = AimDirection(playerPosition);
+        _beamPhase = BeamPhase.Charging;
+        _chargeUntil = Time.time + _chargeSeconds;
+        if (_view != null)
+        {
+            _view.SetNamedSkill(REAR_UP_SKILL);
+        }
+
+        _mouthSector = int.MinValue;
+        SetChargeView(_beamAim);
+    }
+
+    private void TickBeamCharge(Vector2 playerPosition)
+    {
+        TurnBeamToward(playerPosition, Time.deltaTime);
+        SetChargeView(_beamAim);
+        var duration = Mathf.Max(MIN_SHOT_INTERVAL, _chargeSeconds);
+        var progress = 1f - Mathf.Clamp01((_chargeUntil - Time.time) / duration);
+        ShowBeamWarning(_beamAim, progress);
+        if (Time.time < _chargeUntil)
+        {
+            return;
+        }
+
+        BeginBeamFire();
+    }
+
+    private void BeginBeamFire()
+    {
+        HideBeamWarning();
+        _beamPhase = BeamPhase.Firing;
+        _chargeUntil = Time.time + _beamSeconds;
+        _beamNextHitTime = Time.time;
+        _beamFrameIndex = 0;
+        _beamFrameTimer = 0f;
+        if (_view != null)
+        {
+            _view.SetNamedSkill(null);
+        }
+
+        _mouthSector = int.MinValue;
+        SetShootView(_beamAim);
+    }
+
+    private void TickBeamFire(Vector2 playerPosition)
+    {
+        TurnBeamToward(playerPosition, Time.deltaTime);
+        SetShootView(_beamAim);
+        ShowBeam(_beamAim);
+        TryBeamHit(playerPosition);
+        if (Time.time < _chargeUntil)
+        {
+            return;
+        }
+
+        FinishBeam();
+    }
+
+    private void FinishBeam()
+    {
+        _beamPhase = BeamPhase.None;
+        HideBeamVisuals();
+        if (_view != null)
+        {
+            _view.SetNamedSkill(null);
+        }
+
+        _nextShotTime = Time.time + _skillCooldown;
+    }
+
+    private void TurnBeamToward(Vector2 playerPosition, float deltaTime)
+    {
+        var target = AimDirection(playerPosition);
+        var current = Mathf.Atan2(_beamAim.y, _beamAim.x) * Mathf.Rad2Deg;
+        var desired = Mathf.Atan2(target.y, target.x) * Mathf.Rad2Deg;
+        var next = Mathf.MoveTowardsAngle(current, desired, _beamTurnSpeed * deltaTime) * Mathf.Deg2Rad;
+        _beamAim = new Vector2(Mathf.Cos(next), Mathf.Sin(next));
+    }
+
+    private Vector2 AimDirection(Vector2 playerPosition)
+    {
+        var toPlayer = playerPosition - (Vector2)transform.position;
+        return toPlayer.sqrMagnitude > MOVE_SQR_EPSILON ? toPlayer.normalized : Vector2.right;
+    }
+
+    private void TryBeamHit(Vector2 playerPosition)
+    {
+        if (Time.time < _beamNextHitTime || !IsInsideBeam(playerPosition))
+        {
+            return;
+        }
+
+        DealSkillDamage();
+        _beamNextHitTime = Time.time + _beamHitInterval;
+    }
+
+    private bool IsInsideBeam(Vector2 playerPosition)
+    {
+        var offset = playerPosition - BeamOrigin(_beamAim);
+        var along = Vector2.Dot(offset, _beamAim);
+        var side = offset - _beamAim * along;
+        return along >= 0f && along <= _beamLength && side.sqrMagnitude <= _beamWidth * _beamWidth * 0.25f;
+    }
+
+    /// <summary>
+    /// 빔이 바라보는 방향의 입 좌표에서 시작하게 한다.
+    /// </summary>
+    private Vector2 BeamOrigin(Vector2 aim)
+    {
+        var sector = FacingSector(aim);
+        if (sector != _mouthSector)
+        {
+            _mouthSector = sector;
+            var scale = Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.y));
+            _mouthOffset = BossPartyMember.MouthOffset(_beamMouthOffsets, sector) * scale;
+        }
+
+        return (Vector2)transform.position + _mouthOffset;
+    }
+
+    private static int FacingSector(Vector2 aim)
+    {
+        var degrees = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
+        if (degrees < 0f)
+        {
+            degrees += 360f;
+        }
+
+        return Mathf.RoundToInt(degrees / 45f) % BossPartyMember.MOUTH_SECTOR_COUNT;
+    }
+
+    private void ShowBeamWarning(Vector2 aim, float progress)
+    {
+        var origin = BeamOrigin(aim);
+        var lane = EnsureBeamBar(ref _beamWarning, "BeamWarning", BEAM_SORTING_ORDER - 1);
+        var fill = EnsureBeamBar(ref _beamFill, "BeamFill", BEAM_SORTING_ORDER);
+        lane.color = BEAM_WARNING_COLOR;
+        fill.color = BEAM_FILL_COLOR;
+        PlaceBeamBar(lane, origin, aim, _beamLength, _beamWidth);
+        PlaceBeamBar(fill, origin, aim, _beamLength * Mathf.Clamp01(progress), _beamWidth);
+    }
+
+    private void ShowBeam(Vector2 aim)
+    {
+        var beam = EnsureBeamBar(ref _beam, "TrackingBeam", BEAM_SORTING_ORDER + 1);
+        var frames = _beamFrames;
+        if (frames != null && frames.Length > 0)
+        {
+            AdvanceBeamFrames(beam, frames, ref _beamFrameIndex, ref _beamFrameTimer);
+            beam.color = Color.white;
+        }
+        else
+        {
+            beam.sprite = PrototypeSprite.WhiteSquare;
+            beam.color = BEAM_FALLBACK_COLOR;
+        }
+
+        PlaceBeamBar(beam, BeamOrigin(aim), aim, _beamLength, _beamWidth);
+    }
+
+    private void AdvanceBeamFrames(SpriteRenderer beam, Sprite[] frames, ref int frameIndex, ref float frameTimer)
+    {
+        frameTimer += Time.deltaTime;
+        var frameDuration = 1f / BEAM_FRAME_RATE;
+        while (frameTimer >= frameDuration)
+        {
+            frameTimer -= frameDuration;
+            frameIndex = (frameIndex + 1) % frames.Length;
+        }
+
+        var index = Mathf.Clamp(frameIndex, 0, frames.Length - 1);
+        if (frames[index] != null)
+        {
+            beam.sprite = frames[index];
+        }
+    }
+
+    private SpriteRenderer EnsureBeamBar(ref SpriteRenderer renderer, string objectName, int sortingOrder)
+    {
+        if (renderer != null)
+        {
+            return renderer;
+        }
+
+        var barObject = new GameObject(objectName);
+        renderer = barObject.AddComponent<SpriteRenderer>();
+        renderer.sprite = PrototypeSprite.WhiteSquare;
+        renderer.sortingOrder = sortingOrder;
+        return renderer;
+    }
+
+    private static void PlaceBeamBar(SpriteRenderer renderer, Vector2 origin, Vector2 aim, float length, float width)
+    {
+        var sprite = renderer.sprite;
+        var size = sprite != null ? sprite.bounds.size : Vector3.one;
+        var scaleX = length / Mathf.Max(0.01f, size.x);
+        var scaleY = width / Mathf.Max(0.01f, size.y);
+        renderer.transform.localScale = new Vector3(scaleX, scaleY, 1f);
+        var angle = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
+        renderer.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        var center = sprite != null ? (Vector2)sprite.bounds.center : Vector2.zero;
+        var midpoint = origin + aim * (length * 0.5f);
+        var pivotShift = (Vector2)(renderer.transform.rotation * new Vector3(center.x * scaleX, center.y * scaleY, 0f));
+        renderer.transform.position = midpoint - pivotShift;
+        renderer.enabled = length > 0.01f;
+    }
+
+    private void HideBeamWarning()
+    {
+        DestroyBar(ref _beamWarning);
+        DestroyBar(ref _beamFill);
+    }
+
+    /// <summary>
+    /// 예고와 빔을 끄고 시전 상태를 비운다.
+    /// </summary>
+    private void HideBeamVisuals()
+    {
+        HideBeamWarning();
+        DestroyBar(ref _beam);
+        _beamPhase = BeamPhase.None;
+    }
+
+    private static void DestroyBar(ref SpriteRenderer renderer)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        Destroy(renderer.gameObject);
+        renderer = null;
+    }
+
+    private void SetShootView(Vector2 lookDirection)
+    {
+        if (_view == null)
+        {
+            return;
+        }
+
+        _view.SetBeamShoot(lookDirection);
+    }
+
     private bool TickChargeDash(Vector2 playerPosition)
     {
         if (_chargePhase == ChargeDashPhase.None)
@@ -1182,7 +1520,7 @@ public class Enemy : MonoBehaviour
 
     private bool TryLungeHit(Vector2 playerPosition)
     {
-        if (_lungeHit || Vector2.Distance(transform.position, playerPosition) > ContactReach)
+        if (_lungeHit || !IsBodyTouching(playerPosition))
         {
             return true;
         }
@@ -1447,7 +1785,8 @@ public class Enemy : MonoBehaviour
             || skill == BossSkillKind.Lunge
             || skill == BossSkillKind.NidokingLunge
             || skill == BossSkillKind.CircleVolley
-            || skill == BossSkillKind.FanVolley;
+            || skill == BossSkillKind.FanVolley
+            || skill == BossSkillKind.TrackingBeam;
     }
 
     private static float ResolveSkillCooldown(BossSkillKind skill, float attackInterval, float skillCooldown)
@@ -1663,7 +2002,7 @@ public class Enemy : MonoBehaviour
 
     private bool TryContactDamage(Vector2 playerPosition, float damage)
     {
-        if (Vector2.Distance(transform.position, playerPosition) > ContactReach)
+        if (!IsBodyTouching(playerPosition))
         {
             return true;
         }
@@ -1714,6 +2053,19 @@ public class Enemy : MonoBehaviour
         _shootPoseUntil = Time.time + SHOOT_POSE_SECONDS;
         _owner.LaunchProjectile(_playerId, origin, toPlayer, _projectileSpeed, _attackRange, _contactDamage, _hitRadius, _attackDistance, _projectileSprite);
         return true;
+    }
+
+    /// <summary>
+    /// 그림의 가로세로 안에 있을 때만 접촉으로 본다. 피벗에서 그린 원은 몸 아래 빈 칸까지 맞는다.
+    /// </summary>
+    private bool IsBodyTouching(Vector2 playerPosition)
+    {
+        if (_view != null && _view.HasBodyBounds)
+        {
+            return _view.ContainsBody(playerPosition);
+        }
+
+        return Vector2.Distance(transform.position, playerPosition) <= ContactReach;
     }
 
     /// <summary>

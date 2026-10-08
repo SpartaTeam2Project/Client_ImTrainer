@@ -60,6 +60,11 @@ public class BossEncounterEditor : Editor
                 DrawFanProjectileFrames(party, i);
             }
 
+            if (skill == BossSkillKind.TrackingBeam)
+            {
+                DrawBeamFrames(party, i);
+            }
+
             DrawStatsForSkill(stats.GetArrayElementAtIndex(i), skill);
             EditorGUILayout.Space();
         }
@@ -113,6 +118,46 @@ public class BossEncounterEditor : Editor
         if (flyFrames != null)
         {
             EditorGUILayout.PropertyField(flyFrames, new GUIContent("발사 탄"), true);
+        }
+    }
+
+    private static void DrawBeamFrames(SerializedProperty party, int index)
+    {
+        var member = party.GetArrayElementAtIndex(index);
+        var frames = member.FindPropertyRelative("_beamFrames");
+        if (frames == null)
+        {
+            return;
+        }
+
+        EditorGUILayout.PropertyField(frames, new GUIContent("빔 그림"), true);
+        DrawMouthOffsets(member.FindPropertyRelative("_beamMouthOffsets"));
+    }
+
+    private static void DrawMouthOffsets(SerializedProperty mouths)
+    {
+        if (mouths == null)
+        {
+            return;
+        }
+
+        if (mouths.arraySize != BossPartyMember.MOUTH_SECTOR_COUNT)
+        {
+            mouths.arraySize = BossPartyMember.MOUTH_SECTOR_COUNT;
+            for (var i = 0; i < BossPartyMember.MOUTH_SECTOR_COUNT; i++)
+            {
+                mouths.GetArrayElementAtIndex(i).vector2Value = BossPartyMember.MouthOffset(null, i);
+            }
+        }
+
+        var labels = new[]
+        {
+            "입 오른쪽", "입 오른쪽 위", "입 위", "입 왼쪽 위",
+            "입 왼쪽", "입 왼쪽 아래", "입 아래", "입 오른쪽 아래",
+        };
+        for (var i = 0; i < labels.Length; i++)
+        {
+            EditorGUILayout.PropertyField(mouths.GetArrayElementAtIndex(i), new GUIContent(labels[i]));
         }
     }
 
@@ -177,6 +222,19 @@ public class BossEncounterEditor : Editor
             DrawRelative(stats, "_fanCount", "투사체 수");
             DrawRelative(stats, "_fanDistance", "투사체 날아가는 거리");
             DrawRelative(stats, "_attackDistance", "탄 크기");
+            return;
+        }
+
+        if (skill == BossSkillKind.TrackingBeam)
+        {
+            DrawRelative(stats, "_skillCooldown", "스킬 쿨타임");
+            DrawRelative(stats, "_beamCastRange", "시전 범위");
+            DrawRelative(stats, "_beamWidth", "스킬 너비");
+            DrawRelative(stats, "_beamLength", "스킬 길이");
+            DrawRelative(stats, "_chargeSeconds", "차지 시간");
+            DrawRelative(stats, "_beamSeconds", "빔 쏘는 시간");
+            DrawRelative(stats, "_beamHitInterval", "빔 다단 히트 시간");
+            DrawRelative(stats, "_beamTurnSpeed", "방향 전환 속도");
             return;
         }
 

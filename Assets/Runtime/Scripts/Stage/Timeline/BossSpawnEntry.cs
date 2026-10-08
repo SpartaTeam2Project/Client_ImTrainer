@@ -21,7 +21,9 @@ public enum BossSkillKind
     [InspectorName("니드킹 몸통박치기")]
     NidokingLunge = 6,
     [InspectorName("부채꼴 사격")]
-    FanVolley = 7
+    FanVolley = 7,
+    [InspectorName("추적 빔")]
+    TrackingBeam = 8
 }
 
 /// <summary>
@@ -45,6 +47,9 @@ public class BossSpawnEntry
     [SerializeField] private Sprite _projectileSprite;
     [SerializeField] private Sprite[] _chargeProjectileFrames = Array.Empty<Sprite>();
     [SerializeField] private Sprite[] _flyProjectileFrames = Array.Empty<Sprite>();
+    [Tooltip("빔 그림. 쏘는 동안 반복한다. 비어 있으면 단색 직선을 쓴다.")]
+    [SerializeField] private Sprite[] _beamFrames = Array.Empty<Sprite>();
+    [SerializeField] private Vector2[] _beamMouthOffsets = Array.Empty<Vector2>();
     [SerializeField, Min(0.5f)] private float _attackRange = 4f;
     [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
     [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
@@ -80,6 +85,18 @@ public class BossSpawnEntry
     [SerializeField, Min(1)] private int _fanCount = 5;
     [Tooltip("투사체가 날아가는 거리.")]
     [SerializeField, Min(0.1f)] private float _fanDistance = 8f;
+    [Tooltip("이 거리 안에 플레이어가 있고 쿨타임이 끝났을 때만 추적 빔을 쏜다.")]
+    [SerializeField, Min(0.1f)] private float _beamCastRange = 6f;
+    [Tooltip("직선 빔과 빨간 예고의 너비.")]
+    [SerializeField, Min(0.05f)] private float _beamWidth = 0.8f;
+    [Tooltip("직선 빔과 빨간 예고의 길이.")]
+    [SerializeField, Min(0.1f)] private float _beamLength = 8f;
+    [Tooltip("빔을 쏘고 있는 시간.")]
+    [SerializeField, Min(0.05f)] private float _beamSeconds = 2.5f;
+    [Tooltip("빔 안에서 스킬 피해가 다시 들어가는 간격.")]
+    [SerializeField, Min(0.05f)] private float _beamHitInterval = 0.25f;
+    [Tooltip("빔을 쏘는 동안 플레이어 쪽으로 도는 속도. 도/초.")]
+    [SerializeField, Min(0f)] private float _beamTurnSpeed = 45f;
 
     public MonsterVisualData Monster => _monster;
 
@@ -118,6 +135,8 @@ public class BossSpawnEntry
         _projectileSprite = party.ProjectileSprite != null ? party.ProjectileSprite : source._projectileSprite;
         _chargeProjectileFrames = party.ChargeProjectileFrames;
         _flyProjectileFrames = party.FlyProjectileFrames;
+        _beamFrames = party.BeamFrames;
+        _beamMouthOffsets = party.BeamMouthOffsets;
         _attackRange = source._attackRange;
         _attackInterval = source._attackInterval;
         _projectileSpeed = source._projectileSpeed;
@@ -140,6 +159,12 @@ public class BossSpawnEntry
         _fanCastRange = source._fanCastRange;
         _fanCount = source._fanCount;
         _fanDistance = source._fanDistance;
+        _beamCastRange = source._beamCastRange;
+        _beamWidth = source._beamWidth;
+        _beamLength = source._beamLength;
+        _beamSeconds = source._beamSeconds;
+        _beamHitInterval = source._beamHitInterval;
+        _beamTurnSpeed = source._beamTurnSpeed;
     }
 
     /// <summary>
@@ -161,6 +186,8 @@ public class BossSpawnEntry
             ProjectileSprite = _projectileSprite,
             ChargeProjectileFrames = _chargeProjectileFrames,
             FlyProjectileFrames = _flyProjectileFrames,
+            BeamFrames = _beamFrames,
+            BeamMouthOffsets = _beamMouthOffsets,
             AttackRange = _attackRange,
             AttackInterval = _attackInterval,
             ProjectileSpeed = _projectileSpeed,
@@ -181,6 +208,12 @@ public class BossSpawnEntry
             FanCastRange = _fanCastRange,
             FanCount = _fanCount,
             FanDistance = _fanDistance,
+            BeamCastRange = _beamCastRange,
+            BeamWidth = _beamWidth,
+            BeamLength = _beamLength,
+            BeamSeconds = _beamSeconds,
+            BeamHitInterval = _beamHitInterval,
+            BeamTurnSpeed = _beamTurnSpeed,
             OverrideScale = true,
             Scale = _scale > 0f ? _scale : MonsterVisualData.DEFAULT_SCALE,
             DisableOffscreenTeleport = true
@@ -245,6 +278,12 @@ public class BossSpawnEntry
         _fanCastRange = stats.FanCastRange;
         _fanCount = stats.FanCount;
         _fanDistance = stats.FanDistance;
+        _beamCastRange = stats.BeamCastRange;
+        _beamWidth = stats.BeamWidth;
+        _beamLength = stats.BeamLength;
+        _beamSeconds = stats.BeamSeconds;
+        _beamHitInterval = stats.BeamHitInterval;
+        _beamTurnSpeed = stats.BeamTurnSpeed;
     }
 }
 
@@ -297,6 +336,18 @@ public class BossFightStats
     [SerializeField, Min(1)] private int _fanCount = 5;
     [Tooltip("투사체가 날아가는 거리.")]
     [SerializeField, Min(0.1f)] private float _fanDistance = 8f;
+    [Tooltip("이 거리 안에 플레이어가 있고 쿨타임이 끝났을 때만 추적 빔을 쏜다.")]
+    [SerializeField, Min(0.1f)] private float _beamCastRange = 6f;
+    [Tooltip("직선 빔과 빨간 예고의 너비.")]
+    [SerializeField, Min(0.05f)] private float _beamWidth = 0.8f;
+    [Tooltip("직선 빔과 빨간 예고의 길이.")]
+    [SerializeField, Min(0.1f)] private float _beamLength = 8f;
+    [Tooltip("빔을 쏘고 있는 시간.")]
+    [SerializeField, Min(0.05f)] private float _beamSeconds = 2.5f;
+    [Tooltip("빔 안에서 스킬 피해가 다시 들어가는 간격.")]
+    [SerializeField, Min(0.05f)] private float _beamHitInterval = 0.25f;
+    [Tooltip("빔을 쏘는 동안 플레이어 쪽으로 도는 속도. 도/초.")]
+    [SerializeField, Min(0f)] private float _beamTurnSpeed = 45f;
 
     public BossFightStats()
     {
@@ -386,4 +437,16 @@ public class BossFightStats
     public int FanCount => _fanCount > 0 ? _fanCount : 5;
 
     public float FanDistance => _fanDistance > 0f ? _fanDistance : 8f;
+
+    public float BeamCastRange => _beamCastRange > 0f ? _beamCastRange : 6f;
+
+    public float BeamWidth => _beamWidth > 0f ? _beamWidth : 0.8f;
+
+    public float BeamLength => _beamLength > 0f ? _beamLength : 8f;
+
+    public float BeamSeconds => _beamSeconds > 0f ? _beamSeconds : 2.5f;
+
+    public float BeamHitInterval => _beamHitInterval > 0f ? _beamHitInterval : 0.25f;
+
+    public float BeamTurnSpeed => Mathf.Max(0f, _beamTurnSpeed);
 }

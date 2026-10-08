@@ -102,6 +102,10 @@ public class BossPartyMember
     [SerializeField] private Sprite[] _chargeProjectileFrames = System.Array.Empty<Sprite>();
     [Tooltip("발사 후 회오리. 날아가는 동안 반복한다.")]
     [SerializeField] private Sprite[] _flyProjectileFrames = System.Array.Empty<Sprite>();
+    [Tooltip("추적 빔 그림. 쏘는 동안 반복한다. 비어 있으면 단색 직선을 쓴다.")]
+    [SerializeField] private Sprite[] _beamFrames = System.Array.Empty<Sprite>();
+    [Tooltip("빔이 나가는 입. 그림 중심 기준이고 보스 크기를 곱하기 전 값이다. 순서: 오른쪽, 오른쪽 위, 위, 왼쪽 위, 왼쪽, 왼쪽 아래, 아래, 오른쪽 아래.")]
+    [SerializeField] private Vector2[] _beamMouthOffsets = new Vector2[0];
 
     public MonsterVisualData Monster => _monster;
 
@@ -112,4 +116,41 @@ public class BossPartyMember
     public Sprite[] ChargeProjectileFrames => _chargeProjectileFrames ?? System.Array.Empty<Sprite>();
 
     public Sprite[] FlyProjectileFrames => _flyProjectileFrames ?? System.Array.Empty<Sprite>();
+
+    public Sprite[] BeamFrames => _beamFrames ?? System.Array.Empty<Sprite>();
+
+    public Vector2[] BeamMouthOffsets => _beamMouthOffsets;
+
+    public const int MOUTH_SECTOR_COUNT = 8;
+
+    private static readonly Vector2[] DEFAULT_MOUTH_OFFSETS =
+    {
+        new Vector2(0.39f, 0.27f),
+        new Vector2(0.31f, 0.5f),
+        new Vector2(-0.01f, 0.52f),
+        new Vector2(-0.32f, 0.5f),
+        new Vector2(-0.4f, 0.27f),
+        new Vector2(-0.34f, -0.01f),
+        new Vector2(-0.01f, 0.03f),
+        new Vector2(0.33f, -0.01f),
+    };
+
+    /// <summary>
+    /// 방향 칸의 입 좌표. 비어 있으면 갸라도스 슛 그림에서 잰 기본값이다.
+    /// </summary>
+    public static Vector2 MouthOffset(Vector2[] offsets, int sector)
+    {
+        var index = sector % MOUTH_SECTOR_COUNT;
+        if (index < 0)
+        {
+            index += MOUTH_SECTOR_COUNT;
+        }
+
+        if (offsets != null && index < offsets.Length)
+        {
+            return offsets[index];
+        }
+
+        return DEFAULT_MOUTH_OFFSETS[index];
+    }
 }

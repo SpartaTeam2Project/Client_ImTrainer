@@ -573,7 +573,15 @@ public class EnemyManager : BaseManager
             profile.FanCount,
             profile.FanDistance,
             profile.ChargeProjectileFrames,
-            profile.FlyProjectileFrames);
+            profile.FlyProjectileFrames,
+            profile.BeamCastRange,
+            profile.BeamWidth,
+            profile.BeamLength,
+            profile.BeamSeconds,
+            profile.BeamHitInterval,
+            profile.BeamTurnSpeed,
+            profile.BeamFrames,
+            profile.BeamMouthOffsets);
         enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
         enemy.SetDropGem(onDied != null ? _bossExperienceGem : null);
         if (onDied != null)

@@ -13,6 +13,7 @@ public class EnemyView : MonoBehaviour
     private const float HURT_HOLD_SECONDS = 0.45f;
     private const float HURT_SHORT_LIMIT_SECONDS = 1f;
     private const float HURT_MIN_SECONDS = 1.4f;
+    private const int SHOOT_TAIL_FRAME_COUNT = 6;
     private const float FLIP_X_EPSILON = 0.0001f;
     private const float SECTOR_DEGREES = 45f;
     private const float SECTOR_HALF_DEGREES = 22.5f;
@@ -53,6 +54,7 @@ public class EnemyView : MonoBehaviour
     private MonsterAnimationSet _animations;
     private bool _isMoving;
     private bool _isShooting;
+    private bool _shootLoopsTail;
     private bool _holdLastFrame;
     private bool _isAttacking;
     private bool _isStriking;
@@ -62,6 +64,7 @@ public class EnemyView : MonoBehaviour
     private bool _useIdleMove;
     private bool _isCharging;
     private bool _hasVisual;
+    private EightDirectionFrames _namedSkill;
     private bool _facesLeft;
     private EightWay _eightWay = EightWay.Right;
     private int _frameIndex;
@@ -69,6 +72,7 @@ public class EnemyView : MonoBehaviour
     private int _hurtPlayId;
     private bool _hurtPlaying;
     private CircleCollider2D _hitCollider;
+    private Vector2 _bodyExtents;
     private Material _defaultMaterial;
 
     #region Unity Methods
@@ -104,6 +108,26 @@ public class EnemyView : MonoBehaviour
     #region Public Methods
 
     /// <summary>
+    /// 그림에 맞춘 몸통 안에 있는지. 원이 아니라 몸 가로세로로 봐서 빈 아래쪽이 맞지 않는다.
+    /// </summary>
+    public bool ContainsBody(Vector2 worldPosition)
+    {
+        if (_hitCollider == null || _bodyExtents.x <= 0f || _bodyExtents.y <= 0f)
+        {
+            return false;
+        }
+
+        var local = (Vector2)transform.InverseTransformPoint(worldPosition);
+        var delta = local - _hitCollider.offset;
+        return Mathf.Abs(delta.x) <= _bodyExtents.x && Mathf.Abs(delta.y) <= _bodyExtents.y;
+    }
+
+    /// <summary>
+    /// 몸통 판정을 쓸 수 있으면 true.
+    /// </summary>
+    public bool HasBodyBounds => _hitCollider != null && _bodyExtents.x > 0f && _bodyExtents.y > 0f;
+
+    /// <summary>
     /// 이번 스폰에 쓸 그림 에셋을 넣는다. 8방향은 이 에셋만 재생한다.
     /// </summary>
     public void ApplyVisual(MonsterVisualData visual)
@@ -111,6 +135,7 @@ public class EnemyView : MonoBehaviour
         CancelHurt();
         _visual = visual;
         _animations = MonsterAnimationLoader.Get(visual);
+        _namedSkill = null;
         ApplyBodyMaterial(visual);
         _frameIndex = 0;
         _frameTimer = 0f;
@@ -196,6 +221,11 @@ public class EnemyView : MonoBehaviour
         _isStriking = striking;
         _isPosing = posing;
 
+        if (!_isShooting)
+        {
+            _shootLoopsTail = false;
+        }
+
         if (motionChanged && !strikeContinues && !poseContinues)
         {
             _frameIndex = 0;
@@ -207,9 +237,44 @@ public class EnemyView : MonoBehaviour
             WrapFrameIndex();
         }
 
+        if (_isShooting && _shootLoopsTail && motionChanged)
+        {
+            var frames = CurrentFrames();
+            if (HasFrames(frames))
+            {
+                _frameIndex = ShootTailStart(frames.Length);
+            }
+        }
+
         AdvanceFrames();
         ApplyCurrentSprite();
         ApplyFlip();
+    }
+
+    /// <summary>
+    /// 빔 사격. 방향마다 끝에서 여섯 장만 바로 반복한다.
+    /// </summary>
+    public void SetBeamShoot(Vector2 lookDirection)
+    {
+        _shootLoopsTail = true;
+        SetVisual(false, lookDirection, true);
+    }
+
+    /// <summary>
+    /// 차지 중 재생할 특수 기술 이름. 비우면 차지 칸을 쓴다.
+    /// </summary>
+    public void SetNamedSkill(string skillName)
+    {
+        _namedSkill = null;
+        if (string.IsNullOrEmpty(skillName) || _animations == null)
+        {
+            return;
+        }
+
+        if (_animations.TryGetSkill(skillName, out var frames))
+        {
+            _namedSkill = frames;
+        }
     }
 
     #endregion
@@ -265,7 +330,23 @@ public class EnemyView : MonoBehaviour
             return;
         }
 
+        if (_shootLoopsTail)
+        {
+            var tailStart = ShootTailStart(frames.Length);
+            if (_frameIndex < tailStart || _frameIndex >= frames.Length)
+            {
+                _frameIndex = tailStart;
+            }
+
+            return;
+        }
+
         _frameIndex %= frames.Length;
+    }
+
+    private static int ShootTailStart(int frameCount)
+    {
+        return Mathf.Max(0, frameCount - SHOOT_TAIL_FRAME_COUNT);
     }
 
     private void UpdateFacing(Vector2 lookDirection)
@@ -325,7 +406,15 @@ public class EnemyView : MonoBehaviour
                 break;
             }
 
-            _frameIndex = (_frameIndex + 1) % frames.Length;
+            _frameIndex++;
+            if (_isShooting && _shootLoopsTail && _frameIndex >= frames.Length)
+            {
+                _frameIndex = ShootTailStart(frames.Length);
+            }
+            else
+            {
+                _frameIndex %= frames.Length;
+            }
         }
     }
 
@@ -379,21 +468,28 @@ public class EnemyView : MonoBehaviour
 
         var bounds = BodyBounds(sprite);
         _hitCollider.offset = bounds.center;
+        _bodyExtents = bounds.extents;
         _hitCollider.radius = Mathf.Max(bounds.extents.x, bounds.extents.y);
     }
 
-    // 칸 크기 격자로 자른 시트는 sprite.bounds가 빈 여백까지 포함한 칸 전체다.
-    // Tight 메시가 잘라 낸 그림 영역(textureRect)으로 몸 크기를 잰다. 아틀라스에 Tight로 묶이면 textureRect를 못 써서 bounds를 쓴다.
+    // 격자 칸의 textureRect는 빈 여백까지 포함한다. 타이트 메시가 더 작으면 그림에 맞춘다.
     private static Bounds BodyBounds(Sprite sprite)
     {
-        if (sprite.packed && sprite.packingMode == SpritePackingMode.Tight)
-        {
-            return sprite.bounds;
-        }
-
+        var mesh = sprite.bounds;
         var size = sprite.textureRect.size;
         var center = sprite.textureRectOffset + size * 0.5f - sprite.pivot;
-        return new Bounds(center / sprite.pixelsPerUnit, size / sprite.pixelsPerUnit);
+        var cell = new Bounds(center / sprite.pixelsPerUnit, size / sprite.pixelsPerUnit);
+        if (mesh.size.x <= 0.001f || mesh.size.y <= 0.001f)
+        {
+            return cell;
+        }
+
+        if (mesh.size.x <= cell.size.x + 0.001f && mesh.size.y <= cell.size.y + 0.001f)
+        {
+            return mesh;
+        }
+
+        return cell;
     }
 
     private static Sprite FindLargestSprite(MonsterAnimationSet visual)
@@ -509,6 +605,12 @@ public class EnemyView : MonoBehaviour
 
         if (_isCharging)
         {
+            var named = GetDirectionFrames(_namedSkill, _eightWay);
+            if (HasFrames(named))
+            {
+                return named;
+            }
+
             var charge = GetDirectionFrames(_animations != null ? _animations.Charge : null, _eightWay);
             if (HasFrames(charge))
             {
