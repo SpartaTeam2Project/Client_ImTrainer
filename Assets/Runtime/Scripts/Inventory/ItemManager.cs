@@ -473,7 +473,7 @@ public class ItemManager : BaseManager
         }
 
         Refund(playerId, item.currencyId, GetSellPrice(item) * number);
-        LastMessage = "판매했습니다.";
+        LastMessage = SellMessage.Get(item.name);
         FinishBag(playerId);
         return true;
     }
@@ -508,7 +508,7 @@ public class ItemManager : BaseManager
 
         run.Equipment.ClearSlot(slot);
         Refund(playerId, item.currencyId, GetSellPrice(item));
-        LastMessage = "판매했습니다.";
+        LastMessage = SellMessage.Get(item.name);
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;

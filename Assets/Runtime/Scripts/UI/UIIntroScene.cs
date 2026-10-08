@@ -362,7 +362,7 @@ public class UIIntroScene : MonoBehaviour
         _phase = IntroPhase.Answer;
         _pendingStarter = starterIndex;
         _choiceIndex = ANSWER_YES;
-        SetDialogue(string.Format(STARTER_CONFIRM_PROMPT, visual.MonsterName, ObjectParticle(visual.MonsterName)));
+        SetDialogue(string.Format(STARTER_CONFIRM_PROMPT, visual.MonsterName, KoreanParticle.Object(visual.MonsterName)));
         SetChoiceVisible(false, true, true);
         ApplyHighlight(_starterImages, _pendingStarter);
         ApplyAnswerSelect();
@@ -801,23 +801,6 @@ public class UIIntroScene : MonoBehaviour
         }
 
         return line.Replace(PLAYER_NAME_TOKEN, string.Empty);
-    }
-
-    // 이름 끝 글자에 받침이 있으면 "을", 없으면 "를"을 붙인다.
-    private static string ObjectParticle(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-        {
-            return "를";
-        }
-
-        var last = name[name.Length - 1];
-        if (last < '가' || last > '힣')
-        {
-            return "를";
-        }
-
-        return (last - '가') % 28 != 0 ? "을" : "를";
     }
 
     private bool TryConsumeSubmit()
