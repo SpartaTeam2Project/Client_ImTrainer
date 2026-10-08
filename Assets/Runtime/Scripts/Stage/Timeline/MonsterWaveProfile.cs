@@ -25,6 +25,10 @@ public sealed class MonsterWaveProfile
 
     public Sprite ProjectileSprite { get; set; }
 
+    public Sprite[] ChargeProjectileFrames { get; set; }
+
+    public Sprite[] FlyProjectileFrames { get; set; }
+
     public float AttackRange { get; set; }
 
     public float AttackInterval { get; set; }
@@ -58,6 +62,12 @@ public sealed class MonsterWaveProfile
     public float CircleRange { get; set; }
 
     public float CircleGapSeconds { get; set; }
+
+    public float FanCastRange { get; set; }
+
+    public int FanCount { get; set; }
+
+    public float FanDistance { get; set; }
 
     public bool OverrideScale { get; set; }
 

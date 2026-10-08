@@ -354,6 +354,22 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
+    /// 부채꼴 사격용 회오리를 꺼낸다. 차지 장과 발사 장을 나눠 재생한다.
+    /// </summary>
+    public EnemyProjectile ArmFanProjectile(int playerId, Vector2 origin, Vector2 hoverPoint, float riseSeconds, float attackDistance, Sprite[] chargeFrames, Sprite[] flyFrames, float swayPhase)
+    {
+        var projectile = GetProjectile();
+        if (projectile == null)
+        {
+            return null;
+        }
+
+        projectile.ApplyFrameClips(chargeFrames, flyFrames);
+        projectile.BeginRise(playerId, origin, hoverPoint, riseSeconds, attackDistance, swayPhase);
+        return projectile;
+    }
+
+    /// <summary>
     /// 적 체력이 0이 되면 목록에서 빼고 처치 수를 올린다.
     /// </summary>
     public void NotifyDied(Enemy enemy)
@@ -552,7 +568,12 @@ public class EnemyManager : BaseManager
             profile.LungeSpeed,
             profile.CircleMoveSpeed,
             profile.CircleRange,
-            profile.CircleGapSeconds);
+            profile.CircleGapSeconds,
+            profile.FanCastRange,
+            profile.FanCount,
+            profile.FanDistance,
+            profile.ChargeProjectileFrames,
+            profile.FlyProjectileFrames);
         enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
         enemy.SetDropGem(onDied != null ? _bossExperienceGem : null);
         if (onDied != null)

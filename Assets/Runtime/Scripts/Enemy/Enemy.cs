@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -19,6 +20,11 @@ public class Enemy : MonoBehaviour
     private const float VOLLEY_RISE_SECONDS = 0.95f;
     private const float VOLLEY_SHOT_GAP = 0.28f;
     private const float VOLLEY_RANGE = 30f;
+    private const float FAN_ARC_DEGREES = 90f;
+    private const float FAN_HOVER_RADIUS = 1.2f;
+    private const float DEFAULT_FAN_CAST_RANGE = 4f;
+    private const int DEFAULT_FAN_COUNT = 5;
+    private const float DEFAULT_FAN_DISTANCE = 8f;
     private const float CHARGE_SECONDS = 0.9f;
     private const float CHARGE_DASH_OVERSHOOT = 1.5f;
     private const int DASH_END_FRAME_COUNT = 3;
@@ -78,6 +84,8 @@ public class Enemy : MonoBehaviour
     private float _attackDistance;
     private float _projectileSpeed;
     private Sprite _projectileSprite;
+    private Sprite[] _chargeProjectileFrames = System.Array.Empty<Sprite>();
+    private Sprite[] _flyProjectileFrames = System.Array.Empty<Sprite>();
     private float _nextShotTime;
     private float _shootPoseUntil;
     private int _waveIndex;
@@ -129,6 +137,15 @@ public class Enemy : MonoBehaviour
     private int _volleyReleased;
     private float _nextVolleyShotTime;
     private readonly EnemyProjectile[] _volley = new EnemyProjectile[VOLLEY_COUNT];
+    private FanPhase _fanPhase;
+    private float _fanCastRange;
+    private int _fanCount;
+    private float _fanDistance;
+    private float _fanChargeStart;
+    private Vector2 _fanAim;
+    private int _fanSpawned;
+    private readonly List<EnemyProjectile> _fanShots = new List<EnemyProjectile>();
+    private readonly List<Vector2> _fanDirections = new List<Vector2>();
     private float _damageTextValue;
     private float _lastTimeDamageText;
     private DamageTextKind _damageTextKind;
@@ -139,6 +156,13 @@ public class Enemy : MonoBehaviour
         None = 0,
         Rising = 1,
         Firing = 2
+    }
+
+    private enum FanPhase
+    {
+        None = 0,
+        Charging = 1,
+        Attacking = 2
     }
 
     private enum SlamPhase
@@ -340,9 +364,15 @@ public class Enemy : MonoBehaviour
         float lungeSpeed = 0f,
         float circleMoveSpeed = 0f,
         float circleRange = 0f,
-        float circleGapSeconds = 0f)
+        float circleGapSeconds = 0f,
+        float fanCastRange = 0f,
+        int fanCount = 0,
+        float fanDistance = 0f,
+        Sprite[] chargeProjectileFrames = null,
+        Sprite[] flyProjectileFrames = null)
     {
         CancelUnfiredVolley();
+        CancelFanShots();
         HideChargeMark();
         HideSlamMark();
         _playerId = playerId;
@@ -360,6 +390,8 @@ public class Enemy : MonoBehaviour
         _attackDistance = Mathf.Max(0.01f, attackDistance);
         _projectileSpeed = projectileSpeed;
         _projectileSprite = projectileSprite;
+        _chargeProjectileFrames = chargeProjectileFrames;
+        _flyProjectileFrames = flyProjectileFrames;
         _skill = skill;
         _volleyPhase = VolleyPhase.None;
         _volleyReleased = 0;
@@ -381,6 +413,11 @@ public class Enemy : MonoBehaviour
         _circleMoveSpeed = circleMoveSpeed > 0f ? circleMoveSpeed : DEFAULT_CIRCLE_MOVE_SPEED;
         _circleRange = circleRange > 0f ? circleRange : DEFAULT_CIRCLE_RANGE;
         _circleGapSeconds = Mathf.Max(0f, circleGapSeconds);
+        _fanPhase = FanPhase.None;
+        _fanCastRange = fanCastRange > 0f ? fanCastRange : DEFAULT_FAN_CAST_RANGE;
+        _fanCount = fanCount > 0 ? fanCount : DEFAULT_FAN_COUNT;
+        _fanDistance = fanDistance > 0f ? fanDistance : DEFAULT_FAN_DISTANCE;
+        _fanSpawned = 0;
         _nextContactTime = 0f;
         _nextShotTime = UsesSkillCooldown(skill) ? Time.time + _skillCooldown : 0f;
         _shootPoseUntil = 0f;
@@ -473,6 +510,11 @@ public class Enemy : MonoBehaviour
             return TickRisingVolley(playerPosition);
         }
 
+        if (_skill == BossSkillKind.FanVolley)
+        {
+            return TickFanVolley(playerPosition);
+        }
+
         if (_attackKind == EnemyAttackKind.Projectile)
         {
             TickProjectile(playerPosition);
@@ -517,6 +559,7 @@ public class Enemy : MonoBehaviour
 
         HideChargeMark();
         HideSlamMark();
+        CancelFanShots();
         if (_owner != null)
         {
             _owner.NotifyDied(this);
@@ -737,6 +780,174 @@ public class Enemy : MonoBehaviour
     {
         _volleyPhase = VolleyPhase.None;
         _nextShotTime = Time.time + _skillCooldown;
+    }
+
+    private bool TickFanVolley(Vector2 playerPosition)
+    {
+        if (_fanPhase == FanPhase.Charging)
+        {
+            TickFanCharge();
+            return TryContactDamage(playerPosition);
+        }
+
+        if (_fanPhase == FanPhase.Attacking)
+        {
+            TickFanAttack();
+            return TryContactDamage(playerPosition);
+        }
+
+        if (Time.time >= _nextShotTime && Vector2.Distance(transform.position, playerPosition) <= _fanCastRange)
+        {
+            BeginFanCharge(playerPosition);
+            return TryContactDamage(playerPosition);
+        }
+
+        MoveToward(playerPosition, Time.deltaTime);
+        return TryContactDamage(playerPosition);
+    }
+
+    private void BeginFanCharge(Vector2 playerPosition)
+    {
+        var toPlayer = playerPosition - (Vector2)transform.position;
+        // 차지 시작 방향을 고정한다. 끝나는 순간까지 부채꼴은 그 앞을 유지한다.
+        _fanAim = toPlayer.sqrMagnitude > MOVE_SQR_EPSILON ? toPlayer.normalized : Vector2.right;
+        _fanPhase = FanPhase.Charging;
+        _fanChargeStart = Time.time;
+        _chargeUntil = Time.time + _chargeSeconds;
+        _fanSpawned = 0;
+        _fanShots.Clear();
+        _fanDirections.Clear();
+        SetChargeView(_fanAim);
+    }
+
+    private void TickFanCharge()
+    {
+        SetChargeView(_fanAim);
+        var count = Mathf.Max(1, _fanCount);
+        while (_fanSpawned < count && Time.time >= FanSpawnTime(_fanSpawned, count))
+        {
+            ArmFanShot(_fanSpawned, count);
+            _fanSpawned++;
+        }
+
+        if (Time.time < _chargeUntil)
+        {
+            return;
+        }
+
+        BeginFanRelease();
+    }
+
+    private float FanSpawnTime(int index, int count)
+    {
+        return _fanChargeStart + _chargeSeconds * (index + 1) / (count + 1f);
+    }
+
+    private static bool HasFrames(Sprite[] frames)
+    {
+        return frames != null && frames.Length > 0;
+    }
+
+    private void ArmFanShot(int index, int count)
+    {
+        var direction = FanDirection(index, count);
+        _fanDirections.Add(direction);
+        if (_owner == null)
+        {
+            _fanShots.Add(null);
+            return;
+        }
+
+        // 몸에서 떠오르지 않고, 조준 방향 앞에 바로 둔다.
+        var hover = (Vector2)transform.position + direction * FAN_HOVER_RADIUS;
+        var shot = HasFrames(_chargeProjectileFrames) || HasFrames(_flyProjectileFrames)
+            ? _owner.ArmFanProjectile(
+                _playerId,
+                hover,
+                hover,
+                0f,
+                _attackDistance,
+                _chargeProjectileFrames,
+                _flyProjectileFrames,
+                index + 1f)
+            : _owner.ArmRisingProjectile(
+                _playerId,
+                hover,
+                hover,
+                0f,
+                _attackDistance,
+                _projectileSprite,
+                index + 1f);
+        _fanShots.Add(shot);
+    }
+
+    private Vector2 FanDirection(int index, int count)
+    {
+        var offset = count <= 1
+            ? 0f
+            : Mathf.Lerp(-FAN_ARC_DEGREES * 0.5f, FAN_ARC_DEGREES * 0.5f, index / (float)(count - 1));
+        var radians = offset * Mathf.Deg2Rad;
+        var cos = Mathf.Cos(radians);
+        var sin = Mathf.Sin(radians);
+        return new Vector2(
+            _fanAim.x * cos - _fanAim.y * sin,
+            _fanAim.x * sin + _fanAim.y * cos);
+    }
+
+    private void BeginFanRelease()
+    {
+        for (var i = 0; i < _fanShots.Count; i++)
+        {
+            var shot = _fanShots[i];
+            if (shot == null)
+            {
+                continue;
+            }
+
+            var direction = i < _fanDirections.Count ? _fanDirections[i] : _fanAim;
+            shot.Release(direction, _projectileSpeed, _fanDistance, _skillDamage, _hitRadius);
+        }
+
+        _fanShots.Clear();
+        _fanDirections.Clear();
+        _fanPhase = FanPhase.Attacking;
+        if (_view != null)
+        {
+            _view.PlayAttackLunge(_fanAim, false);
+        }
+    }
+
+    private void TickFanAttack()
+    {
+        if (_view != null)
+        {
+            // 장은 SetVisual이 불릴 때만 넘어간다. 한 번만 부르면 공격 그림에서 멈춘다.
+            _view.PlayAttackLunge(_fanAim, false);
+            if (!_view.IsStrikeFinished)
+            {
+                return;
+            }
+        }
+
+        _fanPhase = FanPhase.None;
+        _nextShotTime = Time.time + _skillCooldown;
+    }
+
+    private void CancelFanShots()
+    {
+        for (var i = 0; i < _fanShots.Count; i++)
+        {
+            var shot = _fanShots[i];
+            if (shot != null)
+            {
+                shot.CancelIfUnfired();
+            }
+        }
+
+        _fanShots.Clear();
+        _fanDirections.Clear();
+        _fanPhase = FanPhase.None;
+        _fanSpawned = 0;
     }
 
     private bool TickChargeDash(Vector2 playerPosition)
@@ -1235,7 +1446,8 @@ public class Enemy : MonoBehaviour
             || skill == BossSkillKind.Slam
             || skill == BossSkillKind.Lunge
             || skill == BossSkillKind.NidokingLunge
-            || skill == BossSkillKind.CircleVolley;
+            || skill == BossSkillKind.CircleVolley
+            || skill == BossSkillKind.FanVolley;
     }
 
     private static float ResolveSkillCooldown(BossSkillKind skill, float attackInterval, float skillCooldown)

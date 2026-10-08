@@ -98,10 +98,18 @@ public class BossPartyMember
     [SerializeField] private BossSkillData _skill;
     [Tooltip("보스 스킬 탄 그림. 비어 있으면 타임라인 클립의 탄을 쓴다.")]
     [SerializeField] private Sprite _projectileSprite;
+    [Tooltip("차지 중 회오리. 작은 장부터 큰 장까지 한 번 재생한다.")]
+    [SerializeField] private Sprite[] _chargeProjectileFrames = System.Array.Empty<Sprite>();
+    [Tooltip("발사 후 회오리. 날아가는 동안 반복한다.")]
+    [SerializeField] private Sprite[] _flyProjectileFrames = System.Array.Empty<Sprite>();
 
     public MonsterVisualData Monster => _monster;
 
     public BossSkillKind Skill => _skill != null ? _skill.Kind : BossSkillKind.None;
 
     public Sprite ProjectileSprite => _projectileSprite;
+
+    public Sprite[] ChargeProjectileFrames => _chargeProjectileFrames ?? System.Array.Empty<Sprite>();
+
+    public Sprite[] FlyProjectileFrames => _flyProjectileFrames ?? System.Array.Empty<Sprite>();
 }

@@ -55,6 +55,11 @@ public class BossEncounterEditor : Editor
                 DrawProjectile(party, i);
             }
 
+            if (skill == BossSkillKind.FanVolley)
+            {
+                DrawFanProjectileFrames(party, i);
+            }
+
             DrawStatsForSkill(stats.GetArrayElementAtIndex(i), skill);
             EditorGUILayout.Space();
         }
@@ -93,6 +98,22 @@ public class BossEncounterEditor : Editor
         }
 
         EditorGUILayout.PropertyField(sprite, new GUIContent("탄 그림"));
+    }
+
+    private static void DrawFanProjectileFrames(SerializedProperty party, int index)
+    {
+        var member = party.GetArrayElementAtIndex(index);
+        var chargeFrames = member.FindPropertyRelative("_chargeProjectileFrames");
+        var flyFrames = member.FindPropertyRelative("_flyProjectileFrames");
+        if (chargeFrames != null)
+        {
+            EditorGUILayout.PropertyField(chargeFrames, new GUIContent("차지 탄"), true);
+        }
+
+        if (flyFrames != null)
+        {
+            EditorGUILayout.PropertyField(flyFrames, new GUIContent("발사 탄"), true);
+        }
     }
 
     private static void DrawStatsForSkill(SerializedProperty stats, BossSkillKind skill)
@@ -144,6 +165,18 @@ public class BossEncounterEditor : Editor
             DrawRelative(stats, "_circleMoveSpeed", "스킬 이동속도");
             DrawRelative(stats, "_circleRange", "스킬 범위");
             DrawRelative(stats, "_circleGapSeconds", "스킬 공격간 딜레이");
+            return;
+        }
+
+        if (skill == BossSkillKind.FanVolley)
+        {
+            DrawRelative(stats, "_skillCooldown", "스킬 쿨타임");
+            DrawRelative(stats, "_fanCastRange", "스킬 시전 범위");
+            DrawRelative(stats, "_chargeSeconds", "차지 시간");
+            DrawRelative(stats, "_projectileSpeed", "투사체 날아가는 속도");
+            DrawRelative(stats, "_fanCount", "투사체 수");
+            DrawRelative(stats, "_fanDistance", "투사체 날아가는 거리");
+            DrawRelative(stats, "_attackDistance", "탄 크기");
             return;
         }
 

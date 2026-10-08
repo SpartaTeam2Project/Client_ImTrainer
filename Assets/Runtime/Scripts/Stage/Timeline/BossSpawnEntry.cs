@@ -19,7 +19,9 @@ public enum BossSkillKind
     [InspectorName("원형 연타")]
     CircleVolley = 5,
     [InspectorName("니드킹 몸통박치기")]
-    NidokingLunge = 6
+    NidokingLunge = 6,
+    [InspectorName("부채꼴 사격")]
+    FanVolley = 7
 }
 
 /// <summary>
@@ -41,6 +43,8 @@ public class BossSpawnEntry
     [SerializeField, Min(0.05f)] private float _skillCooldown = 4f;
     [Tooltip("보스 스킬 탄 그림. 플레이어 무기 탄과는 따로다.")]
     [SerializeField] private Sprite _projectileSprite;
+    [SerializeField] private Sprite[] _chargeProjectileFrames = Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _flyProjectileFrames = Array.Empty<Sprite>();
     [SerializeField, Min(0.5f)] private float _attackRange = 4f;
     [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
     [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
@@ -70,6 +74,12 @@ public class BossSpawnEntry
     [SerializeField, Min(0.1f)] private float _circleRange = 2.5f;
     [Tooltip("원형 연타의 공격과 공격 사이 걷는 시간.")]
     [SerializeField, Min(0f)] private float _circleGapSeconds = 0.75f;
+    [Tooltip("이 거리 안에 플레이어가 있고 쿨타임이 끝났을 때만 부채꼴 사격을 한다.")]
+    [SerializeField, Min(0.1f)] private float _fanCastRange = 4f;
+    [Tooltip("부채꼴로 날리는 투사체 수.")]
+    [SerializeField, Min(1)] private int _fanCount = 5;
+    [Tooltip("투사체가 날아가는 거리.")]
+    [SerializeField, Min(0.1f)] private float _fanDistance = 8f;
 
     public MonsterVisualData Monster => _monster;
 
@@ -106,6 +116,8 @@ public class BossSpawnEntry
         _skill = party.Skill;
         _skillCooldown = source._skillCooldown;
         _projectileSprite = party.ProjectileSprite != null ? party.ProjectileSprite : source._projectileSprite;
+        _chargeProjectileFrames = party.ChargeProjectileFrames;
+        _flyProjectileFrames = party.FlyProjectileFrames;
         _attackRange = source._attackRange;
         _attackInterval = source._attackInterval;
         _projectileSpeed = source._projectileSpeed;
@@ -125,6 +137,9 @@ public class BossSpawnEntry
         _circleMoveSpeed = source._circleMoveSpeed;
         _circleRange = source._circleRange;
         _circleGapSeconds = source._circleGapSeconds;
+        _fanCastRange = source._fanCastRange;
+        _fanCount = source._fanCount;
+        _fanDistance = source._fanDistance;
     }
 
     /// <summary>
@@ -144,6 +159,8 @@ public class BossSpawnEntry
             Skill = _skill,
             SkillCooldown = _skillCooldown,
             ProjectileSprite = _projectileSprite,
+            ChargeProjectileFrames = _chargeProjectileFrames,
+            FlyProjectileFrames = _flyProjectileFrames,
             AttackRange = _attackRange,
             AttackInterval = _attackInterval,
             ProjectileSpeed = _projectileSpeed,
@@ -161,6 +178,9 @@ public class BossSpawnEntry
             CircleMoveSpeed = _circleMoveSpeed,
             CircleRange = _circleRange,
             CircleGapSeconds = _circleGapSeconds,
+            FanCastRange = _fanCastRange,
+            FanCount = _fanCount,
+            FanDistance = _fanDistance,
             OverrideScale = true,
             Scale = _scale > 0f ? _scale : MonsterVisualData.DEFAULT_SCALE,
             DisableOffscreenTeleport = true
@@ -222,6 +242,9 @@ public class BossSpawnEntry
         _circleMoveSpeed = stats.CircleMoveSpeed;
         _circleRange = stats.CircleRange;
         _circleGapSeconds = stats.CircleGapSeconds;
+        _fanCastRange = stats.FanCastRange;
+        _fanCount = stats.FanCount;
+        _fanDistance = stats.FanDistance;
     }
 }
 
@@ -268,6 +291,12 @@ public class BossFightStats
     [SerializeField, Min(0.1f)] private float _circleRange = 2.5f;
     [Tooltip("원형 연타의 공격과 공격 사이 걷는 시간.")]
     [SerializeField, Min(0f)] private float _circleGapSeconds = 0.75f;
+    [Tooltip("이 거리 안에 플레이어가 있고 쿨타임이 끝났을 때만 부채꼴 사격을 한다.")]
+    [SerializeField, Min(0.1f)] private float _fanCastRange = 4f;
+    [Tooltip("부채꼴로 날리는 투사체 수.")]
+    [SerializeField, Min(1)] private int _fanCount = 5;
+    [Tooltip("투사체가 날아가는 거리.")]
+    [SerializeField, Min(0.1f)] private float _fanDistance = 8f;
 
     public BossFightStats()
     {
@@ -351,4 +380,10 @@ public class BossFightStats
     public float CircleRange => _circleRange > 0f ? _circleRange : 2.5f;
 
     public float CircleGapSeconds => Mathf.Max(0f, _circleGapSeconds);
+
+    public float FanCastRange => _fanCastRange > 0f ? _fanCastRange : 4f;
+
+    public int FanCount => _fanCount > 0 ? _fanCount : 5;
+
+    public float FanDistance => _fanDistance > 0f ? _fanDistance : 8f;
 }
