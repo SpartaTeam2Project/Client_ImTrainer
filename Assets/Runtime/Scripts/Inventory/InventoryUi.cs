@@ -11,6 +11,16 @@ using UnityEngine.UI;
 /// </summary>
 public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 {
+    /// <summary>
+    /// 버튼 그림 한 벌. Normal은 평소, Focus는 마우스를 올리거나 누를 때 그림이다.
+    /// </summary>
+    [System.Serializable]
+    private struct ButtonSkin
+    {
+        public Sprite Normal;
+        public Sprite Focus;
+    }
+
     private enum SelectionKind
     {
         None,
@@ -60,6 +70,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     [SerializeField] private Button _discardButton;
     [SerializeField] private Button _closeButton;
 
+    [Header("Synthesis Pick")]
+    // 키보드로 합성 대상을 고르는 동안 합성 버튼은 확정, 해제 버튼은 취소 그림으로 바뀐다.
+    [SerializeField] private ButtonSkin _confirmSkin;
+    [SerializeField] private ButtonSkin _cancelSkin;
+
     [Header("Drag")]
     [SerializeField] private InventoryDropZone _trashZone;
     [SerializeField] private Vector2 _dragGhostSize = new Vector2(96f, 96f);
@@ -91,6 +106,9 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private TMP_Text _unequipLabel;
     private string _synthesizeText;
     private string _unequipText;
+    private ButtonSkin _synthesizeSkin;
+    private ButtonSkin _unequipSkin;
+    private bool _pickShown;
 
     private void Awake()
     {
@@ -111,6 +129,8 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         _sellPress = PressFlash.ForButton(_sellButton);
         _synthesizeLabel = FindLabel(_synthesizeButton, out _synthesizeText);
         _unequipLabel = FindLabel(_unequipButton, out _unequipText);
+        _synthesizeSkin = ReadSkin(_synthesizeButton);
+        _unequipSkin = ReadSkin(_unequipButton);
         if (_shopUi != null)
         {
             _shopUi.Bind(Refresh, SelectShop, _purchaseDirector);
@@ -413,7 +433,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         RebuildBag(itemManager, playerId);
         _purchaseDirector.Reapply();
         _keyboard.Validate(itemManager.GetInventory(playerId), itemManager.GetEquipment(playerId));
-        RefreshActionLabels();
+        RefreshPickMode();
         ResolveShopSelection(itemManager, playerId);
         if (_shopUi != null)
         {
@@ -1321,13 +1341,53 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     }
 
     /// <summary>
-    /// 키보드로 합성 대상을 고르는 동안에는 합성, 해제 버튼 글자를 확정, 취소로 바꾼다.
+    /// 키보드로 합성 대상을 고르는 동안에는 합성, 해제 버튼을 확정, 취소 글자와 그림으로 바꾸고 장착 버튼을 숨긴다.
+    /// 모드가 바뀔 때만 바꾼다.
     /// </summary>
-    private void RefreshActionLabels()
+    private void RefreshPickMode()
     {
         var picking = _keyboard.Synthesizing;
+        if (picking == _pickShown)
+        {
+            return;
+        }
+
+        _pickShown = picking;
         SetLabel(_synthesizeLabel, picking ? CONFIRM_LABEL : _synthesizeText, picking);
         SetLabel(_unequipLabel, picking ? CANCEL_LABEL : _unequipText, picking);
+        // 단축키로 덮어 둔 눌린 그림이 남으면 새 그림이 늦게 보여서 바로 걷는다.
+        _synthesizePress.ClearSprite();
+        _unequipPress.ClearSprite();
+        ApplySkin(_synthesizeButton, picking ? _confirmSkin : _synthesizeSkin);
+        ApplySkin(_unequipButton, picking ? _cancelSkin : _unequipSkin);
+        if (_equipButton != null)
+        {
+            _equipButton.gameObject.SetActive(!picking);
+        }
+    }
+
+    private static ButtonSkin ReadSkin(Button button)
+    {
+        return button != null && button.image != null
+            ? new ButtonSkin { Normal = button.image.sprite, Focus = button.spriteState.highlightedSprite }
+            : default;
+    }
+
+    /// <summary>
+    /// 버튼 그림과 Sprite Swap의 포커스 그림(Highlighted, Pressed)을 바꾼다. 그림이 비어 있으면 그대로 둔다.
+    /// </summary>
+    private static void ApplySkin(Button button, ButtonSkin skin)
+    {
+        if (button == null || button.image == null || skin.Normal == null)
+        {
+            return;
+        }
+
+        button.image.sprite = skin.Normal;
+        var state = button.spriteState;
+        state.highlightedSprite = skin.Focus;
+        state.pressedSprite = skin.Focus;
+        button.spriteState = state;
     }
 
     private static TMP_Text FindLabel(Button button, out string text)

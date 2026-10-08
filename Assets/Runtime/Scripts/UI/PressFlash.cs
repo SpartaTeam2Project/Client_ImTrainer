@@ -17,27 +17,36 @@ public sealed class PressFlash
 
     private readonly Image _image;
     private readonly Sprite _pressed;
+    // 있으면 누를 때마다 버튼의 지금 Pressed 그림을 읽는다. 버튼 그림이 바뀌어도 따라간다.
+    private readonly Button _button;
     private readonly GameObject _link;
     private readonly float _duration;
     private Tween _tween;
     private Tween _punch;
 
     public PressFlash(Image image, Sprite pressed, GameObject link, float duration = DEFAULT_DURATION)
+        : this(image, pressed, link, null, duration)
+    {
+    }
+
+    private PressFlash(Image image, Sprite pressed, GameObject link, Button button, float duration)
     {
         _image = image;
         _pressed = pressed;
         _link = link;
+        _button = button;
         _duration = duration;
     }
 
     /// <summary>
-    /// 버튼의 Sprite Swap에 넣은 Pressed 그림을 쓴다. 버튼이 없으면 아무것도 하지 않는다.
+    /// 버튼의 Sprite Swap에 넣은 Pressed 그림을 쓴다. 누를 때마다 다시 읽어서 버튼 그림을 바꿔도 따라간다.
+    /// 버튼이 없으면 아무것도 하지 않는다.
     /// </summary>
     public static PressFlash ForButton(Button button, float duration = DEFAULT_DURATION)
     {
         return button != null
-            ? new PressFlash(button.image, button.spriteState.pressedSprite, button.gameObject, duration)
-            : new PressFlash(null, null, null, duration);
+            ? new PressFlash(button.image, null, button.gameObject, button, duration)
+            : new PressFlash(null, null, null, null, duration);
     }
 
     /// <summary>
@@ -46,14 +55,15 @@ public sealed class PressFlash
     public void Play()
     {
         Punch();
-        if (_image == null || _pressed == null)
+        var pressed = _button != null ? _button.spriteState.pressedSprite : _pressed;
+        if (_image == null || pressed == null)
         {
             return;
         }
 
-        StopSprite();
-        _image.overrideSprite = _pressed;
-        _tween = DOVirtual.DelayedCall(_duration, StopSprite, true).SetLink(_link);
+        ClearSprite();
+        _image.overrideSprite = pressed;
+        _tween = DOVirtual.DelayedCall(_duration, ClearSprite, true).SetLink(_link);
     }
 
     /// <summary>
@@ -78,11 +88,14 @@ public sealed class PressFlash
     /// </summary>
     public void Release()
     {
-        StopSprite();
+        ClearSprite();
         StopPunch();
     }
 
-    private void StopSprite()
+    /// <summary>
+    /// 덮은 그림만 바로 걷고 눌리는 연출은 그대로 둔다. 버튼 그림을 바꿀 때 새 그림이 바로 보이게 부른다.
+    /// </summary>
+    public void ClearSprite()
     {
         if (_tween != null)
         {
