@@ -455,6 +455,14 @@ public class ItemManager : BaseManager
     /// </summary>
     public bool TrySell(int playerId, int bagIndex)
     {
+        return TrySell(playerId, bagIndex, true);
+    }
+
+    /// <summary>
+    /// announce가 false면 판매 대사를 보내지 않는다. 디졸브로 파는 쪽은 디졸브를 시작할 때 대사를 먼저 띄운다.
+    /// </summary>
+    public bool TrySell(int playerId, int bagIndex, bool announce)
+    {
         var run = GetRun(playerId);
         if (run == null || !run.TryTakeBag(bagIndex, out var item, out var number))
         {
@@ -463,7 +471,11 @@ public class ItemManager : BaseManager
         }
 
         Refund(playerId, item.currencyId, GetSellPrice(item) * number);
-        Notify(playerId, SellMessage.Get(item.name));
+        if (announce)
+        {
+            Notify(playerId, SellMessage.Get(item.name));
+        }
+
         FinishBag(playerId);
         return true;
     }
@@ -489,6 +501,14 @@ public class ItemManager : BaseManager
     /// </summary>
     public bool TrySellEquipped(int playerId, int slot)
     {
+        return TrySellEquipped(playerId, slot, true);
+    }
+
+    /// <summary>
+    /// announce가 false면 판매 대사를 보내지 않는다. 디졸브로 파는 쪽은 디졸브를 시작할 때 대사를 먼저 띄운다.
+    /// </summary>
+    public bool TrySellEquipped(int playerId, int slot, bool announce)
+    {
         var run = GetRun(playerId);
         if (!TryTakeEquipped(playerId, run, slot, out var item))
         {
@@ -497,7 +517,11 @@ public class ItemManager : BaseManager
 
         run.Equipment.ClearSlot(slot);
         Refund(playerId, item.currencyId, GetSellPrice(item));
-        Notify(playerId, SellMessage.Get(item.name));
+        if (announce)
+        {
+            Notify(playerId, SellMessage.Get(item.name));
+        }
+
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;

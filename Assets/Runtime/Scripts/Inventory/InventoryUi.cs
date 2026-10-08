@@ -26,6 +26,8 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private const string EQUIP_SOUND = "inventory_equip";
     private const string UNEQUIP_SOUND = "inventory_unequip";
     private const string ERROR_SOUND = "error";
+    private const string PRESS_SOUND = "cursor";
+    private const string SELL_SOUND = "inventory_sell";
     private const string STAR_UP_SOUND = "inventory_star_up";
     private const string EVOLUTION_START_SOUND = "inventory_star_evolution_start";
     private const string EVOLUTION_END_SOUND = "inventory_star_evolution_end";
@@ -81,6 +83,10 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private Coroutine _showRoutine;
     private Tween _fadeTween;
     private bool _closing;
+    private PressFlash _synthesizePress;
+    private PressFlash _equipPress;
+    private PressFlash _unequipPress;
+    private PressFlash _sellPress;
     private TMP_Text _synthesizeLabel;
     private TMP_Text _unequipLabel;
     private string _synthesizeText;
@@ -93,12 +99,16 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         _purchaseDirector = new PurchaseBeamDirector(_purchaseBeam, _bagSlots, _navigator);
         _sellDirector = new InventorySellDirector(_bagSlots, _equipmentUi, _slotPrefab != null ? _slotPrefab.DissolveTemplate : null, Refresh);
         _bagScroll = _bagContent != null ? _bagContent.GetComponentInParent<ScrollRect>() : null;
-        AddAction(_synthesizeButton, SynthesizeSelected);
-        AddAction(_equipButton, EquipSelected);
-        AddAction(_unequipButton, UnequipSelected);
-        AddAction(_sellButton, SellSelected);
+        AddAction(_synthesizeButton, () => PressAction(InventoryHotkey.Synthesize, false, SynthesizeSelected));
+        AddAction(_equipButton, () => PressAction(InventoryHotkey.Equip, false, EquipSelected));
+        AddAction(_unequipButton, () => PressAction(InventoryHotkey.Unequip, false, UnequipSelected));
+        AddAction(_sellButton, () => PressAction(InventoryHotkey.Sell, false, SellSelected));
         AddAction(_discardButton, DiscardSelected);
         AddAction(_closeButton, Close);
+        _synthesizePress = PressFlash.ForButton(_synthesizeButton);
+        _equipPress = PressFlash.ForButton(_equipButton);
+        _unequipPress = PressFlash.ForButton(_unequipButton);
+        _sellPress = PressFlash.ForButton(_sellButton);
         _synthesizeLabel = FindLabel(_synthesizeButton, out _synthesizeText);
         _unequipLabel = FindLabel(_unequipButton, out _unequipText);
         if (_shopUi != null)
@@ -170,7 +180,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
         if (_open && _shopUi != null && inputManager.ConsumeShopRefreshPressed())
         {
-            _shopUi.RefreshOffers();
+            _shopUi.PressRefresh();
         }
 
         if (_open && _shopUi != null)
@@ -303,6 +313,10 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     {
         _closing = false;
         ResetFade();
+        _synthesizePress.Release();
+        _equipPress.Release();
+        _unequipPress.Release();
+        _sellPress.Release();
         if (_toast != null)
         {
             _toast.Hide();
@@ -728,11 +742,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
         if (_selection == SelectionKind.Bag)
         {
-            itemManager.TrySell(playerId, _selectedIndex);
+            PlaySoundIf(itemManager.TrySell(playerId, _selectedIndex), SELL_SOUND, ERROR_SOUND);
         }
         else if (_selection == SelectionKind.Equipment && HasEquipped(itemManager, playerId, _selectedIndex))
         {
-            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TrySellEquipped), null, ERROR_SOUND);
+            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TrySellEquipped), SELL_SOUND, ERROR_SOUND);
         }
 
         Refresh();
@@ -881,12 +895,12 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
                 var bagIndex = InventoryMerge.ResolveBagIndex(itemManager.GetInventory(playerId), _drag);
                 if (bagIndex >= 0)
                 {
-                    itemManager.TrySell(playerId, bagIndex);
+                    PlaySoundIf(itemManager.TrySell(playerId, bagIndex), SELL_SOUND, ERROR_SOUND);
                 }
             }
             else
             {
-                PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TrySellEquipped), null, ERROR_SOUND);
+                PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TrySellEquipped), SELL_SOUND, ERROR_SOUND);
             }
         }
         else if (zone == InventoryDropZone.ZoneKind.Bag && _drag.Kind == InventorySlotDrag.SlotKind.Equipment)
@@ -904,14 +918,36 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     /// </summary>
     private bool TryBeginSell(InventorySlotRef target, Image dragGhost)
     {
+        // 디졸브가 끝나면 칸이 비어 이름을 알 수 없어서 시작하기 전에 읽어 둔다.
+        var name = GetItemName(target);
         if (!_sellDirector.TryBegin(target, dragGhost))
         {
             return false;
         }
 
+        // 판매 대사는 디졸브가 끝날 때가 아니라 시작할 때 띄운다.
+        ShowNotice(SellMessage.Get(name));
+        PlaySound(SELL_SOUND);
         ClearSelection();
         Refresh();
         return true;
+    }
+
+    private string GetItemName(InventorySlotRef target)
+    {
+        if (target.IsEmpty || !TryGetContext(out var itemManager, out var playerId))
+        {
+            return null;
+        }
+
+        var holder = target.Kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId) : itemManager.GetEquipment(playerId);
+        var index = target.Kind == InventorySlotDrag.SlotKind.Bag ? InventoryMerge.ResolveBagIndex(holder, target) : target.Index;
+        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Item == null)
+        {
+            return null;
+        }
+
+        return holder.Stacks[index].Item.name;
     }
 
     private InventorySlotRef GetSelectedRef(ItemManager itemManager, int playerId)
@@ -1184,6 +1220,68 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     void IInventoryKeyboardTarget.Notify(string message)
     {
         ShowNotice(message);
+    }
+
+    void IInventoryKeyboardTarget.ShowHotkeyPress(InventoryHotkey hotkey)
+    {
+        PressAction(hotkey, true, null);
+    }
+
+    /// <summary>
+    /// 버튼을 누른 연출과 소리를 낸 뒤 동작한다. 단축키면 눌린 그림도 잠깐 덮는다. 판매 단축키는 휴지통이 반응한다.
+    /// 누르면 cursor 소리를 내고, 합성 확정은 키보드가 결과에 따라 select나 error를, 판매는 결과에 따라 판매 소리나 error를 낸다.
+    /// </summary>
+    private void PressAction(InventoryHotkey hotkey, bool fromHotkey, System.Action action)
+    {
+        var sound = PRESS_SOUND;
+        switch (hotkey)
+        {
+            case InventoryHotkey.Synthesize:
+                PlayPress(_synthesizePress, fromHotkey);
+                if (_keyboard.Synthesizing)
+                {
+                    sound = null;
+                }
+
+                break;
+            case InventoryHotkey.Equip:
+                PlayPress(_equipPress, fromHotkey);
+                break;
+            case InventoryHotkey.Unequip:
+                PlayPress(_unequipPress, fromHotkey);
+                break;
+            case InventoryHotkey.Sell:
+                if (fromHotkey && _trashZone != null)
+                {
+                    _trashZone.PlayPress();
+                }
+                else
+                {
+                    PlayPress(_sellPress, fromHotkey);
+                }
+
+                sound = null;
+                break;
+        }
+
+        if (sound != null)
+        {
+            PlaySound(sound);
+        }
+
+        action?.Invoke();
+    }
+
+    private static void PlayPress(PressFlash press, bool fromHotkey)
+    {
+        if (fromHotkey)
+        {
+            press.Play();
+        }
+        else
+        {
+            press.Punch();
+        }
     }
 
     /// <summary>

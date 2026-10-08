@@ -31,6 +31,11 @@ public interface IInventoryKeyboardTarget
     /// 안내 문구를 잠깐 띄운다.
     /// </summary>
     void Notify(string message);
+
+    /// <summary>
+    /// 단축키가 맡은 버튼을 잠깐 눌린 그림으로 보여 준다. 동작보다 먼저 부른다.
+    /// </summary>
+    void ShowHotkeyPress(InventoryHotkey hotkey);
 }
 
 /// <summary>
@@ -81,9 +86,11 @@ public sealed class InventoryKeyboard
             Move(move);
         }
 
-        switch (inputManager.ConsumeInventoryHotkey())
+        var hotkey = inputManager.ConsumeInventoryHotkey();
+        switch (hotkey)
         {
             case InventoryHotkey.Synthesize:
+                _target.ShowHotkeyPress(hotkey);
                 if (!TryConfirm())
                 {
                     Begin();
@@ -93,11 +100,13 @@ public sealed class InventoryKeyboard
             case InventoryHotkey.Equip:
                 if (!Synthesizing)
                 {
+                    _target.ShowHotkeyPress(hotkey);
                     _target.Equip();
                 }
 
                 break;
             case InventoryHotkey.Unequip:
+                _target.ShowHotkeyPress(hotkey);
                 if (Synthesizing)
                 {
                     Cancel();
@@ -111,6 +120,7 @@ public sealed class InventoryKeyboard
             case InventoryHotkey.Sell:
                 if (!Synthesizing)
                 {
+                    _target.ShowHotkeyPress(hotkey);
                     _target.Sell();
                 }
 
@@ -234,7 +244,6 @@ public sealed class InventoryKeyboard
         _source = new InventorySlotRef(kind, index, item.uid, item.upgradeLevel);
         _cursorKind = kind;
         _cursorIndex = index;
-        PlaySound(PICK_SOUND);
         _target.Refresh();
     }
 
@@ -255,6 +264,7 @@ public sealed class InventoryKeyboard
             return;
         }
 
+        PlaySound(PICK_SOUND);
         var source = _source;
         var targetKind = _cursorKind;
         var targetIndex = _cursorIndex;

@@ -248,11 +248,11 @@ public sealed class InventorySellDirector
 
         if (target.Kind == InventorySlotDrag.SlotKind.Bag)
         {
-            itemManager.TrySell(playerId, target.Index);
+            itemManager.TrySell(playerId, target.Index, false);
         }
         else
         {
-            itemManager.TrySellEquipped(playerId, target.Index);
+            itemManager.TrySellEquipped(playerId, target.Index, false);
         }
     }
 

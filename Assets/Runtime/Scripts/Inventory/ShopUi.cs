@@ -65,6 +65,7 @@ public class ShopUi : MonoBehaviour
     private CapturedPose[] _poses;
     private Sequence[] _stampTweens;
     private int _pendingStampIndex = -1;
+    private PressFlash _refreshPress;
 
     private void Awake()
     {
@@ -89,8 +90,14 @@ public class ShopUi : MonoBehaviour
 
         if (_refreshButton != null)
         {
-            _refreshButton.onClick.AddListener(RefreshOffers);
+            _refreshButton.onClick.AddListener(() =>
+            {
+                _refreshPress.Punch();
+                RefreshOffers();
+            });
         }
+
+        _refreshPress = PressFlash.ForButton(_refreshButton);
 
         if (_refreshPrice != null)
         {
@@ -104,6 +111,7 @@ public class ShopUi : MonoBehaviour
     private void OnDisable()
     {
         _pendingStampIndex = -1;
+        _refreshPress?.Release();
         for (var i = 0; i < _rows.Length; i++)
         {
             if (_stampTweens[i] != null)
@@ -173,6 +181,15 @@ public class ShopUi : MonoBehaviour
             SetLock(row, true, offer.Locked);
             HideCaptured(i);
         }
+    }
+
+    /// <summary>
+    /// F키로 새로고침한다. 버튼을 거치지 않아서 잠깐 눌린 그림으로 바꿔 누른 느낌을 준다.
+    /// </summary>
+    public void PressRefresh()
+    {
+        _refreshPress.Play();
+        RefreshOffers();
     }
 
     /// <summary>
