@@ -12,6 +12,9 @@ using Object = UnityEngine.Object;
 /// </summary>
 public sealed class InventorySellDirector
 {
+    private const string SELL_SOUND = "inventory_sell";
+    private const string ERROR_SOUND = "error";
+
     private sealed class PendingSale
     {
         public InventorySlotRef Target;
@@ -25,27 +28,78 @@ public sealed class InventorySellDirector
     private readonly IReadOnlyList<InventoryItem> _bagSlots;
     private readonly EquipmentUi _equipmentUi;
     private readonly Action _onSold;
+    private readonly Action<string> _notify;
     private readonly UIEffect _ghostTemplate;
     private readonly List<PendingSale> _pending = new List<PendingSale>();
 
     /// <summary>
     /// ghostTemplate은 끌기 그림에 복사할 디졸브 설정이다. 보통 슬롯 프리팹의 디졸브 덮개를 넘긴다.
+    /// notify는 판매 대사와 경고 문구를 창에 띄울 때 부른다.
     /// </summary>
-    public InventorySellDirector(IReadOnlyList<InventoryItem> bagSlots, EquipmentUi equipmentUi, UIEffect ghostTemplate, Action onSold)
+    public InventorySellDirector(IReadOnlyList<InventoryItem> bagSlots, EquipmentUi equipmentUi, UIEffect ghostTemplate, Action onSold,
+        Action<string> notify)
     {
         _bagSlots = bagSlots;
         _equipmentUi = equipmentUi;
         _ghostTemplate = ghostTemplate;
         _onSold = onSold;
+        _notify = notify;
+    }
+
+    /// <summary>
+    /// 포켓몬을 판다. 디졸브로 팔 수 있으면 디졸브를 시작하면서 판매 소리와 대사를 내고 true를 돌려준다.
+    /// 디졸브로 팔 수 없으면 바로 팔고 결과에 따라 판매 소리나 error를 낸 뒤 false. 빈 대상이면 아무것도 하지 않는다.
+    /// </summary>
+    public bool Sell(InventorySlotRef target, Image dragGhost)
+    {
+        if (target.IsEmpty || !TryGetContext(out var itemManager, out var playerId))
+        {
+            return false;
+        }
+
+        // 디졸브가 끝나면 칸이 비어 이름을 알 수 없어서 시작하기 전에 읽어 둔다.
+        var name = GetItemName(itemManager, playerId, target);
+        if (TryBegin(target, dragGhost))
+        {
+            // 판매 대사는 디졸브가 끝날 때가 아니라 시작할 때 띄운다.
+            UiSound.Play(SELL_SOUND);
+            _notify?.Invoke(SellMessage.Get(name));
+            return true;
+        }
+
+        if (target.Kind == InventorySlotDrag.SlotKind.Bag)
+        {
+            var index = InventoryMerge.ResolveBagIndex(itemManager.GetInventory(playerId), target);
+            UiSound.PlayResult(index >= 0 && itemManager.TrySell(playerId, index), SELL_SOUND, ERROR_SOUND);
+            return false;
+        }
+
+        UiSound.PlayResult(TryReserveEquipped() && itemManager.TrySellEquipped(playerId, target.Index), SELL_SOUND, ERROR_SOUND);
+        return false;
+    }
+
+    /// <summary>
+    /// 장착 칸 하나를 바로 빼도 되면 true. 디졸브로 판매 중인 장착 칸까지 빼고 최소 장착 수보다 많이 남아야 한다.
+    /// 안 되면 경고 문구를 띄운다. 장착 칸을 바로 팔거나 버리거나 해제하기 전에 불러야 디졸브 중인 판매가 나중에 실패하지 않는다.
+    /// </summary>
+    public bool TryReserveEquipped()
+    {
+        if (TryGetContext(out var itemManager, out var playerId) && CanSellEquipped(itemManager, playerId))
+        {
+            return true;
+        }
+
+        _notify?.Invoke(ItemManager.MIN_EQUIPPED_MESSAGE);
+        return false;
     }
 
     /// <summary>
     /// 판매를 디졸브로 시작한다. 이미 판매 중인 포켓몬이면 true를 돌려주고 무시한다.
-    /// 디졸브로 팔 수 없으면 false를 돌려주고, 부른 쪽이 바로 판다.
+    /// 디졸브로 팔 수 없으면 false를 돌려주고, Sell이 바로 판다.
     /// 마지막 장착 포켓몬처럼 판매가 실패할 칸은 디졸브 뒤에 실패하지 않게 미리 false로 돌려준다.
     /// dragGhost를 넘기면 그 자리에 복사본을 남겨 복사본을 디졸브한다. 원본 끌기 그림은 다음 끌기에 바로 쓸 수 있다.
     /// </summary>
-    public bool TryBegin(InventorySlotRef target, Image dragGhost = null)
+    private bool TryBegin(InventorySlotRef target, Image dragGhost)
     {
         if (target.IsEmpty || !TryGetContext(out var itemManager, out var playerId))
         {
@@ -285,9 +339,8 @@ public sealed class InventorySellDirector
 
     /// <summary>
     /// 판매 중인 장착 칸까지 빼고도 최소 장착 수보다 많이 남아야 판다.
-    /// 장착 칸을 바로 팔거나 버리거나 해제할 때도 이걸로 막아야 디졸브 중인 판매가 나중에 실패하지 않는다.
     /// </summary>
-    public bool CanSellEquipped(ItemManager itemManager, int playerId)
+    private bool CanSellEquipped(ItemManager itemManager, int playerId)
     {
         var equipment = itemManager.GetEquipment(playerId);
         if (equipment == null)
@@ -330,6 +383,17 @@ public sealed class InventorySellDirector
         }
 
         return null;
+    }
+
+    private static string GetItemName(ItemManager itemManager, int playerId, InventorySlotRef target)
+    {
+        if (!TryResolve(itemManager, playerId, ref target))
+        {
+            return null;
+        }
+
+        var holder = target.Kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId) : itemManager.GetEquipment(playerId);
+        return holder.Stacks[target.Index].Item.name;
     }
 
     private static bool TryGetContext(out ItemManager itemManager, out int playerId)

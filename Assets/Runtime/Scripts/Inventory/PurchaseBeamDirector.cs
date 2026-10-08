@@ -74,7 +74,7 @@ public sealed class PurchaseBeamDirector : IShopPurchaseEffect
         }
 
         _navigator.ScrollTo(InventorySlotDrag.SlotKind.Bag, index);
-        PlaySound(BEAM_SOUND);
+        UiSound.Play(BEAM_SOUND);
         _beam.Play(ball, () => FindSlotRect(pending), () => Arrive(pending));
     }
 
@@ -244,15 +244,5 @@ public sealed class PurchaseBeamDirector : IShopPurchaseEffect
 
         playerId = playerManager.LocalPlayerId;
         return true;
-    }
-
-    private static void PlaySound(string name)
-    {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
-        {
-            return;
-        }
-
-        audioManager.PlaySound(name);
     }
 }

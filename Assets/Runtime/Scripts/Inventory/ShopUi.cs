@@ -204,11 +204,11 @@ public class ShopUi : MonoBehaviour
 
         if (itemManager.TryRefreshShop(playerId))
         {
-            PlaySound(REROLL_SOUND);
+            UiSound.Play(REROLL_SOUND);
         }
         else
         {
-            PlaySound(ERROR_SOUND);
+            UiSound.Play(ERROR_SOUND);
         }
 
         _onChanged?.Invoke();
@@ -286,7 +286,7 @@ public class ShopUi : MonoBehaviour
         if (row.PriceIcon != null && TryGetOpenIcons(currencyId, out var opening, out var open))
         {
             // 볼 소리는 누르자마자 나고, 그림은 한 박자 뒤부터 바뀐다.
-            PlaySound(BALL_OPEN_SOUND);
+            UiSound.Play(BALL_OPEN_SOUND);
             sequence.AppendInterval(BALL_FRAME_DURATION);
             sequence.AppendCallback(() => row.PriceIcon.sprite = opening);
             sequence.AppendInterval(BALL_FRAME_DURATION);
@@ -328,7 +328,7 @@ public class ShopUi : MonoBehaviour
                 sequence.Insert(stampAt, stamp.DOLocalRotate(pose.StampAngles, STAMP_DROP_DURATION).SetEase(Ease.InQuad));
                 sequence.Insert(stampAt, row.Stamp.DOFade(1f, STAMP_FADE_DURATION));
                 // 도장이 다 내려와 닿는 순간에 소리를 낸다.
-                sequence.InsertCallback(stampAt + STAMP_DROP_DURATION, () => PlaySound(STAMP_SOUND));
+                sequence.InsertCallback(stampAt + STAMP_DROP_DURATION, () => UiSound.Play(STAMP_SOUND));
             }
         }
 
@@ -513,16 +513,6 @@ public class ShopUi : MonoBehaviour
         }
 
         return currencies.GetIcon(currencyId);
-    }
-
-    private static void PlaySound(string name)
-    {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
-        {
-            return;
-        }
-
-        audioManager.PlaySound(name);
     }
 
     private static bool TryGetOpenIcons(string currencyId, out Sprite opening, out Sprite open)

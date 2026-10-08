@@ -213,7 +213,7 @@ public sealed class InventoryKeyboard
             return;
         }
 
-        PlaySound(CURSOR_SOUND);
+        UiSound.Play(CURSOR_SOUND);
         _navigator.ScrollTo(nextKind, nextIndex);
         if (!Synthesizing)
         {
@@ -236,7 +236,7 @@ public sealed class InventoryKeyboard
         var holder = kind == InventorySlotDrag.SlotKind.Bag ? bag : equipment;
         if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Empty || holder.Stacks[index].Item == null)
         {
-            PlaySound(ERROR_SOUND);
+            UiSound.Play(ERROR_SOUND);
             return;
         }
 
@@ -259,12 +259,12 @@ public sealed class InventoryKeyboard
 
         if (!InventoryMerge.IsTarget(bag, equipment, _source, _cursorKind, _cursorIndex, true))
         {
-            PlaySound(ERROR_SOUND);
+            UiSound.Play(ERROR_SOUND);
             _target.Notify(WRONG_TARGET_MESSAGE);
             return;
         }
 
-        PlaySound(PICK_SOUND);
+        UiSound.Play(PICK_SOUND);
         var source = _source;
         var targetKind = _cursorKind;
         var targetIndex = _cursorIndex;
@@ -276,15 +276,5 @@ public sealed class InventoryKeyboard
     {
         Reset();
         _target.Refresh();
-    }
-
-    private static void PlaySound(string name)
-    {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
-        {
-            return;
-        }
-
-        audioManager.PlaySound(name);
     }
 }

@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -11,16 +10,6 @@ using UnityEngine.UI;
 /// </summary>
 public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 {
-    /// <summary>
-    /// 버튼 그림 한 벌. Normal은 평소, Focus는 마우스를 올리거나 누를 때 그림이다.
-    /// </summary>
-    [System.Serializable]
-    private struct ButtonSkin
-    {
-        public Sprite Normal;
-        public Sprite Focus;
-    }
-
     private enum SelectionKind
     {
         None,
@@ -34,22 +23,9 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private const string OPEN_SOUND = "inventory_open";
     private const string CLOSE_SOUND = "inventory_close";
     private const string EQUIP_SOUND = "inventory_equip";
-    private const string UNEQUIP_SOUND = "inventory_unequip";
-    private const string ERROR_SOUND = "error";
-    private const string PRESS_SOUND = "cursor";
-    private const string SELL_SOUND = "inventory_sell";
     private const string STAR_UP_SOUND = "inventory_star_up";
     private const string EVOLUTION_START_SOUND = "inventory_star_evolution_start";
     private const string EVOLUTION_END_SOUND = "inventory_star_evolution_end";
-    // 키보드로 합성 대상을 고르는 동안 합성, 해제 버튼이 확정, 취소로 바뀐다.
-    private const string CONFIRM_LABEL = "확정";
-    private const string CANCEL_LABEL = "취소";
-    // 확정, 취소로 바뀔 때 글자를 튕겨서 눈에 띄게 한다.
-    private const float LABEL_PUNCH_SCALE = 0.3f;
-    private const float LABEL_PUNCH_DURATION = 0.3f;
-    private const int LABEL_PUNCH_VIBRATO = 8;
-    private const float LABEL_PUNCH_ELASTICITY = 0.8f;
-
     [SerializeField] private Canvas _canvas;
     [SerializeField] private CanvasGroup _panelGroup;
     [SerializeField] private ScreenBackdrop _backdrop;
@@ -98,39 +74,22 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private Coroutine _showRoutine;
     private Tween _fadeTween;
     private bool _closing;
-    private PressFlash _synthesizePress;
-    private PressFlash _equipPress;
-    private PressFlash _unequipPress;
-    private PressFlash _sellPress;
-    private TMP_Text _synthesizeLabel;
-    private TMP_Text _unequipLabel;
-    private string _synthesizeText;
-    private string _unequipText;
-    private ButtonSkin _synthesizeSkin;
-    private ButtonSkin _unequipSkin;
-    private bool _pickShown;
+    private InventoryActionBar _actionBar;
+    private InventoryEquipmentActions _equipmentActions;
 
     private void Awake()
     {
         _navigator = new InventoryFocusNavigator();
         _keyboard = new InventoryKeyboard(this, _navigator);
         _purchaseDirector = new PurchaseBeamDirector(_purchaseBeam, _bagSlots, _navigator);
-        _sellDirector = new InventorySellDirector(_bagSlots, _equipmentUi, _slotPrefab != null ? _slotPrefab.DissolveTemplate : null, Refresh);
+        _sellDirector = new InventorySellDirector(_bagSlots, _equipmentUi, _slotPrefab != null ? _slotPrefab.DissolveTemplate : null, Refresh,
+            ShowNotice);
+        _equipmentActions = new InventoryEquipmentActions(_sellDirector);
+        _actionBar = new InventoryActionBar(_synthesizeButton, _equipButton, _unequipButton, _sellButton, _trashZone, _confirmSkin, _cancelSkin);
+        _actionBar.Bind(SynthesizeSelected, EquipSelected, UnequipSelected, SellSelected);
         _bagScroll = _bagContent != null ? _bagContent.GetComponentInParent<ScrollRect>() : null;
-        AddAction(_synthesizeButton, () => PressAction(InventoryHotkey.Synthesize, false, SynthesizeSelected));
-        AddAction(_equipButton, () => PressAction(InventoryHotkey.Equip, false, EquipSelected));
-        AddAction(_unequipButton, () => PressAction(InventoryHotkey.Unequip, false, UnequipSelected));
-        AddAction(_sellButton, () => PressAction(InventoryHotkey.Sell, false, SellSelected));
         AddAction(_discardButton, DiscardSelected);
         AddAction(_closeButton, Close);
-        _synthesizePress = PressFlash.ForButton(_synthesizeButton);
-        _equipPress = PressFlash.ForButton(_equipButton);
-        _unequipPress = PressFlash.ForButton(_unequipButton);
-        _sellPress = PressFlash.ForButton(_sellButton);
-        _synthesizeLabel = FindLabel(_synthesizeButton, out _synthesizeText);
-        _unequipLabel = FindLabel(_unequipButton, out _unequipText);
-        _synthesizeSkin = ReadSkin(_synthesizeButton);
-        _unequipSkin = ReadSkin(_unequipButton);
         if (_shopUi != null)
         {
             _shopUi.Bind(Refresh, SelectShop, _purchaseDirector);
@@ -253,7 +212,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             Time.timeScale = 0f;
         }
 
-        PlaySound(OPEN_SOUND);
+        UiSound.Play(OPEN_SOUND);
         _showRoutine = StartCoroutine(ShowAfterCapture());
     }
 
@@ -309,7 +268,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        PlaySound(CLOSE_SOUND);
+        UiSound.Play(CLOSE_SOUND);
         if (_panelGroup == null || _canvas == null || !_canvas.gameObject.activeSelf)
         {
             FinishClose();
@@ -333,10 +292,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     {
         _closing = false;
         ResetFade();
-        _synthesizePress.Release();
-        _equipPress.Release();
-        _unequipPress.Release();
-        _sellPress.Release();
+        _actionBar.Release();
         if (_toast != null)
         {
             _toast.Hide();
@@ -433,7 +389,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         RebuildBag(itemManager, playerId);
         _purchaseDirector.Reapply();
         _keyboard.Validate(itemManager.GetInventory(playerId), itemManager.GetEquipment(playerId));
-        RefreshPickMode();
+        _actionBar.SetPickMode(_keyboard.Synthesizing);
         ResolveShopSelection(itemManager, playerId);
         if (_shopUi != null)
         {
@@ -724,7 +680,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
         if (itemManager.TryEquip(playerId, _selectedIndex))
         {
-            PlaySound(EQUIP_SOUND);
+            UiSound.Play(EQUIP_SOUND);
         }
 
         Refresh();
@@ -737,14 +693,12 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        if (_selection != SelectionKind.Equipment || !TryGetContext(out var itemManager, out var playerId)
-            || !HasEquipped(itemManager, playerId, _selectedIndex))
+        if (_selection != SelectionKind.Equipment)
         {
             return;
         }
 
-        PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TryUnequip), UNEQUIP_SOUND, ERROR_SOUND);
-
+        _equipmentActions.Unequip(_selectedIndex);
         Refresh();
     }
 
@@ -755,18 +709,10 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        if (TryBeginSell(GetSelectedRef(itemManager, playerId), null))
+        // 디졸브로 팔기 시작했으면 그 칸은 판매가 끝날 때까지 고를 수 없어서 선택을 푼다.
+        if (_sellDirector.Sell(GetSelectedRef(itemManager, playerId), null))
         {
-            return;
-        }
-
-        if (_selection == SelectionKind.Bag)
-        {
-            PlaySoundIf(itemManager.TrySell(playerId, _selectedIndex), SELL_SOUND, ERROR_SOUND);
-        }
-        else if (_selection == SelectionKind.Equipment && HasEquipped(itemManager, playerId, _selectedIndex))
-        {
-            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TrySellEquipped), SELL_SOUND, ERROR_SOUND);
+            ClearSelection();
         }
 
         Refresh();
@@ -783,9 +729,9 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         {
             itemManager.TryDiscard(playerId, _selectedIndex);
         }
-        else if (_selection == SelectionKind.Equipment && HasEquipped(itemManager, playerId, _selectedIndex))
+        else if (_selection == SelectionKind.Equipment)
         {
-            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TryDiscardEquipped), null, ERROR_SOUND);
+            _equipmentActions.Discard(_selectedIndex);
         }
 
         Refresh();
@@ -901,73 +847,18 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        // 휴지통에 놓으면 끌고 있던 그림이 그 자리에서 디졸브된다.
-        if (zone == InventoryDropZone.ZoneKind.Trash && TryBeginSell(ResolveDrag(itemManager, playerId), _dragGhost))
+        // 휴지통에 놓으면 판다. 디졸브로 팔면 끌고 있던 그림이 그 자리에서 디졸브된다.
+        if (zone == InventoryDropZone.ZoneKind.Trash && _sellDirector.Sell(ResolveDrag(itemManager, playerId), _dragGhost))
         {
-            EndDrag();
-            return;
-        }
-
-        if (zone == InventoryDropZone.ZoneKind.Trash)
-        {
-            if (_drag.Kind == InventorySlotDrag.SlotKind.Bag)
-            {
-                var bagIndex = InventoryMerge.ResolveBagIndex(itemManager.GetInventory(playerId), _drag);
-                if (bagIndex >= 0)
-                {
-                    PlaySoundIf(itemManager.TrySell(playerId, bagIndex), SELL_SOUND, ERROR_SOUND);
-                }
-            }
-            else
-            {
-                PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TrySellEquipped), SELL_SOUND, ERROR_SOUND);
-            }
+            ClearSelection();
         }
         else if (zone == InventoryDropZone.ZoneKind.Bag && _drag.Kind == InventorySlotDrag.SlotKind.Equipment)
         {
-            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TryUnequip), UNEQUIP_SOUND, ERROR_SOUND);
+            _equipmentActions.Unequip(_drag.Index);
         }
 
         EndDrag();
         Refresh();
-    }
-
-    /// <summary>
-    /// 판매를 디졸브로 시작한다. 시작했으면 선택을 풀고 true. 디졸브로 팔 수 없으면 false라서 부른 쪽이 바로 판다.
-    /// dragGhost가 있으면 칸 아이콘 대신 끌기 그림이 디졸브된다.
-    /// </summary>
-    private bool TryBeginSell(InventorySlotRef target, Image dragGhost)
-    {
-        // 디졸브가 끝나면 칸이 비어 이름을 알 수 없어서 시작하기 전에 읽어 둔다.
-        var name = GetItemName(target);
-        if (!_sellDirector.TryBegin(target, dragGhost))
-        {
-            return false;
-        }
-
-        // 판매 대사는 디졸브가 끝날 때가 아니라 시작할 때 띄운다.
-        ShowNotice(SellMessage.Get(name));
-        PlaySound(SELL_SOUND);
-        ClearSelection();
-        Refresh();
-        return true;
-    }
-
-    private string GetItemName(InventorySlotRef target)
-    {
-        if (target.IsEmpty || !TryGetContext(out var itemManager, out var playerId))
-        {
-            return null;
-        }
-
-        var holder = target.Kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId) : itemManager.GetEquipment(playerId);
-        var index = target.Kind == InventorySlotDrag.SlotKind.Bag ? InventoryMerge.ResolveBagIndex(holder, target) : target.Index;
-        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Item == null)
-        {
-            return null;
-        }
-
-        return holder.Stacks[index].Item.name;
     }
 
     private InventorySlotRef GetSelectedRef(ItemManager itemManager, int playerId)
@@ -1022,7 +913,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         {
             if (itemManager.TryEquipToSlot(playerId, bagIndex, targetIndex))
             {
-                PlaySound(EQUIP_SOUND);
+                UiSound.Play(EQUIP_SOUND);
             }
         }
     }
@@ -1048,7 +939,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
         if (targetKind == InventorySlotDrag.SlotKind.Bag)
         {
-            PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _drag.Index, itemManager.TryUnequip), UNEQUIP_SOUND, ERROR_SOUND);
+            _equipmentActions.Unequip(_drag.Index);
         }
     }
 
@@ -1244,64 +1135,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
     void IInventoryKeyboardTarget.ShowHotkeyPress(InventoryHotkey hotkey)
     {
-        PressAction(hotkey, true, null);
-    }
-
-    /// <summary>
-    /// 버튼을 누른 연출과 소리를 낸 뒤 동작한다. 단축키면 눌린 그림도 잠깐 덮는다. 판매 단축키는 휴지통이 반응한다.
-    /// 누르면 cursor 소리를 내고, 합성 확정은 키보드가 결과에 따라 select나 error를, 판매는 결과에 따라 판매 소리나 error를 낸다.
-    /// </summary>
-    private void PressAction(InventoryHotkey hotkey, bool fromHotkey, System.Action action)
-    {
-        var sound = PRESS_SOUND;
-        switch (hotkey)
-        {
-            case InventoryHotkey.Synthesize:
-                PlayPress(_synthesizePress, fromHotkey);
-                if (_keyboard.Synthesizing)
-                {
-                    sound = null;
-                }
-
-                break;
-            case InventoryHotkey.Equip:
-                PlayPress(_equipPress, fromHotkey);
-                break;
-            case InventoryHotkey.Unequip:
-                PlayPress(_unequipPress, fromHotkey);
-                break;
-            case InventoryHotkey.Sell:
-                if (fromHotkey && _trashZone != null)
-                {
-                    _trashZone.PlayPress();
-                }
-                else
-                {
-                    PlayPress(_sellPress, fromHotkey);
-                }
-
-                sound = null;
-                break;
-        }
-
-        if (sound != null)
-        {
-            PlaySound(sound);
-        }
-
-        action?.Invoke();
-    }
-
-    private static void PlayPress(PressFlash press, bool fromHotkey)
-    {
-        if (fromHotkey)
-        {
-            press.Play();
-        }
-        else
-        {
-            press.Punch();
-        }
+        _actionBar.PlayHotkey(hotkey);
     }
 
     /// <summary>
@@ -1340,87 +1174,6 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         }
     }
 
-    /// <summary>
-    /// 키보드로 합성 대상을 고르는 동안에는 합성, 해제 버튼을 확정, 취소 글자와 그림으로 바꾸고 장착 버튼을 숨긴다.
-    /// 모드가 바뀔 때만 바꾼다.
-    /// </summary>
-    private void RefreshPickMode()
-    {
-        var picking = _keyboard.Synthesizing;
-        if (picking == _pickShown)
-        {
-            return;
-        }
-
-        _pickShown = picking;
-        SetLabel(_synthesizeLabel, picking ? CONFIRM_LABEL : _synthesizeText, picking);
-        SetLabel(_unequipLabel, picking ? CANCEL_LABEL : _unequipText, picking);
-        // 단축키로 덮어 둔 눌린 그림이 남으면 새 그림이 늦게 보여서 바로 걷는다.
-        _synthesizePress.ClearSprite();
-        _unequipPress.ClearSprite();
-        ApplySkin(_synthesizeButton, picking ? _confirmSkin : _synthesizeSkin);
-        ApplySkin(_unequipButton, picking ? _cancelSkin : _unequipSkin);
-        if (_equipButton != null)
-        {
-            _equipButton.gameObject.SetActive(!picking);
-        }
-    }
-
-    private static ButtonSkin ReadSkin(Button button)
-    {
-        return button != null && button.image != null
-            ? new ButtonSkin { Normal = button.image.sprite, Focus = button.spriteState.highlightedSprite }
-            : default;
-    }
-
-    /// <summary>
-    /// 버튼 그림과 Sprite Swap의 포커스 그림(Highlighted, Pressed)을 바꾼다. 그림이 비어 있으면 그대로 둔다.
-    /// </summary>
-    private static void ApplySkin(Button button, ButtonSkin skin)
-    {
-        if (button == null || button.image == null || skin.Normal == null)
-        {
-            return;
-        }
-
-        button.image.sprite = skin.Normal;
-        var state = button.spriteState;
-        state.highlightedSprite = skin.Focus;
-        state.pressedSprite = skin.Focus;
-        button.spriteState = state;
-    }
-
-    private static TMP_Text FindLabel(Button button, out string text)
-    {
-        var label = button != null ? button.GetComponentInChildren<TMP_Text>(true) : null;
-        text = label != null ? label.text : null;
-        return label;
-    }
-
-    /// <summary>
-    /// 글자가 바뀌면 바꾸고, punch면 튕기는 연출을 건다. 창이 열려 있는 동안 시간이 멈춰 있어서 시간 정지와 상관없이 돈다.
-    /// </summary>
-    private static void SetLabel(TMP_Text label, string text, bool punch)
-    {
-        if (label == null || label.text == text)
-        {
-            return;
-        }
-
-        label.text = text;
-        if (!punch)
-        {
-            return;
-        }
-
-        // 연달아 바뀌어도 크기가 어긋나지 않게 이전 연출을 끝낸 크기에서 다시 건다.
-        label.transform.DOKill(true);
-        label.transform
-            .DOPunchScale(Vector3.one * LABEL_PUNCH_SCALE, LABEL_PUNCH_DURATION, LABEL_PUNCH_VIBRATO, LABEL_PUNCH_ELASTICITY)
-            .SetUpdate(true)
-            .SetLink(label.gameObject);
-    }
-
     private void HandleInventoryChanged(InventoryChanged changed)
     {
         if (!_open || !TryGetContext(out _, out var playerId) || changed.PlayerId != playerId)
@@ -1447,7 +1200,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         var slot = FindSynthesizedSlot(itemManager, synthesized);
         if (!synthesized.Evolved)
         {
-            PlaySound(STAR_UP_SOUND);
+            UiSound.Play(STAR_UP_SOUND);
             if (slot != null)
             {
                 slot.PlayStarUp(synthesized.UpgradeLevel);
@@ -1456,11 +1209,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
-        var startSound = PlaySound(EVOLUTION_START_SOUND);
+        var startSound = UiSound.Play(EVOLUTION_START_SOUND);
         if (slot != null)
         {
             slot.PlayEvolution(GetPortrait(itemManager, synthesized.PreviousUid), GetPortrait(itemManager, synthesized.Uid),
-                GetLength(startSound), () => PlaySound(EVOLUTION_END_SOUND));
+                GetLength(startSound), () => UiSound.Play(EVOLUTION_END_SOUND));
         }
     }
 
@@ -1534,52 +1287,6 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         eventManager.Unsubscribe<ItemSynthesized>(HandleItemSynthesized);
         eventManager.Unsubscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = false;
-    }
-
-    private static AudioSource PlaySound(string name)
-    {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
-        {
-            return null;
-        }
-
-        return audioManager.PlaySound(name);
-    }
-
-    /// <summary>
-    /// 장착 칸을 바로 팔거나 버리거나 해제한다. 디졸브로 판매 중인 장착 칸까지 빼면 최소 장착 수가 안 남을 때는 막는다.
-    /// 막지 않으면 이 칸이 먼저 빠지고, 디졸브가 끝난 판매가 마지막 한 마리라서 실패한다.
-    /// </summary>
-    /// <summary>
-    /// 장착 칸에 포켓몬이 있으면 true. 빈 칸에서 해제, 판매, 버리기를 누르면 아무 반응 없이 넘기려고 먼저 본다.
-    /// </summary>
-    private static bool HasEquipped(ItemManager itemManager, int playerId, int slot)
-    {
-        var equipment = itemManager.GetEquipment(playerId);
-        return equipment != null && slot >= 0 && slot < equipment.Stacks.Count && !equipment.Stacks[slot].Empty;
-    }
-
-    private bool TryRemoveEquipped(ItemManager itemManager, int playerId, int slot, System.Func<int, int, bool> remove)
-    {
-        if (!_sellDirector.CanSellEquipped(itemManager, playerId))
-        {
-            ShowNotice(ItemManager.MIN_EQUIPPED_MESSAGE);
-            return false;
-        }
-
-        return remove(playerId, slot);
-    }
-
-    /// <summary>
-    /// 성공하면 success, 실패하면 failure 효과음을 낸다. null이면 그쪽은 소리를 내지 않는다.
-    /// </summary>
-    private static void PlaySoundIf(bool succeeded, string success, string failure)
-    {
-        var name = succeeded ? success : failure;
-        if (name != null)
-        {
-            PlaySound(name);
-        }
     }
 
     /// <summary>
