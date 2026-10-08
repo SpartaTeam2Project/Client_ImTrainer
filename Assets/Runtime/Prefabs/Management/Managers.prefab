@@ -28,6 +28,7 @@ GameObject:
   - component: {fileID: 1674151062905869692}
   - component: {fileID: 5910283746501928374}
   - component: {fileID: 7319027461358201946}
+  - component: {fileID: 4719305822614937851}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -80,6 +81,7 @@ MonoBehaviour:
   _inputManager: {fileID: 1412512290878640492}
   _playerManager: {fileID: 2362224293694159950}
   _cameraManager: {fileID: 2162253218046748493}
+  _postProcessManager: {fileID: 4719305822614937851}
   _stageFieldManager: {fileID: 8108567764852124782}
   _enemyManager: {fileID: 47417374525550097}
   _experienceManager: {fileID: 8036055043370602046}
@@ -320,6 +322,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8460206b17534bbc86d4b8b5f03f11b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &4719305822614937851
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5778147509170455382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f671715fb3c4c7c91f38b3cc1731baf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _hitColor: {r: 0.8, g: 0, b: 0, a: 1}
+  _hitIntensity: 0.35
+  _hitSmoothness: 0.6
+  _hitInSeconds: 0.05
+  _hitOutSeconds: 0.25
+  _defeatSaturation: 0
+  _defeatFadeSeconds: 1
+  _victoryExposure: 0.4
+  _victoryInSeconds: 0.2
+  _victoryOutSeconds: 0.8
 --- !u!1001 &5256769204921313244
 PrefabInstance:
   m_ObjectHideFlags: 0

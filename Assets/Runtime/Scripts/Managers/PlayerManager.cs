@@ -312,7 +312,15 @@ public class PlayerManager : BaseManager
             return;
         }
 
-        _player.Health.TakeDamage(amount);
+        var health = _player.Health;
+        var previousHealth = health.CurrentHealth;
+        health.TakeDamage(amount);
+
+        var damage = previousHealth - health.CurrentHealth;
+        if (damage > 0f && Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(new PlayerDamaged(playerId, damage, health.CurrentHealth, health.maxHealth));
+        }
     }
 
     

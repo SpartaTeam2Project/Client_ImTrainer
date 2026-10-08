@@ -17,6 +17,7 @@ public class Managers : MonoBehaviour
     [SerializeField] private InputManager _inputManager;
     [SerializeField] private PlayerManager _playerManager;
     [SerializeField] private CameraManager _cameraManager;
+    [SerializeField] private PostProcessManager _postProcessManager;
     [SerializeField] private StageFieldManager _stageFieldManager;
     [SerializeField] private EnemyManager _enemyManager;
     [SerializeField] private ExperienceManager _experienceManager;
@@ -60,6 +61,7 @@ public class Managers : MonoBehaviour
         RegisterManager(_inputManager);
         RegisterManager(_playerManager);
         RegisterManager(_cameraManager);
+        RegisterManager(_postProcessManager);
         RegisterManager(_stageFieldManager);
         RegisterManager(_enemyManager);
         RegisterManager(_experienceManager);
@@ -167,7 +169,7 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 필드, 적, 경험치, 드롭, 재화, 무기, 계정, 씬, 트레이닝, 인벤토리, 업그레이드, Addressables 순서로 초기화한다.
+    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 화면 효과, 필드, 적, 경험치, 드롭, 재화, 무기, 계정, 씬, 트레이닝, 인벤토리, 업그레이드, Addressables 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
@@ -194,6 +196,11 @@ public class Managers : MonoBehaviour
         if (TryGetManager<CameraManager>(out var cameraManager))
         {
             await cameraManager.InitializeAsync();
+        }
+
+        if (TryGetManager<PostProcessManager>(out var postProcessManager))
+        {
+            await postProcessManager.InitializeAsync();
         }
 
         if (TryGetManager<StageFieldManager>(out var stageFieldManager))
