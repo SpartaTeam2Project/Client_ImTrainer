@@ -21,6 +21,8 @@ public class MonsterVisualData : ScriptableObject
 
     [SerializeField] private AssetReferenceT<MonsterAnimationSet> _animations = new AssetReferenceT<MonsterAnimationSet>(string.Empty);
 
+    [SerializeField] private Material _bodyMaterial;
+
     [SerializeField] private WeaponAbilityData _ability;
 
     [SerializeField] private MonsterType _primaryType = MonsterType.Normal;
@@ -52,6 +54,11 @@ public class MonsterVisualData : ScriptableObject
     /// 동작 그림 세트의 Addressables 참조. 형태가 기본형 그림을 같이 쓰면 기본형 세트를 가리킨다.
     /// </summary>
     public AssetReferenceT<MonsterAnimationSet> Animations => _animations;
+
+    /// <summary>
+    /// 필드에서 몸 스프라이트에 쓸 머티리얼. 비어 있으면 렌더러 기본 머티리얼을 쓴다.
+    /// </summary>
+    public Material BodyMaterial => _bodyMaterial;
 
     public WeaponAbilityData WeaponAbility => _ability;
 

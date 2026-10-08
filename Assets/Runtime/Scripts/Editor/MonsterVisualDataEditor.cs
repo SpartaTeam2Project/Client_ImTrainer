@@ -74,6 +74,7 @@ public class MonsterVisualDataEditor : Editor
         if (expanded)
         {
             DrawField("_scale", "크기 (Scale)", "씬 뷰에서 적용될 스프라이트 크기");
+            DrawField("_bodyMaterial", "몸 머티리얼 (Body Material)", "필드 스프라이트에 쓸 머티리얼. 불꽃 글로우처럼 종마다 다른 효과가 필요할 때만 넣는다");
         }
 
         EndCategory(expanded);
