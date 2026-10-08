@@ -8,6 +8,7 @@ public static class StorageSounds
     private const string ENTRY_LOCKED_SOUND = "error";
     private const string ENTRY_PICK_UP_SOUND = "storage_entry_pick_up";
     private const string ENTRY_PICK_DOWN_SOUND = "storage_entry_pick_down";
+    private const string GAME_START_SOUND = "game_start";
     private const string STORAGE_MUSIC_NAME = "storage";
 
     public static void PlayMusic()
@@ -41,6 +42,11 @@ public static class StorageSounds
     public static void PlayEntryPickDown()
     {
         PlaySound(ENTRY_PICK_DOWN_SOUND);
+    }
+
+    public static void PlayGameStart()
+    {
+        PlaySound(GAME_START_SOUND);
     }
 
     private static void PlaySound(string soundName)

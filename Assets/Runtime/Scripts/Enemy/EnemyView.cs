@@ -69,6 +69,7 @@ public class EnemyView : MonoBehaviour
     private int _hurtPlayId;
     private bool _hurtPlaying;
     private CircleCollider2D _hitCollider;
+    private Material _defaultMaterial;
 
     #region Unity Methods
 
@@ -77,6 +78,11 @@ public class EnemyView : MonoBehaviour
         if (_spriteRenderer == null)
         {
             _spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        if (_spriteRenderer != null)
+        {
+            _defaultMaterial = _spriteRenderer.sharedMaterial;
         }
 
         _hitCollider = GetComponent<CircleCollider2D>();
@@ -105,6 +111,7 @@ public class EnemyView : MonoBehaviour
         CancelHurt();
         _visual = visual;
         _animations = MonsterAnimationLoader.Get(visual);
+        ApplyBodyMaterial(visual);
         _frameIndex = 0;
         _frameTimer = 0f;
         _hasVisual = false;
@@ -208,6 +215,20 @@ public class EnemyView : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// 풀에서 다른 종으로 다시 쓰일 수 있으니 매번 종의 몸 머티리얼이나 처음 머티리얼로 맞춘다.
+    /// </summary>
+    private void ApplyBodyMaterial(MonsterVisualData visual)
+    {
+        if (_spriteRenderer == null)
+        {
+            return;
+        }
+
+        var material = visual != null ? visual.BodyMaterial : null;
+        _spriteRenderer.sharedMaterial = material != null ? material : _defaultMaterial;
+    }
 
     private bool ApplyDirection(Vector2 lookDirection)
     {

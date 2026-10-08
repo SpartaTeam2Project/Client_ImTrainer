@@ -77,6 +77,7 @@ public class UITitleScene : MonoBehaviour
             return;
         }
 
+        StorageSounds.PlayGameStart();
         sceneLoadManager.LoadGameAsync().Forget();
     }
 

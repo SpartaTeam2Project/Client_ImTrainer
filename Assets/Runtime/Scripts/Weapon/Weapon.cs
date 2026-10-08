@@ -44,6 +44,7 @@ public class Weapon : MonoBehaviour
     private MonsterAnimationSet _animations;
     private Player _owner;
     private SpriteRenderer _renderer;
+    private Material _defaultMaterial;
     private int _playerId;
     private float _attackFacingTimer;
     private bool _shotPose;
@@ -136,6 +137,7 @@ public class Weapon : MonoBehaviour
     {
         _visual = visual;
         _animations = MonsterAnimationLoader.Get(visual);
+        ApplyBodyMaterial(visual);
         _shotPose = false;
         _fainting = false;
         _posing = false;
@@ -285,6 +287,21 @@ public class Weapon : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// 종에 지정된 몸 머티리얼을 쓰고, 없으면 처음 머티리얼로 되돌린다.
+    /// </summary>
+    private void ApplyBodyMaterial(MonsterVisualData visual)
+    {
+        CacheRenderer();
+        if (_defaultMaterial == null)
+        {
+            _defaultMaterial = _renderer.sharedMaterial;
+        }
+
+        var material = visual != null ? visual.BodyMaterial : null;
+        _renderer.sharedMaterial = material != null ? material : _defaultMaterial;
+    }
 
     private void CacheRenderer()
     {
