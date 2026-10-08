@@ -39,6 +39,8 @@ public class InventoryItem : MonoBehaviour
     [SerializeField] private Material _summonMaterial;
     [Tooltip("칸 전체를 덮는 샤이니 덮개. 꺼 둔 채로 둔다.")]
     [SerializeField] private UIEffect _shinyEffect;
+    [Tooltip("판매할 때 아이콘을 지우는 디졸브 덮개. Icon의 자식이고 꺼 둔 채로 둔다.")]
+    [SerializeField] private UIEffect _dissolveEffect;
 
     private InventorySlotDrag _drag;
     private Color _selectColor;
@@ -54,8 +56,14 @@ public class InventoryItem : MonoBehaviour
     private Sprite _evolutionTarget;
     private InventorySummonEffect _summon;
     private SlotShiny _shiny;
+    private IconDissolve _dissolve;
 
     public Button Button => _button;
+
+    /// <summary>
+    /// 판매 디졸브 설정. 끌기 그림을 디졸브할 때 같은 설정을 복사해 쓴다.
+    /// </summary>
+    public UIEffect DissolveTemplate => _dissolveEffect;
 
     /// <summary>
     /// 끌기를 받는 컴포넌트. 프리팹에 없으면 붙여서 돌려준다.
@@ -114,6 +122,11 @@ public class InventoryItem : MonoBehaviour
             _shinyEffect.gameObject.SetActive(false);
         }
 
+        if (_dissolveEffect != null)
+        {
+            _dissolveEffect.gameObject.SetActive(false);
+        }
+
         ShowEmpty();
     }
 
@@ -125,6 +138,7 @@ public class InventoryItem : MonoBehaviour
         StopEvolution();
         StopSummon();
         StopShiny();
+        StopDissolve();
         if (_icon != null)
         {
             _icon.sprite = null;
@@ -164,6 +178,11 @@ public class InventoryItem : MonoBehaviour
         if (_summon != null)
         {
             _summon.NotifyShown(portrait);
+        }
+
+        if (_dissolve != null)
+        {
+            _dissolve.NotifyShown(portrait);
         }
 
         if (_starText != null)
@@ -277,6 +296,44 @@ public class InventoryItem : MonoBehaviour
         if (_shiny != null)
         {
             _shiny.Stop();
+        }
+    }
+
+    /// <summary>
+    /// 판매할 포켓몬 아이콘을 디졸브로 지운다. 다 사라지면 onFinished를 부른다. 도중에 멈추면 부르지 않는다.
+    /// 진화 연출은 아이콘 머티리얼을 쓰고 소환, 샤이니는 아이콘 위에 겹쳐서 먼저 멈춘다.
+    /// </summary>
+    public void PlayDissolve(Action onFinished)
+    {
+        PrepareDissolve().Play(onFinished);
+    }
+
+    /// <summary>
+    /// 디졸브 없이 아이콘만 숨겨 둔다. 휴지통에 끌어다 놓아 끌기 그림이 대신 디졸브되는 동안 쓴다.
+    /// </summary>
+    public void HoldDissolve()
+    {
+        PrepareDissolve().Hold();
+    }
+
+    private IconDissolve PrepareDissolve()
+    {
+        StopEvolution();
+        StopSummon();
+        StopShiny();
+        if (_dissolve == null)
+        {
+            _dissolve = new IconDissolve(_icon, _dissolveEffect, gameObject);
+        }
+
+        return _dissolve;
+    }
+
+    public void StopDissolve()
+    {
+        if (_dissolve != null)
+        {
+            _dissolve.Stop();
         }
     }
 
@@ -453,6 +510,7 @@ public class InventoryItem : MonoBehaviour
         StopEvolution();
         StopStarPunch();
         StopShiny();
+        StopDissolve();
     }
 
     private void OnDestroy()

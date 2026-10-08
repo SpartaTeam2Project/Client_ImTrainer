@@ -57,6 +57,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private InventoryFocusNavigator _navigator;
     private InventoryKeyboard _keyboard;
     private PurchaseBeamDirector _purchaseDirector;
+    private InventorySellDirector _sellDirector;
     private ScrollRect _bagScroll;
     private InventorySlotRef _synthesized = InventorySlotRef.None;
     private SelectionKind _selection = SelectionKind.None;
@@ -75,6 +76,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         _navigator = new InventoryFocusNavigator();
         _keyboard = new InventoryKeyboard(this, _navigator);
         _purchaseDirector = new PurchaseBeamDirector(_purchaseBeam, _bagSlots, _navigator);
+        _sellDirector = new InventorySellDirector(_bagSlots, _equipmentUi, _slotPrefab != null ? _slotPrefab.DissolveTemplate : null, Refresh);
         _bagScroll = _bagContent != null ? _bagContent.GetComponentInParent<ScrollRect>() : null;
         AddAction(_synthesizeButton, SynthesizeSelected);
         AddAction(_equipButton, EquipSelected);
@@ -108,6 +110,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     {
         Unsubscribe();
         EndDrag();
+        _sellDirector?.FinishAll();
         _purchaseDirector?.Stop();
         if (_holdTime && Managers.Instance != null && Managers.Instance.CurrentState == GameState.Playing)
         {
@@ -245,6 +248,8 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         _open = false;
         _keyboard.Reset();
         EndDrag();
+        // 디졸브 중이던 판매는 기다리지 않고 바로 처리한다.
+        _sellDirector.FinishAll();
         _purchaseDirector.Stop();
         if (_showRoutine != null)
         {
@@ -390,6 +395,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
         RefreshSynthesisPick(itemManager, playerId);
         RefreshInformation(itemManager, playerId);
+        _sellDirector.Reapply();
     }
 
     /// <summary>
@@ -540,6 +546,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
     private void SelectBag(int index)
     {
+        if (_sellDirector.IsSelling(InventorySlotDrag.SlotKind.Bag, index))
+        {
+            return;
+        }
+
         _keyboard.Reset();
         if (!TryGetContext(out var itemManager, out var playerId))
         {
@@ -565,6 +576,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
     private void SelectEquipment(int slot)
     {
+        if (_sellDirector.IsSelling(InventorySlotDrag.SlotKind.Equipment, slot))
+        {
+            return;
+        }
+
         _keyboard.Reset();
         _selection = SelectionKind.Equipment;
         _selectedIndex = slot;
@@ -671,6 +687,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
+        if (TryBeginSell(GetSelectedRef(itemManager, playerId), null))
+        {
+            return;
+        }
+
         if (_selection == SelectionKind.Bag)
         {
             itemManager.TrySell(playerId, _selectedIndex);
@@ -715,7 +736,8 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         var holder = kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId)
             : kind == InventorySlotDrag.SlotKind.Equipment ? itemManager.GetEquipment(playerId)
             : null;
-        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Empty || holder.Stacks[index].Item == null)
+        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Empty || holder.Stacks[index].Item == null
+            || _sellDirector.IsSelling(kind, index))
         {
             return false;
         }
@@ -811,6 +833,13 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
             return;
         }
 
+        // 휴지통에 놓으면 끌고 있던 그림이 그 자리에서 디졸브된다.
+        if (zone == InventoryDropZone.ZoneKind.Trash && TryBeginSell(ResolveDrag(itemManager, playerId), _dragGhost))
+        {
+            EndDrag();
+            return;
+        }
+
         if (zone == InventoryDropZone.ZoneKind.Trash)
         {
             if (_drag.Kind == InventorySlotDrag.SlotKind.Bag)
@@ -833,6 +862,54 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
         EndDrag();
         Refresh();
+    }
+
+    /// <summary>
+    /// 판매를 디졸브로 시작한다. 시작했으면 선택을 풀고 true. 디졸브로 팔 수 없으면 false라서 부른 쪽이 바로 판다.
+    /// dragGhost가 있으면 칸 아이콘 대신 끌기 그림이 디졸브된다.
+    /// </summary>
+    private bool TryBeginSell(InventorySlotRef target, Image dragGhost)
+    {
+        if (!_sellDirector.TryBegin(target, dragGhost))
+        {
+            return false;
+        }
+
+        ClearSelection();
+        Refresh();
+        return true;
+    }
+
+    private InventorySlotRef GetSelectedRef(ItemManager itemManager, int playerId)
+    {
+        var kind = _selection == SelectionKind.Bag ? InventorySlotDrag.SlotKind.Bag
+            : _selection == SelectionKind.Equipment ? InventorySlotDrag.SlotKind.Equipment
+            : InventorySlotDrag.SlotKind.None;
+        var holder = kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId)
+            : kind == InventorySlotDrag.SlotKind.Equipment ? itemManager.GetEquipment(playerId)
+            : null;
+        if (holder == null || _selectedIndex < 0 || _selectedIndex >= holder.Stacks.Count
+            || holder.Stacks[_selectedIndex].Empty || holder.Stacks[_selectedIndex].Item == null)
+        {
+            return InventorySlotRef.None;
+        }
+
+        var item = holder.Stacks[_selectedIndex].Item;
+        return new InventorySlotRef(kind, _selectedIndex, item.uid, item.upgradeLevel);
+    }
+
+    /// <summary>
+    /// 끌고 있는 칸의 지금 번호. 가방은 끄는 사이 정렬될 수 있어서 종과 성으로 다시 찾는다.
+    /// </summary>
+    private InventorySlotRef ResolveDrag(ItemManager itemManager, int playerId)
+    {
+        if (_drag.Kind != InventorySlotDrag.SlotKind.Bag)
+        {
+            return _drag;
+        }
+
+        var bagIndex = InventoryMerge.ResolveBagIndex(itemManager.GetInventory(playerId), _drag);
+        return bagIndex >= 0 ? new InventorySlotRef(_drag.Kind, bagIndex, _drag.Uid, _drag.Star) : InventorySlotRef.None;
     }
 
     private void DropBag(ItemManager itemManager, int playerId, InventorySlotDrag.SlotKind targetKind, int targetIndex)
