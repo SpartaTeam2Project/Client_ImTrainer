@@ -29,3 +29,18 @@ public struct InventoryChanged
         PlayerId = playerId;
     }
 }
+
+/// <summary>
+/// 인벤토리 창에 잠깐 띄울 안내 문구. 판매 대사와 실패 메시지만 보낸다.
+/// </summary>
+public struct InventoryNotice
+{
+    public int PlayerId;
+    public string Message;
+
+    public InventoryNotice(int playerId, string message)
+    {
+        PlayerId = playerId;
+        Message = message;
+    }
+}

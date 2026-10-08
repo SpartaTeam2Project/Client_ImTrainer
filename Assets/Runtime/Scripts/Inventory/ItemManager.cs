@@ -22,6 +22,7 @@ public class ItemManager : BaseManager
     public const float SELL_PRICE_RATE = 0.5f;
     public const int MIN_SELL_PRICE = 1;
     public const int MIN_EQUIPPED = 1;
+    public const string MIN_EQUIPPED_MESSAGE = "포켓몬은 최소 한 마리 이상 데리고 다녀야 합니다.";
     public const int SHOP_OFFER_COUNT = 4;
     public const int SHOP_REFRESH_PRICE = 1;
     private const int DEFAULT_PLAYER_LEVEL = 1;
@@ -34,8 +35,6 @@ public class ItemManager : BaseManager
     private readonly ItemCatalog _catalog = new ItemCatalog();
     private readonly Dictionary<int, RunInventory> _runs = new Dictionary<int, RunInventory>();
     private readonly List<int> _usedSlots = new List<int>(SYNTHESIS_COUNT);
-
-    public string LastMessage { get; private set; } = string.Empty;
 
     public IReadOnlyList<Item> Items => _catalog.Items;
 
@@ -147,8 +146,7 @@ public class ItemManager : BaseManager
         var uid = _catalog.FindUid(visual);
         if (uid < 0)
         {
-            LastMessage = "시작 포켓몬을 찾지 못했습니다.";
-            Debug.LogWarning(LastMessage);
+            Debug.LogWarning("시작 포켓몬을 찾지 못했습니다.");
             RollShop(playerId, run);
             FinishBag(playerId);
             PublishAllEquipment(playerId);
@@ -161,8 +159,7 @@ public class ItemManager : BaseManager
         var index = run.Bag.FindIndex(uid, Item.STAR_MIN);
         if (!run.TryMoveToSlot(index, (int)WeaponSlot.Hour3))
         {
-            LastMessage = "시작 포켓몬을 장착하지 못했습니다.";
-            Debug.LogWarning(LastMessage);
+            Debug.LogWarning("시작 포켓몬을 장착하지 못했습니다.");
         }
 
         // 시작 포켓몬이 들어간 뒤에 뽑아야 보유 계통 가중치가 붙는다.
@@ -229,13 +226,12 @@ public class ItemManager : BaseManager
         if (!Managers.Instance.TryGetManager<CurrenciesManager>(out var currencies)
             || !currencies.TryWithdraw(playerId, CurrenciesManager.MONSTER_BALL_ID, SHOP_REFRESH_PRICE, false))
         {
-            LastMessage = "몬스터볼이 부족합니다.";
+            Notify(playerId, "몬스터볼이 부족합니다.");
             PublishInventory(playerId);
             return false;
         }
 
         RollShop(playerId, run);
-        LastMessage = "상점을 새로 고쳤습니다.";
         PublishInventory(playerId);
         return true;
     }
@@ -259,7 +255,7 @@ public class ItemManager : BaseManager
         var run = GetRun(playerId);
         if (!ItemShop.TryPrepareOffer(run, _catalog, offerIndex, out var created, out var message))
         {
-            LastMessage = message;
+            Notify(playerId, message);
             return false;
         }
 
@@ -270,13 +266,12 @@ public class ItemManager : BaseManager
 
         if (!currencies.TryWithdraw(playerId, created.currencyId, created.price, false))
         {
-            LastMessage = currencies.GetName(created.currencyId) + "이 부족합니다.";
+            Notify(playerId, currencies.GetName(created.currencyId) + "이 부족합니다.");
             return false;
         }
 
         ItemShop.CompletePurchase(run, offerIndex, created);
         RecordObtained(playerId, created.uid);
-        LastMessage = created.name + "을 가방에 넣었습니다.";
         FinishBag(playerId);
         return true;
     }
@@ -298,9 +293,9 @@ public class ItemManager : BaseManager
     {
         var success = ItemSynthesis.TrySynthesize(GetRun(playerId), _catalog, uid, upgradeLevel, targetSlot, sourceSlot,
             _usedSlots, out var result, out var message);
-        LastMessage = message;
         if (!success)
         {
+            Notify(playerId, message);
             return false;
         }
 
@@ -324,24 +319,23 @@ public class ItemManager : BaseManager
         var run = GetRun(playerId);
         if (run == null || !run.HasBagItem(bagIndex))
         {
-            LastMessage = "장착할 포켓몬이 없습니다.";
+            Notify(playerId, "장착할 포켓몬이 없습니다.");
             return false;
         }
 
         var slot = run.Equipment.FindEmptyIndex();
         if (slot < 0)
         {
-            LastMessage = "장착 칸이 가득 찼습니다.";
+            Notify(playerId, "장착 칸이 가득 찼습니다.");
             return false;
         }
 
         if (!run.TryMoveToSlot(bagIndex, slot))
         {
-            LastMessage = "장착하지 못했습니다.";
+            Notify(playerId, "장착하지 못했습니다.");
             return false;
         }
 
-        LastMessage = "장착했습니다.";
         FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -355,13 +349,13 @@ public class ItemManager : BaseManager
         var run = GetRun(playerId);
         if (run == null || !run.HasBagItem(bagIndex))
         {
-            LastMessage = "장착할 포켓몬이 없습니다.";
+            Notify(playerId, "장착할 포켓몬이 없습니다.");
             return false;
         }
 
         if (!run.IsValidSlot(slot))
         {
-            LastMessage = "장착하지 못했습니다.";
+            Notify(playerId, "장착하지 못했습니다.");
             return false;
         }
 
@@ -372,11 +366,10 @@ public class ItemManager : BaseManager
 
         if (!run.TryMoveToSlot(bagIndex, slot))
         {
-            LastMessage = "장착하지 못했습니다.";
+            Notify(playerId, "장착하지 못했습니다.");
             return false;
         }
 
-        LastMessage = "장착했습니다.";
         FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -390,7 +383,7 @@ public class ItemManager : BaseManager
         var run = GetRun(playerId);
         if (run == null || !run.HasBagItem(bagIndex) || !run.HasEquipped(slot))
         {
-            LastMessage = "교체할 포켓몬이 없습니다.";
+            Notify(playerId, "교체할 포켓몬이 없습니다.");
             return false;
         }
 
@@ -398,7 +391,6 @@ public class ItemManager : BaseManager
         var equippedItem = run.Equipment.Stacks[slot].Item.Copy();
         run.Bag.Stacks[bagIndex].SetItem(equippedItem, 1);
         run.Equipment.Stacks[slot].SetItem(bagItem, 1);
-        LastMessage = "교체했습니다.";
         FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -428,7 +420,6 @@ public class ItemManager : BaseManager
         }
 
         toStack.SetItem(moving, 1);
-        LastMessage = "자리를 바꿨습니다.";
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, from);
         PublishEquipmentSlot(playerId, to);
@@ -441,20 +432,19 @@ public class ItemManager : BaseManager
     public bool TryUnequip(int playerId, int slot)
     {
         var run = GetRun(playerId);
-        if (!TryTakeEquipped(run, slot, out var item))
+        if (!TryTakeEquipped(playerId, run, slot, out var item))
         {
             return false;
         }
 
         if (!run.Bag.CanAccept(item, 1))
         {
-            LastMessage = "가방이 가득 찼습니다.";
+            Notify(playerId, "가방이 가득 찼습니다.");
             return false;
         }
 
         run.Equipment.ClearSlot(slot);
         run.Bag.AddItem(item, 1);
-        LastMessage = "해제했습니다.";
         FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -468,12 +458,12 @@ public class ItemManager : BaseManager
         var run = GetRun(playerId);
         if (run == null || !run.TryTakeBag(bagIndex, out var item, out var number))
         {
-            LastMessage = "판매할 포켓몬이 없습니다.";
+            Notify(playerId, "판매할 포켓몬이 없습니다.");
             return false;
         }
 
         Refund(playerId, item.currencyId, GetSellPrice(item) * number);
-        LastMessage = SellMessage.Get(item.name);
+        Notify(playerId, SellMessage.Get(item.name));
         FinishBag(playerId);
         return true;
     }
@@ -486,11 +476,10 @@ public class ItemManager : BaseManager
         var run = GetRun(playerId);
         if (run == null || !run.TryTakeBag(bagIndex, out _, out _))
         {
-            LastMessage = "버릴 포켓몬이 없습니다.";
+            Notify(playerId, "버릴 포켓몬이 없습니다.");
             return false;
         }
 
-        LastMessage = "버렸습니다.";
         FinishBag(playerId);
         return true;
     }
@@ -501,14 +490,14 @@ public class ItemManager : BaseManager
     public bool TrySellEquipped(int playerId, int slot)
     {
         var run = GetRun(playerId);
-        if (!TryTakeEquipped(run, slot, out var item))
+        if (!TryTakeEquipped(playerId, run, slot, out var item))
         {
             return false;
         }
 
         run.Equipment.ClearSlot(slot);
         Refund(playerId, item.currencyId, GetSellPrice(item));
-        LastMessage = SellMessage.Get(item.name);
+        Notify(playerId, SellMessage.Get(item.name));
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -520,13 +509,12 @@ public class ItemManager : BaseManager
     public bool TryDiscardEquipped(int playerId, int slot)
     {
         var run = GetRun(playerId);
-        if (!TryTakeEquipped(run, slot, out _))
+        if (!TryTakeEquipped(playerId, run, slot, out _))
         {
             return false;
         }
 
         run.Equipment.ClearSlot(slot);
-        LastMessage = "버렸습니다.";
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -586,13 +574,13 @@ public class ItemManager : BaseManager
         return run;
     }
 
-    private bool TryTakeEquipped(RunInventory run, int slot, out Item item)
+    private bool TryTakeEquipped(int playerId, RunInventory run, int slot, out Item item)
     {
         item = null;
         var message = "장착된 포켓몬이 없습니다.";
         if (run == null || !run.TryTakeEquipped(slot, out item, out message))
         {
-            LastMessage = message;
+            Notify(playerId, message);
             return false;
         }
 
@@ -682,6 +670,17 @@ public class ItemManager : BaseManager
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
         {
             eventManager.Publish(new InventoryChanged(playerId));
+        }
+    }
+
+    /// <summary>
+    /// 인벤토리 창에 잠깐 띄울 안내 문구를 보낸다. 판매 대사와 실패 메시지만 보낸다.
+    /// </summary>
+    private void Notify(int playerId, string message)
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(new InventoryNotice(playerId, message));
         }
     }
 

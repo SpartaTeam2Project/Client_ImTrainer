@@ -29,6 +29,14 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private const string STAR_UP_SOUND = "inventory_star_up";
     private const string EVOLUTION_START_SOUND = "inventory_star_evolution_start";
     private const string EVOLUTION_END_SOUND = "inventory_star_evolution_end";
+    // 키보드로 합성 대상을 고르는 동안 합성, 해제 버튼이 확정, 취소로 바뀐다.
+    private const string CONFIRM_LABEL = "확정";
+    private const string CANCEL_LABEL = "취소";
+    // 확정, 취소로 바뀔 때 글자를 튕겨서 눈에 띄게 한다.
+    private const float LABEL_PUNCH_SCALE = 0.3f;
+    private const float LABEL_PUNCH_DURATION = 0.3f;
+    private const int LABEL_PUNCH_VIBRATO = 8;
+    private const float LABEL_PUNCH_ELASTICITY = 0.8f;
 
     [SerializeField] private Canvas _canvas;
     [SerializeField] private CanvasGroup _panelGroup;
@@ -38,7 +46,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     [SerializeField] private HoverInformation _information;
     [SerializeField] private InventoryItem _slotPrefab;
     [SerializeField] private ResourceBar _resourceBar;
-    [SerializeField] private TextMeshProUGUI _status;
+    [SerializeField] private InventoryToast _toast;
     [SerializeField] private RectTransform _bagContent;
     [SerializeField] private PurchaseBeam _purchaseBeam;
 
@@ -73,6 +81,10 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private Coroutine _showRoutine;
     private Tween _fadeTween;
     private bool _closing;
+    private TMP_Text _synthesizeLabel;
+    private TMP_Text _unequipLabel;
+    private string _synthesizeText;
+    private string _unequipText;
 
     private void Awake()
     {
@@ -87,6 +99,8 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         AddAction(_sellButton, SellSelected);
         AddAction(_discardButton, DiscardSelected);
         AddAction(_closeButton, Close);
+        _synthesizeLabel = FindLabel(_synthesizeButton, out _synthesizeText);
+        _unequipLabel = FindLabel(_unequipButton, out _unequipText);
         if (_shopUi != null)
         {
             _shopUi.Bind(Refresh, SelectShop, _purchaseDirector);
@@ -289,6 +303,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     {
         _closing = false;
         ResetFade();
+        if (_toast != null)
+        {
+            _toast.Hide();
+        }
+
         if (_backdrop != null)
         {
             _backdrop.Release();
@@ -380,11 +399,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         RebuildBag(itemManager, playerId);
         _purchaseDirector.Reapply();
         _keyboard.Validate(itemManager.GetInventory(playerId), itemManager.GetEquipment(playerId));
-        if (_status != null)
-        {
-            _status.text = _keyboard.Message ?? itemManager.LastMessage;
-        }
-
+        RefreshActionLabels();
         ResolveShopSelection(itemManager, playerId);
         if (_shopUi != null)
         {
@@ -652,6 +667,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
     private void SynthesizeSelected()
     {
+        if (_keyboard.TryConfirm())
+        {
+            return;
+        }
+
         if (!TryGetSelectedBag(out var itemManager, out var playerId, out var stack))
         {
             return;
@@ -678,7 +698,13 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 
     private void UnequipSelected()
     {
-        if (_selection != SelectionKind.Equipment || !TryGetContext(out var itemManager, out var playerId))
+        if (_keyboard.TryCancel())
+        {
+            return;
+        }
+
+        if (_selection != SelectionKind.Equipment || !TryGetContext(out var itemManager, out var playerId)
+            || !HasEquipped(itemManager, playerId, _selectedIndex))
         {
             return;
         }
@@ -704,7 +730,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         {
             itemManager.TrySell(playerId, _selectedIndex);
         }
-        else if (_selection == SelectionKind.Equipment)
+        else if (_selection == SelectionKind.Equipment && HasEquipped(itemManager, playerId, _selectedIndex))
         {
             PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TrySellEquipped), null, ERROR_SOUND);
         }
@@ -723,7 +749,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         {
             itemManager.TryDiscard(playerId, _selectedIndex);
         }
-        else if (_selection == SelectionKind.Equipment)
+        else if (_selection == SelectionKind.Equipment && HasEquipped(itemManager, playerId, _selectedIndex))
         {
             PlaySoundIf(TryRemoveEquipped(itemManager, playerId, _selectedIndex, itemManager.TryDiscardEquipped), null, ERROR_SOUND);
         }
@@ -1155,6 +1181,11 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         Refresh();
     }
 
+    void IInventoryKeyboardTarget.Notify(string message)
+    {
+        ShowNotice(message);
+    }
+
     /// <summary>
     /// 키보드로 가방 포켓몬을 장착하거나 팔아 고른 칸이 비면 같은 자리 칸을 다시 고른다. 연달아 누르기 좋게 한다.
     /// </summary>
@@ -1171,6 +1202,65 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         {
             SelectBag(Mathf.Min(index, count - 1));
         }
+    }
+
+    private void HandleInventoryNotice(InventoryNotice notice)
+    {
+        if (!_open || !TryGetContext(out _, out var playerId) || notice.PlayerId != playerId)
+        {
+            return;
+        }
+
+        ShowNotice(notice.Message);
+    }
+
+    private void ShowNotice(string message)
+    {
+        if (_toast != null)
+        {
+            _toast.Show(message);
+        }
+    }
+
+    /// <summary>
+    /// 키보드로 합성 대상을 고르는 동안에는 합성, 해제 버튼 글자를 확정, 취소로 바꾼다.
+    /// </summary>
+    private void RefreshActionLabels()
+    {
+        var picking = _keyboard.Synthesizing;
+        SetLabel(_synthesizeLabel, picking ? CONFIRM_LABEL : _synthesizeText, picking);
+        SetLabel(_unequipLabel, picking ? CANCEL_LABEL : _unequipText, picking);
+    }
+
+    private static TMP_Text FindLabel(Button button, out string text)
+    {
+        var label = button != null ? button.GetComponentInChildren<TMP_Text>(true) : null;
+        text = label != null ? label.text : null;
+        return label;
+    }
+
+    /// <summary>
+    /// 글자가 바뀌면 바꾸고, punch면 튕기는 연출을 건다. 창이 열려 있는 동안 시간이 멈춰 있어서 시간 정지와 상관없이 돈다.
+    /// </summary>
+    private static void SetLabel(TMP_Text label, string text, bool punch)
+    {
+        if (label == null || label.text == text)
+        {
+            return;
+        }
+
+        label.text = text;
+        if (!punch)
+        {
+            return;
+        }
+
+        // 연달아 바뀌어도 크기가 어긋나지 않게 이전 연출을 끝낸 크기에서 다시 건다.
+        label.transform.DOKill(true);
+        label.transform
+            .DOPunchScale(Vector3.one * LABEL_PUNCH_SCALE, LABEL_PUNCH_DURATION, LABEL_PUNCH_VIBRATO, LABEL_PUNCH_ELASTICITY)
+            .SetUpdate(true)
+            .SetLink(label.gameObject);
     }
 
     private void HandleInventoryChanged(InventoryChanged changed)
@@ -1267,6 +1357,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         }
 
         eventManager.Subscribe<InventoryChanged>(HandleInventoryChanged);
+        eventManager.Subscribe<InventoryNotice>(HandleInventoryNotice);
         eventManager.Subscribe<ItemSynthesized>(HandleItemSynthesized);
         eventManager.Subscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = true;
@@ -1281,6 +1372,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         }
 
         eventManager.Unsubscribe<InventoryChanged>(HandleInventoryChanged);
+        eventManager.Unsubscribe<InventoryNotice>(HandleInventoryNotice);
         eventManager.Unsubscribe<ItemSynthesized>(HandleItemSynthesized);
         eventManager.Unsubscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = false;
@@ -1300,9 +1392,24 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     /// 장착 칸을 바로 팔거나 버리거나 해제한다. 디졸브로 판매 중인 장착 칸까지 빼면 최소 장착 수가 안 남을 때는 막는다.
     /// 막지 않으면 이 칸이 먼저 빠지고, 디졸브가 끝난 판매가 마지막 한 마리라서 실패한다.
     /// </summary>
+    /// <summary>
+    /// 장착 칸에 포켓몬이 있으면 true. 빈 칸에서 해제, 판매, 버리기를 누르면 아무 반응 없이 넘기려고 먼저 본다.
+    /// </summary>
+    private static bool HasEquipped(ItemManager itemManager, int playerId, int slot)
+    {
+        var equipment = itemManager.GetEquipment(playerId);
+        return equipment != null && slot >= 0 && slot < equipment.Stacks.Count && !equipment.Stacks[slot].Empty;
+    }
+
     private bool TryRemoveEquipped(ItemManager itemManager, int playerId, int slot, System.Func<int, int, bool> remove)
     {
-        return _sellDirector.CanSellEquipped(itemManager, playerId) && remove(playerId, slot);
+        if (!_sellDirector.CanSellEquipped(itemManager, playerId))
+        {
+            ShowNotice(ItemManager.MIN_EQUIPPED_MESSAGE);
+            return false;
+        }
+
+        return remove(playerId, slot);
     }
 
     /// <summary>

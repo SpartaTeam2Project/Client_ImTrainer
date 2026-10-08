@@ -26,6 +26,11 @@ public interface IInventoryKeyboardTarget
     void Synthesize(InventorySlotRef source, InventorySlotDrag.SlotKind targetKind, int targetIndex);
 
     void Refresh();
+
+    /// <summary>
+    /// 안내 문구를 잠깐 띄운다.
+    /// </summary>
+    void Notify(string message);
 }
 
 /// <summary>
@@ -34,8 +39,7 @@ public interface IInventoryKeyboardTarget
 /// </summary>
 public sealed class InventoryKeyboard
 {
-    private const string PICK_TARGET_MESSAGE = "합성할 포켓몬을 고르세요. Z 확정, C 취소";
-    private const string WRONG_TARGET_MESSAGE = "같은 종, 같은 성 포켓몬을 고르세요. Z 확정, C 취소";
+    private const string WRONG_TARGET_MESSAGE = "같은 종, 같은 성 포켓몬을 고르세요.";
     private const string CURSOR_SOUND = "cursor";
     private const string PICK_SOUND = "select";
     private const string ERROR_SOUND = "error";
@@ -67,11 +71,6 @@ public sealed class InventoryKeyboard
     public int CursorIndex => _cursorIndex;
 
     /// <summary>
-    /// 합성 모드 안내 문구. 합성 모드가 아니면 null이다.
-    /// </summary>
-    public string Message { get; private set; }
-
-    /// <summary>
     /// 창이 열려 있는 동안 매 프레임 입력을 읽는다.
     /// </summary>
     public void Tick(InputManager inputManager)
@@ -85,11 +84,7 @@ public sealed class InventoryKeyboard
         switch (inputManager.ConsumeInventoryHotkey())
         {
             case InventoryHotkey.Synthesize:
-                if (Synthesizing)
-                {
-                    Confirm();
-                }
-                else
+                if (!TryConfirm())
                 {
                     Begin();
                 }
@@ -124,7 +119,21 @@ public sealed class InventoryKeyboard
     }
 
     /// <summary>
-    /// 합성 모드면 취소하고 true를 돌려준다. Esc가 창을 닫기 전에 먼저 부른다.
+    /// 합성 모드면 고르는 칸으로 합성을 확정하고 true를 돌려준다. 합성 버튼도 합성 모드에서는 이걸 부른다.
+    /// </summary>
+    public bool TryConfirm()
+    {
+        if (!Synthesizing)
+        {
+            return false;
+        }
+
+        Confirm();
+        return true;
+    }
+
+    /// <summary>
+    /// 합성 모드면 취소하고 true를 돌려준다. Esc가 창을 닫기 전에 먼저 부른다. 해제 버튼도 합성 모드에서는 이걸 부른다.
     /// </summary>
     public bool TryCancel()
     {
@@ -145,7 +154,6 @@ public sealed class InventoryKeyboard
         _source = InventorySlotRef.None;
         _cursorKind = InventorySlotDrag.SlotKind.None;
         _cursorIndex = -1;
-        Message = null;
     }
 
     /// <summary>
@@ -205,7 +213,6 @@ public sealed class InventoryKeyboard
 
         _cursorKind = nextKind;
         _cursorIndex = nextIndex;
-        Message = PICK_TARGET_MESSAGE;
         _target.Refresh();
     }
 
@@ -227,7 +234,6 @@ public sealed class InventoryKeyboard
         _source = new InventorySlotRef(kind, index, item.uid, item.upgradeLevel);
         _cursorKind = kind;
         _cursorIndex = index;
-        Message = PICK_TARGET_MESSAGE;
         PlaySound(PICK_SOUND);
         _target.Refresh();
     }
@@ -244,9 +250,8 @@ public sealed class InventoryKeyboard
 
         if (!InventoryMerge.IsTarget(bag, equipment, _source, _cursorKind, _cursorIndex, true))
         {
-            Message = WRONG_TARGET_MESSAGE;
             PlaySound(ERROR_SOUND);
-            _target.Refresh();
+            _target.Notify(WRONG_TARGET_MESSAGE);
             return;
         }
 

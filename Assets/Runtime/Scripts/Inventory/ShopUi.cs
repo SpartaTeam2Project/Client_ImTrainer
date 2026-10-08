@@ -14,6 +14,7 @@ public class ShopUi : MonoBehaviour
     private const string BALL_OPEN_SOUND = "shop_pb";
     private const string STAMP_SOUND = "shop_stamp";
     private const string REROLL_SOUND = "shop_reroll";
+    private const string ERROR_SOUND = "error";
 
     private static readonly Color LOCKED_COLOR = Color.white;
     private static readonly Color UNLOCKED_COLOR = new Color(0.6f, 0.6f, 0.6f, 1f);
@@ -187,6 +188,10 @@ public class ShopUi : MonoBehaviour
         if (itemManager.TryRefreshShop(playerId))
         {
             PlaySound(REROLL_SOUND);
+        }
+        else
+        {
+            PlaySound(ERROR_SOUND);
         }
 
         _onChanged?.Invoke();
