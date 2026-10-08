@@ -370,6 +370,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         }
 
         RebuildBag(itemManager, playerId);
+        _purchaseDirector.Reapply();
         _keyboard.Validate(itemManager.GetInventory(playerId), itemManager.GetEquipment(playerId));
         if (_status != null)
         {

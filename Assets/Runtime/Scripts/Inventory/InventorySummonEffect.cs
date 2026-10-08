@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +24,7 @@ public class InventorySummonEffect : MonoBehaviour
     private Sprite _target;
     private bool _hidingStars;
     private bool _hidingFrame;
+    private Action _onFinished;
 
     public void Bind(InventoryItem owner, Image icon, Material material)
     {
@@ -58,10 +60,12 @@ public class InventorySummonEffect : MonoBehaviour
 
     /// <summary>
     /// 광선이 닿았다. 빨간 실루엣이 커지며 나타났다가 원래 색으로 돌아오고, 숨긴 별이 튕기며 나타난다.
+    /// 끝까지 가면 onFinished를 부른다. 도중에 Stop되면 부르지 않는다.
     /// </summary>
-    public void Play()
+    public void Play(Action onFinished)
     {
         KillTween();
+        _onFinished = onFinished;
         RevealFrame();
         if (_icon == null || _icon.sprite == null || !EnsureSilhouette())
         {
@@ -108,6 +112,7 @@ public class InventorySummonEffect : MonoBehaviour
     public void Stop()
     {
         KillTween();
+        _onFinished = null;
         Restore();
         if (_hidingStars)
         {
@@ -127,18 +132,20 @@ public class InventorySummonEffect : MonoBehaviour
     }
 
     /// <summary>
-    /// 실루엣이 다 빠졌다. 아이콘을 되돌리고, 숨겨 둔 별이 있으면 1성부터 차례로 튕기며 보여 준다.
+    /// 실루엣이 다 빠졌다. 아이콘을 되돌리고, 숨겨 둔 별이 있으면 1성부터 차례로 튕기며 샤이니와 함께 보여 준다.
     /// </summary>
     private void Finish()
     {
         Restore();
-        if (!_hidingStars)
+        if (_hidingStars)
         {
-            return;
+            _hidingStars = false;
+            _owner.RevealStarsInOrder();
         }
 
-        _hidingStars = false;
-        _owner.RevealStarsInOrder();
+        var onFinished = _onFinished;
+        _onFinished = null;
+        onFinished?.Invoke();
     }
 
     private void RevealFrame()

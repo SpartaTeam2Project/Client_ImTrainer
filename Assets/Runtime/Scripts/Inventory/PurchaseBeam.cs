@@ -31,21 +31,35 @@ public class PurchaseBeam : MonoBehaviour
     private RectTransform Root => (RectTransform)transform;
 
     /// <summary>
-    /// from 가운데에서 to 가운데로 광선을 쏜다. 닿는 순간 onArrive를 부른다. 도중에 멈추면 부르지 않는다.
+    /// from 가운데에서 to()가 돌려주는 칸 가운데로 광선을 쏜다. 닿는 순간 onArrive를 부른다. 도중에 멈추면 부르지 않는다.
+    /// 날아가는 사이 칸이 옮겨질 수 있어서 to()는 그릴 때마다 다시 부른다. null이면 마지막 위치로 간다.
     /// </summary>
-    public void Play(RectTransform from, RectTransform to, Action onArrive)
+    public void Play(RectTransform from, Func<RectTransform> to, Action onArrive)
     {
-        if (from == null || to == null)
+        var first = to != null ? to() : null;
+        if (from == null || first == null)
         {
             onArrive?.Invoke();
             return;
+        }
+
+        var last = ToLocal(first);
+        Vector2 Target()
+        {
+            var rect = to();
+            if (rect != null)
+            {
+                last = ToLocal(rect);
+            }
+
+            return last;
         }
 
         // 창이 열린 뒤 만들어지는 끌기 그림보다도 위에 그린다.
         transform.SetAsLastSibling();
         var pool = _freePools.Count > 0 ? _freePools.Pop() : new BeamImagePool(Root);
         var style = _style == BeamStyle.Lightning ? (PurchaseBeamStyle)_lightning : _projectile;
-        Tween tween = style.Play(pool, ToLocal(from), ToLocal(to), onArrive);
+        Tween tween = style.Play(pool, ToLocal(from), Target, onArrive);
         // 창이 열려 있으면 시간이 멈춰 있어서 시간 정지와 상관없이 돈다.
         tween.SetUpdate(true).SetLink(gameObject).OnKill(() => Release(tween));
         _active.Add(new ActiveBeam { Tween = tween, Pool = pool });

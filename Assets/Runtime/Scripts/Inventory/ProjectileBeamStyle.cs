@@ -25,7 +25,7 @@ public class ProjectileBeamStyle : PurchaseBeamStyle
     [SerializeField] private float _burstDuration = 0.2f;
     [SerializeField] private float _burstScale = 2.5f;
 
-    public override Sequence Play(BeamImagePool pool, Vector2 from, Vector2 to, Action onArrive)
+    public override Sequence Play(BeamImagePool pool, Vector2 from, Func<Vector2> to, Action onArrive)
     {
         var count = Mathf.Max(0, _trailCount);
         var trail = new Image[count];
@@ -40,12 +40,12 @@ public class ProjectileBeamStyle : PurchaseBeamStyle
         outer.rectTransform.sizeDelta = Vector2.one * _headSize;
         core.rectTransform.sizeDelta = Vector2.one * _coreSize;
 
-        var control = (from + to) * 0.5f + Perpendicular(from, to) * (Vector2.Distance(from, to) * _arc);
-
         // progress가 1을 넘으면 머리는 칸에 멈추고 잔상만 칸으로 따라 들어간다.
         void Place(float progress, float fade)
         {
-            var head = Bezier(from, control, to, Mathf.Min(progress, 1f));
+            var target = to();
+            var control = (from + target) * 0.5f + Perpendicular(from, target) * (Vector2.Distance(from, target) * _arc);
+            var head = Bezier(from, control, target, Mathf.Min(progress, 1f));
             outer.rectTransform.localPosition = head;
             core.rectTransform.localPosition = head;
             for (var i = 0; i < count; i++)
@@ -53,7 +53,7 @@ public class ProjectileBeamStyle : PurchaseBeamStyle
                 var t = progress - (i + 1) * _trailGap;
                 var rate = 1f - (i + 1f) / (count + 1f);
                 var rect = trail[i].rectTransform;
-                rect.localPosition = Bezier(from, control, to, Mathf.Clamp01(t));
+                rect.localPosition = Bezier(from, control, target, Mathf.Clamp01(t));
                 rect.sizeDelta = Vector2.one * (_headSize * Mathf.Lerp(0.3f, 0.9f, rate));
                 trail[i].color = WithAlpha(_outerColor, t < 0f ? 0f : rate * 0.7f * fade);
             }

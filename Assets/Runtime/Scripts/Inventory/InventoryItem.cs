@@ -1,4 +1,5 @@
 using System;
+using Coffee.UIEffects;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -36,6 +37,8 @@ public class InventoryItem : MonoBehaviour
     [SerializeField] private Button _button;
     [SerializeField] private Material _evolutionMaterial;
     [SerializeField] private Material _summonMaterial;
+    [Tooltip("칸 전체를 덮는 샤이니 덮개. 꺼 둔 채로 둔다.")]
+    [SerializeField] private UIEffect _shinyEffect;
 
     private InventorySlotDrag _drag;
     private Color _selectColor;
@@ -50,6 +53,7 @@ public class InventoryItem : MonoBehaviour
     private IconHitBlend _evolutionBlend;
     private Sprite _evolutionTarget;
     private InventorySummonEffect _summon;
+    private SlotShiny _shiny;
 
     public Button Button => _button;
 
@@ -104,6 +108,12 @@ public class InventoryItem : MonoBehaviour
 
         ApplyFont(_starText);
         ApplyFont(_countText);
+        // 프리팹에서 값을 보려고 켜 둔 채 저장해도 평소에는 덮개가 보이지 않게 끈다.
+        if (_shinyEffect != null)
+        {
+            _shinyEffect.gameObject.SetActive(false);
+        }
+
         ShowEmpty();
     }
 
@@ -114,6 +124,7 @@ public class InventoryItem : MonoBehaviour
     {
         StopEvolution();
         StopSummon();
+        StopShiny();
         if (_icon != null)
         {
             _icon.sprite = null;
@@ -225,7 +236,7 @@ public class InventoryItem : MonoBehaviour
     }
 
     /// <summary>
-    /// 성이 올랐다. 새로 켜진 별을 한 번 튕긴다.
+    /// 성이 올랐다. 새로 켜진 별을 한 번 튕기면서 샤이니를 한 번 보여 준다.
     /// </summary>
     public void PlayStarUp(int star)
     {
@@ -240,6 +251,33 @@ public class InventoryItem : MonoBehaviour
             .DOPunchScale(Vector3.one * STAR_PUNCH_SCALE, STAR_PUNCH_DURATION, STAR_PUNCH_VIBRATO)
             .SetUpdate(true)
             .SetLink(gameObject);
+        PlayShiny();
+    }
+
+    /// <summary>
+    /// 빛줄기가 칸 전체를 한 번 훑고 지나간다. 구매, 성 오름, 진화 연출의 마무리로 쓴다.
+    /// </summary>
+    public void PlayShiny()
+    {
+        if (_shinyEffect == null)
+        {
+            return;
+        }
+
+        if (_shiny == null)
+        {
+            _shiny = new SlotShiny(_shinyEffect, gameObject);
+        }
+
+        _shiny.Play();
+    }
+
+    private void StopShiny()
+    {
+        if (_shiny != null)
+        {
+            _shiny.Stop();
+        }
     }
 
     /// <summary>
@@ -285,6 +323,7 @@ public class InventoryItem : MonoBehaviour
             {
                 _evolutionTween = null;
                 ResetEvolutionMaterial();
+                PlayShiny();
             });
     }
 
@@ -333,7 +372,8 @@ public class InventoryItem : MonoBehaviour
     }
 
     /// <summary>
-    /// 숨긴 별을 1성부터 차례로 하나씩 켜며 튕긴다. 상점에서 산 포켓몬이 칸에 다 들어왔을 때 쓴다.
+    /// 숨긴 별을 1성부터 차례로 하나씩 켜며 튕기고, 튕기기 시작할 때 샤이니를 같이 보여 준다.
+    /// 상점에서 산 포켓몬이 칸에 다 들어왔을 때 쓴다.
     /// </summary>
     public void RevealStarsInOrder()
     {
@@ -362,6 +402,7 @@ public class InventoryItem : MonoBehaviour
         }
 
         _starPunchTween = sequence.SetUpdate(true).SetLink(gameObject);
+        PlayShiny();
     }
 
     /// <summary>
@@ -411,6 +452,7 @@ public class InventoryItem : MonoBehaviour
         StopMergeHint();
         StopEvolution();
         StopStarPunch();
+        StopShiny();
     }
 
     private void OnDestroy()

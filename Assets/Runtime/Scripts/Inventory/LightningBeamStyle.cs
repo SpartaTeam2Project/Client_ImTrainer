@@ -29,10 +29,11 @@ public class LightningBeamStyle : PurchaseBeamStyle
     [SerializeField] private float _flickerInterval = 0.04f;
     [SerializeField] private float _fadeDuration = 0.15f;
 
-    public override Sequence Play(BeamImagePool pool, Vector2 from, Vector2 to, Action onArrive)
+    public override Sequence Play(BeamImagePool pool, Vector2 from, Func<Vector2> to, Action onArrive)
     {
         var count = Mathf.Max(1, _segments);
         var points = new Vector2[count + 1];
+        var offsets = new float[count + 1];
         var outers = new Image[count];
         var cores = new Image[count];
         for (var i = 0; i < count; i++)
@@ -49,25 +50,27 @@ public class LightningBeamStyle : PurchaseBeamStyle
         var tip = pool.Get(_tipSprite, _outerColor);
         tip.rectTransform.sizeDelta = Vector2.one * _tipSize;
 
-        var side = Perpendicular(from, to);
         var reveal = 0f;
         var alpha = 1f;
 
         void Shuffle()
         {
-            points[0] = from;
-            points[count] = to;
             for (var i = 1; i < count; i++)
             {
-                var rate = (float)i / count;
                 // 가운데일수록 더 크게 꺾어서 양 끝은 볼과 칸에 붙어 있게 한다.
-                var offset = UnityEngine.Random.Range(-_jitter, _jitter) * Mathf.Sin(rate * Mathf.PI);
-                points[i] = Vector2.Lerp(from, to, rate) + side * offset;
+                offsets[i] = UnityEngine.Random.Range(-_jitter, _jitter) * Mathf.Sin((float)i / count * Mathf.PI);
             }
         }
 
         void Draw()
         {
+            var target = to();
+            var side = Perpendicular(from, target);
+            for (var i = 0; i <= count; i++)
+            {
+                points[i] = Vector2.Lerp(from, target, (float)i / count) + side * offsets[i];
+            }
+
             var total = 0f;
             for (var i = 0; i < count; i++)
             {
