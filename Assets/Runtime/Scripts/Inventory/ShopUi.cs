@@ -60,6 +60,7 @@ public class ShopUi : MonoBehaviour
 
     private Action _onChanged;
     private Action<int> _onSelect;
+    private IShopPurchaseEffect _purchaseEffect;
     private CapturedPose[] _poses;
     private Sequence[] _stampTweens;
     private int _pendingStampIndex = -1;
@@ -113,11 +114,13 @@ public class ShopUi : MonoBehaviour
 
     /// <summary>
     /// 구매나 새로고침이 끝나면 onChanged를, 포켓몬 칸을 누르면 onSelect(칸 번호)를 호출한다.
+    /// 구매 연출의 각 단계는 purchaseEffect에 알린다. 없으면 null.
     /// </summary>
-    public void Bind(Action onChanged, Action<int> onSelect)
+    public void Bind(Action onChanged, Action<int> onSelect, IShopPurchaseEffect purchaseEffect)
     {
         _onChanged = onChanged;
         _onSelect = onSelect;
+        _purchaseEffect = purchaseEffect;
     }
 
     /// <summary>
@@ -256,6 +259,7 @@ public class ShopUi : MonoBehaviour
             row.Buy.interactable = false;
         }
 
+        _purchaseEffect?.OnPurchased(index);
         var sequence = DOTween.Sequence();
         if (row.PriceIcon != null && TryGetOpenIcons(currencyId, out var opening, out var open))
         {
@@ -264,8 +268,17 @@ public class ShopUi : MonoBehaviour
             sequence.AppendInterval(BALL_FRAME_DURATION);
             sequence.AppendCallback(() => row.PriceIcon.sprite = opening);
             sequence.AppendInterval(BALL_FRAME_DURATION);
-            sequence.AppendCallback(() => row.PriceIcon.sprite = open);
+            sequence.AppendCallback(() =>
+            {
+                row.PriceIcon.sprite = open;
+                _purchaseEffect?.OnBallOpened(index, row.PriceIcon.rectTransform);
+            });
             sequence.AppendInterval(BALL_FRAME_DURATION);
+        }
+        else if (row.Buy != null)
+        {
+            // 열리는 그림이 없어도 가격 버튼이 사라지기 전에 광선은 쏜다.
+            sequence.AppendCallback(() => _purchaseEffect?.OnBallOpened(index, (RectTransform)row.Buy.transform));
         }
 
         sequence.AppendCallback(() => SetPrice(row, null, 0, false));

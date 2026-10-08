@@ -37,6 +37,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     [SerializeField] private ResourceBar _resourceBar;
     [SerializeField] private TextMeshProUGUI _status;
     [SerializeField] private RectTransform _bagContent;
+    [SerializeField] private PurchaseBeam _purchaseBeam;
 
     [Header("Actions")]
     [SerializeField] private Button _synthesizeButton;
@@ -55,6 +56,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     private InventorySlotRef _drag = InventorySlotRef.None;
     private InventoryFocusNavigator _navigator;
     private InventoryKeyboard _keyboard;
+    private PurchaseBeamDirector _purchaseDirector;
     private ScrollRect _bagScroll;
     private InventorySlotRef _synthesized = InventorySlotRef.None;
     private SelectionKind _selection = SelectionKind.None;
@@ -72,6 +74,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     {
         _navigator = new InventoryFocusNavigator();
         _keyboard = new InventoryKeyboard(this, _navigator);
+        _purchaseDirector = new PurchaseBeamDirector(_purchaseBeam, _bagSlots, _navigator);
         _bagScroll = _bagContent != null ? _bagContent.GetComponentInParent<ScrollRect>() : null;
         AddAction(_synthesizeButton, SynthesizeSelected);
         AddAction(_equipButton, EquipSelected);
@@ -81,7 +84,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         AddAction(_closeButton, Close);
         if (_shopUi != null)
         {
-            _shopUi.Bind(Refresh, SelectShop);
+            _shopUi.Bind(Refresh, SelectShop, _purchaseDirector);
         }
 
         if (_equipmentUi != null)
@@ -105,6 +108,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
     {
         Unsubscribe();
         EndDrag();
+        _purchaseDirector?.Stop();
         if (_holdTime && Managers.Instance != null && Managers.Instance.CurrentState == GameState.Playing)
         {
             Time.timeScale = 1f;
@@ -241,6 +245,7 @@ public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
         _open = false;
         _keyboard.Reset();
         EndDrag();
+        _purchaseDirector.Stop();
         if (_showRoutine != null)
         {
             StopCoroutine(_showRoutine);

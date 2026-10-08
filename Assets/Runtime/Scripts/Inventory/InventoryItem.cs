@@ -19,10 +19,11 @@ public class InventoryItem : MonoBehaviour
     private const float STAR_PUNCH_SCALE = 0.5f;
     private const float STAR_PUNCH_DURATION = 0.3f;
     private const int STAR_PUNCH_VIBRATO = 6;
+    // 별을 차례로 켤 때 다음 별까지의 간격.
+    private const float STAR_REVEAL_INTERVAL = 0.15f;
     private const float EVOLUTION_GLOW_IN_DURATION = 0.5f;
     private const float EVOLUTION_HOLD_DURATION = 0.15f;
     private const float EVOLUTION_GLOW_OUT_DURATION = 0.5f;
-    private static readonly int HIT_EFFECT_BLEND_ID = Shader.PropertyToID("_HitEffectBlend");
 
     [SerializeField] private Image _frame;
     [SerializeField] private Image[] _starImages = new Image[Item.STAR_MAX];
@@ -34,15 +35,21 @@ public class InventoryItem : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _countText;
     [SerializeField] private Button _button;
     [SerializeField] private Material _evolutionMaterial;
+    [SerializeField] private Material _summonMaterial;
 
     private InventorySlotDrag _drag;
     private Color _selectColor;
     private bool _selected;
     private Tween _mergeHintTween;
     private Tween _starPunchTween;
+    private int _star;
+    private bool _starsHidden;
+    private bool _filled;
+    private bool _frameEmpty;
     private Tween _evolutionTween;
-    private Material _evolutionInstance;
+    private IconHitBlend _evolutionBlend;
     private Sprite _evolutionTarget;
+    private InventorySummonEffect _summon;
 
     public Button Button => _button;
 
@@ -59,6 +66,27 @@ public class InventoryItem : MonoBehaviour
             }
 
             return _drag;
+        }
+    }
+
+    /// <summary>
+    /// 상점에서 산 포켓몬이 들어올 때의 빨간 실루엣. 프리팹에 없으면 붙여서 돌려준다.
+    /// </summary>
+    public InventorySummonEffect Summon
+    {
+        get
+        {
+            if (_summon == null)
+            {
+                if (!TryGetComponent(out _summon))
+                {
+                    _summon = gameObject.AddComponent<InventorySummonEffect>();
+                }
+
+                _summon.Bind(this, _icon, _summonMaterial);
+            }
+
+            return _summon;
         }
     }
 
@@ -85,6 +113,7 @@ public class InventoryItem : MonoBehaviour
     public void ShowEmpty()
     {
         StopEvolution();
+        StopSummon();
         if (_icon != null)
         {
             _icon.sprite = null;
@@ -98,15 +127,7 @@ public class InventoryItem : MonoBehaviour
 
         ShowStars(0);
         SetSelected(false);
-        if (_frame != null)
-        {
-            _frame.color = EMPTY_FRAME;
-        }
-
-        if (_background != null)
-        {
-            _background.color = EMPTY_BACKGROUND;
-        }
+        ShowFrame(false);
     }
 
     /// <summary>
@@ -129,6 +150,11 @@ public class InventoryItem : MonoBehaviour
             _icon.color = Color.white;
         }
 
+        if (_summon != null)
+        {
+            _summon.NotifyShown(portrait);
+        }
+
         if (_starText != null)
         {
             var label = string.IsNullOrEmpty(pokemonName) ? string.Empty : pokemonName;
@@ -146,15 +172,7 @@ public class InventoryItem : MonoBehaviour
         }
 
         SetSelected(selected);
-        if (_frame != null)
-        {
-            _frame.color = FILLED_FRAME;
-        }
-
-        if (_background != null)
-        {
-            _background.color = FILLED_BACKGROUND;
-        }
+        ShowFrame(true);
     }
 
     /// <summary>
@@ -237,12 +255,12 @@ public class InventoryItem : MonoBehaviour
             return;
         }
 
-        if (_evolutionInstance == null)
+        if (_evolutionBlend == null)
         {
-            _evolutionInstance = new Material(_evolutionMaterial);
+            _evolutionBlend = new IconHitBlend(_icon, _evolutionMaterial);
         }
 
-        _icon.material = _evolutionInstance;
+        _evolutionBlend.Apply();
         _icon.sprite = from;
         _icon.enabled = from != null;
         _evolutionTarget = to;
@@ -289,26 +307,93 @@ public class InventoryItem : MonoBehaviour
 
     private void ResetEvolutionMaterial()
     {
-        SetEvolutionBlend(0f);
-        if (_icon != null)
+        if (_evolutionBlend != null)
         {
-            _icon.material = null;
+            _evolutionBlend.Clear();
+        }
+    }
+
+    private void SetEvolutionBlend(float blend)
+    {
+        if (_evolutionBlend != null)
+        {
+            _evolutionBlend.Set(blend);
         }
     }
 
     /// <summary>
-    /// 마스크 안에서는 그리는 머티리얼이 따로 복사돼서 둘 다 바꾼다.
+    /// 소환 실루엣을 멈추고 아이콘을 보이게 되돌린다. 실루엣을 쓴 적이 없으면 아무것도 하지 않는다.
     /// </summary>
-    private void SetEvolutionBlend(float blend)
+    public void StopSummon()
     {
-        if (_evolutionInstance != null)
+        if (_summon != null)
         {
-            _evolutionInstance.SetFloat(HIT_EFFECT_BLEND_ID, blend);
+            _summon.Stop();
+        }
+    }
+
+    /// <summary>
+    /// 숨긴 별을 1성부터 차례로 하나씩 켜며 튕긴다. 상점에서 산 포켓몬이 칸에 다 들어왔을 때 쓴다.
+    /// </summary>
+    public void RevealStarsInOrder()
+    {
+        StopStarPunch();
+        _starsHidden = false;
+        if (_starImages == null)
+        {
+            return;
         }
 
-        if (_icon != null && _icon.materialForRendering != _evolutionInstance && _icon.material == _evolutionInstance)
+        ShowStars(_starImages, 0);
+        var sequence = DOTween.Sequence();
+        for (var i = 0; i < _starImages.Length && i < _star; i++)
         {
-            _icon.materialForRendering.SetFloat(HIT_EFFECT_BLEND_ID, blend);
+            var star = _starImages[i];
+            if (star == null)
+            {
+                continue;
+            }
+
+            var index = i;
+            var at = i * STAR_REVEAL_INTERVAL;
+            // 도중에 칸이 비거나 다른 포켓몬이 되면 그 칸의 성 수를 따른다.
+            sequence.InsertCallback(at, () => star.gameObject.SetActive(index < _star && !_starsHidden));
+            sequence.Insert(at, star.transform.DOPunchScale(Vector3.one * STAR_PUNCH_SCALE, STAR_PUNCH_DURATION, STAR_PUNCH_VIBRATO));
+        }
+
+        _starPunchTween = sequence.SetUpdate(true).SetLink(gameObject);
+    }
+
+    /// <summary>
+    /// 별을 숨기거나 되돌린다. 숨긴 동안 칸을 다시 그려도 별은 꺼진 채로 남는다.
+    /// </summary>
+    public void SetStarsHidden(bool hidden)
+    {
+        _starsHidden = hidden;
+        ShowStars(_star);
+    }
+
+    /// <summary>
+    /// 포켓몬이 있어도 테두리와 배경을 빈 칸 색으로 둔다. 둔 동안 칸을 다시 그려도 빈 칸 색으로 남는다.
+    /// </summary>
+    public void SetFrameEmpty(bool empty)
+    {
+        _frameEmpty = empty;
+        ShowFrame(_filled);
+    }
+
+    private void ShowFrame(bool filled)
+    {
+        _filled = filled;
+        var look = filled && !_frameEmpty;
+        if (_frame != null)
+        {
+            _frame.color = look ? FILLED_FRAME : EMPTY_FRAME;
+        }
+
+        if (_background != null)
+        {
+            _background.color = look ? FILLED_BACKGROUND : EMPTY_BACKGROUND;
         }
     }
 
@@ -330,15 +415,16 @@ public class InventoryItem : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_evolutionInstance != null)
+        if (_evolutionBlend != null)
         {
-            Destroy(_evolutionInstance);
+            _evolutionBlend.Dispose();
         }
     }
 
     private void ShowStars(int star)
     {
-        ShowStars(_starImages, star);
+        _star = star;
+        ShowStars(_starImages, _starsHidden ? 0 : star);
     }
 
     /// <summary>
