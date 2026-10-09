@@ -590,8 +590,9 @@ public class Enemy : MonoBehaviour
 
     /// <summary>
     /// 공격 타입 상성을 곱한 뒤 체력을 깎는다. 체력이 0이면 소유 매니저에 사망을 알린다.
+    /// 실제로 깎인 양은 출처와 함께 EnemyDamaged로 알린다.
     /// </summary>
-    public void ApplyDamage(float amount, MonsterType attackType)
+    public void ApplyDamage(float amount, MonsterType attackType, DamageSource source)
     {
         if (!IsAlive)
         {
@@ -612,10 +613,12 @@ public class Enemy : MonoBehaviour
             return;
         }
 
+        var healthBefore = _health;
         _health = Mathf.Max(0f, _health - dealt);
         _damageTextKind = DamageTextRequested.FromMultiplier(multiplier);
         PlayDamageSound(_damageTextKind);
         PublishDamageText(dealt);
+        PublishDamaged(source, healthBefore - _health, _health <= 0f);
         if (_health > 0f)
         {
             return;
@@ -691,6 +694,14 @@ public class Enemy : MonoBehaviour
         _damageTextValue = 0f;
         _lastTimeDamageText = Time.unscaledTime;
         PublishDamageTextEvent(damageText, _damageTextKind);
+    }
+
+    private static void PublishDamaged(DamageSource source, float amount, bool killed)
+    {
+        if (amount > 0f && Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(new EnemyDamaged(source, amount, killed));
+        }
     }
 
     private void PublishDamageTextEvent(string text, DamageTextKind kind)

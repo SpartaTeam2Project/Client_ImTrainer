@@ -5,10 +5,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 시간 클리어 후 계속 버튼으로 메뉴에 돌아간다.
+/// 시간 클리어 후 판 결과를 보여 주고 계속 버튼으로 메뉴에 돌아간다.
+/// 결과 패널은 StageResult 폴더의 패널이 그린다. 여기서는 열고 닫기와 패널 호출만 한다.
 /// </summary>
 public class StageCompleteScreen : MonoBehaviour
 {
+    private const string TITLE = "도전 성공";
     private const float FADE_DURATION = 0.3f;
     private const string STAGE_COMPLETE_SOUND = "Stage Complete";
     private const string BUTTON_CLICK_SOUND = "select";
@@ -18,7 +20,17 @@ public class StageCompleteScreen : MonoBehaviour
     [SerializeField] private StageCompleteLines _lines;
     [SerializeField] private Button _button;
 
+    [Header("판 결과")]
+    [SerializeField] private TextMeshProUGUI _stageNameText;
+    [SerializeField] private TextMeshProUGUI _lineText;
+    [SerializeField] private GameObject _resultLayout;
+    [SerializeField] private StagePlayerStatPanel _playerStatPanel;
+    [SerializeField] private StagePartyPanel _partyPanel;
+    [SerializeField] private StageDataPanel _dataPanel;
+    [SerializeField] private StageDamagePanel _damagePanel;
+
     private Tweener _alphaTween;
+    private StageResult _result;
 
     #region Unity Methods
 
@@ -59,12 +71,15 @@ public class StageCompleteScreen : MonoBehaviour
 
     /// <summary>
     /// 화면을 켜고 알파를 올린다. 판 종료 중에는 시간이 멈춰 있으므로 트윈은 스케일을 무시한다.
+    /// result가 없으면 결과 패널을 숨기고 제목과 버튼만 보인다.
     /// </summary>
-    public void Show()
+    public void Show(StageResult result)
     {
         KillTween();
+        _result = result;
         ApplyTitle();
         gameObject.SetActive(true);
+        BindResult(result);
         if (_canvasGroup == null)
         {
             return;
@@ -105,7 +120,14 @@ public class StageCompleteScreen : MonoBehaviour
 
     private void ApplyTitle()
     {
-        if (_titleText == null)
+        // 결과 패널이 없던 화면은 제목 자리에 대사를 그대로 띄운다.
+        var lineTarget = _lineText != null ? _lineText : _titleText;
+        if (_lineText != null && _titleText != null)
+        {
+            _titleText.text = TITLE;
+        }
+
+        if (lineTarget == null)
         {
             return;
         }
@@ -116,8 +138,66 @@ public class StageCompleteScreen : MonoBehaviour
             return;
         }
 
-        _titleText.text = line;
+        lineTarget.text = line;
     }
+
+    private void BindResult(StageResult result)
+    {
+        if (_resultLayout != null)
+        {
+            _resultLayout.SetActive(result != null);
+        }
+
+        if (result == null)
+        {
+            return;
+        }
+
+        if (_stageNameText != null)
+        {
+            _stageNameText.text = result.StageName;
+        }
+
+        if (_playerStatPanel != null)
+        {
+            _playerStatPanel.Bind(result);
+        }
+
+        if (_partyPanel != null)
+        {
+            _partyPanel.Bind(result);
+        }
+
+        if (_dataPanel != null)
+        {
+            _dataPanel.Bind(result);
+        }
+
+        if (_damagePanel != null)
+        {
+            _damagePanel.Bind(result);
+        }
+    }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// 마지막으로 보여 준 결과를 서버 요청 JSON으로 복사한다. 서버 계약 확인용이다.
+    /// </summary>
+    [ContextMenu("Copy Result JSON")]
+    private void CopyResultJson()
+    {
+        if (_result == null)
+        {
+            Debug.LogWarning("아직 보여 준 판 결과가 없습니다.");
+            return;
+        }
+
+        Managers.Instance.TryGetManager<ItemManager>(out var itemManager);
+        var json = JsonUtility.ToJson(StageResultMapper.ToRequest(_result, itemManager), true);
+        GUIUtility.systemCopyBuffer = json;
+        Debug.Log(json);
+    }
+#endif
 
     private void OnButtonClicked()
     {

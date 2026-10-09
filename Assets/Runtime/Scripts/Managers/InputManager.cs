@@ -23,6 +23,7 @@ public class InputManager : BaseManager
     private bool _actionPressed;
     private bool _inventoryPressed;
     private bool _shopRefreshPressed;
+    private bool _damageWindowToggle;
     private int _numberSlot = -1;
     private InventoryHotkey _inventoryHotkey;
 
@@ -163,6 +164,20 @@ public class InputManager : BaseManager
     }
 
     /// <summary>
+    /// 이번 프레임에 결과 화면 피해 통계 전환 키가 눌렸으면 true를 반환하고 소비한다. R키다.
+    /// </summary>
+    public bool ConsumeDamageWindowToggle()
+    {
+        if (!_damageWindowToggle)
+        {
+            return false;
+        }
+
+        _damageWindowToggle = false;
+        return true;
+    }
+
+    /// <summary>
     /// 이번 프레임에 눌린 숫자키 칸 번호(0~3)를 반환하고 소비한다. 1~4키와 넘버패드 1~4다. 없으면 -1이다.
     /// </summary>
     public int ConsumeNumberSlot()
@@ -196,6 +211,7 @@ public class InputManager : BaseManager
         _actionPressed = false;
         _inventoryPressed = false;
         _shopRefreshPressed = false;
+        _damageWindowToggle = false;
         _numberSlot = -1;
         _inventoryHotkey = InventoryHotkey.None;
         var keyboard = Keyboard.current;
@@ -310,6 +326,11 @@ public class InputManager : BaseManager
         if (keyboard.fKey.wasPressedThisFrame)
         {
             _shopRefreshPressed = true;
+        }
+
+        if (keyboard.rKey.wasPressedThisFrame)
+        {
+            _damageWindowToggle = true;
         }
 
         // 한 프레임에 여러 키를 눌러도 앞 번호 하나만 받는다.

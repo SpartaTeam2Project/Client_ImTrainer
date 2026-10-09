@@ -177,9 +177,10 @@ public class FireballProjectileBehavior : MonoBehaviour
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EnemyManager>(out var enemyManager))
         {
             enemyManager.CollectInRadius(transform.position, _explosionRadius, _hitEnemies);
+            var source = _owner != null ? _owner.CreateDamageSource() : default;
             for (var i = 0; i < _hitEnemies.Count; i++)
             {
-                _hitEnemies[i].ApplyDamage(_damage, _attackType);
+                _hitEnemies[i].ApplyDamage(_damage, _attackType, source);
             }
         }
 

@@ -1,5 +1,6 @@
 /// <summary>
-/// 장착 칸 하나가 바뀌었다. 비면 Uid는 -1이다.
+/// 장착 칸 하나가 바뀌었다. 비면 Uid는 -1, MemberId는 0이다.
+/// MemberId는 판 안의 포켓몬 개체 번호다. 교체하면 새 번호, 진화와 성 올리기는 같은 번호다.
 /// </summary>
 public struct EquipmentChanged
 {
@@ -7,13 +8,15 @@ public struct EquipmentChanged
     public int Slot;
     public int Uid;
     public int UpgradeLevel;
+    public int MemberId;
 
-    public EquipmentChanged(int playerId, int slot, int uid, int upgradeLevel)
+    public EquipmentChanged(int playerId, int slot, int uid, int upgradeLevel, int memberId)
     {
         PlayerId = playerId;
         Slot = slot;
         Uid = uid;
         UpgradeLevel = upgradeLevel;
+        MemberId = memberId;
     }
 }
 

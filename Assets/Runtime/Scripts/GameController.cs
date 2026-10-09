@@ -136,6 +136,10 @@ public class GameController : MonoBehaviour
             case GameState.Playing:
                 audioManager.PlayMusic(MAIN_MUSIC_NAME);
                 break;
+            case GameState.Victory:
+                // 클리어 전용 BGM이 생기면 여기서 PlayMusic으로 바꾼다.
+                audioManager.StopMusic();
+                break;
         }
     }
 }

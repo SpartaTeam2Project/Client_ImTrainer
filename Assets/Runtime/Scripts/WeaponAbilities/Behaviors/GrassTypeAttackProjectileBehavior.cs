@@ -11,6 +11,7 @@ public class GrassTypeAttackProjectileBehavior : MonoBehaviour
     [SerializeField] private CircleCollider2D hitCollider;
 
     private int _playerId;
+    private IDamageSourceProvider _sourceProvider;
     private float _damageMultiplier;
     private MonsterType _attackType;
     private float _scale;
@@ -67,7 +68,8 @@ public class GrassTypeAttackProjectileBehavior : MonoBehaviour
             return;
         }
 
-        enemy.ApplyDamage(_damageMultiplier * player.Stat.damageMultiplier, _attackType);
+        var source = _sourceProvider != null ? _sourceProvider.CreateDamageSource() : default;
+        enemy.ApplyDamage(_damageMultiplier * player.Stat.damageMultiplier, _attackType, source);
     }
 
     #endregion
@@ -77,9 +79,10 @@ public class GrassTypeAttackProjectileBehavior : MonoBehaviour
     /// <summary>
     /// 크기를 키우며 피해를 줄 수 있게 한다.
     /// </summary>
-    public void Show(int playerId, float damageMultiplier, MonsterType attackType, float sizeMultiplier)
+    public void Show(int playerId, IDamageSourceProvider sourceProvider, float damageMultiplier, MonsterType attackType, float sizeMultiplier)
     {
         _playerId = playerId;
+        _sourceProvider = sourceProvider;
         _damageMultiplier = damageMultiplier;
         _attackType = attackType;
         _shown = true;

@@ -273,6 +273,7 @@ public class ItemManager : BaseManager
         ItemShop.CompletePurchase(run, offerIndex, created);
         RecordObtained(playerId, created.uid);
         FinishBag(playerId);
+        PublishEvent(new ItemPurchased(playerId, created.uid, created.upgradeLevel, created.currencyId, created.price));
         return true;
     }
 
@@ -391,6 +392,7 @@ public class ItemManager : BaseManager
         var equippedItem = run.Equipment.Stacks[slot].Item.Copy();
         run.Bag.Stacks[bagIndex].SetItem(equippedItem, 1);
         run.Equipment.Stacks[slot].SetItem(bagItem, 1);
+        run.Members.AssignNew(slot);
         FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -420,6 +422,7 @@ public class ItemManager : BaseManager
         }
 
         toStack.SetItem(moving, 1);
+        run.Members.Swap(from, to);
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, from);
         PublishEquipmentSlot(playerId, to);
@@ -444,6 +447,7 @@ public class ItemManager : BaseManager
         }
 
         run.Equipment.ClearSlot(slot);
+        run.Members.Release(slot);
         run.Bag.AddItem(item, 1);
         FinishBag(playerId);
         PublishEquipmentSlot(playerId, slot);
@@ -471,6 +475,7 @@ public class ItemManager : BaseManager
         }
 
         Refund(playerId, item.currencyId, GetSellPrice(item) * number);
+        PublishEvent(new ItemSold(playerId, item.uid, item.upgradeLevel, number, false));
         if (announce)
         {
             Notify(playerId, SellMessage.Get(item.name));
@@ -516,7 +521,9 @@ public class ItemManager : BaseManager
         }
 
         run.Equipment.ClearSlot(slot);
+        run.Members.Release(slot);
         Refund(playerId, item.currencyId, GetSellPrice(item));
+        PublishEvent(new ItemSold(playerId, item.uid, item.upgradeLevel, 1, true));
         if (announce)
         {
             Notify(playerId, SellMessage.Get(item.name));
@@ -539,6 +546,7 @@ public class ItemManager : BaseManager
         }
 
         run.Equipment.ClearSlot(slot);
+        run.Members.Release(slot);
         PublishInventory(playerId);
         PublishEquipmentSlot(playerId, slot);
         return true;
@@ -574,6 +582,39 @@ public class ItemManager : BaseManager
     public static int ToAbilityLevel(int star, WeaponAbilityData ability)
     {
         return EquippedAbilityResolver.ToAbilityLevel(star, ability);
+    }
+
+    /// <summary>
+    /// 장착 칸 포켓몬의 개체 번호. 판이 없거나 칸이 비면 0이다.
+    /// </summary>
+    public int GetMemberId(int playerId, int slot)
+    {
+        var run = GetRun(playerId);
+        return run != null && run.HasEquipped(slot) ? run.Members.Get(slot) : DamageSource.NO_MEMBER;
+    }
+
+    /// <summary>
+    /// 지금 장착 칸을 판 결과용으로 복사한다. 판이 끝나 가방을 지우기 전에 부른다.
+    /// </summary>
+    public void CopyParty(int playerId, List<StagePartyMember> results)
+    {
+        results.Clear();
+        var run = GetRun(playerId);
+        if (run == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < run.Equipment.Stacks.Count; i++)
+        {
+            if (!run.HasEquipped(i))
+            {
+                continue;
+            }
+
+            var item = run.Equipment.Stacks[i].Item;
+            results.Add(new StagePartyMember(i, run.Members.Get(i), item.uid, item.upgradeLevel));
+        }
     }
 
     private void EnsureWindow()
@@ -710,9 +751,14 @@ public class ItemManager : BaseManager
 
     private void PublishSynthesized(ItemSynthesized synthesized)
     {
+        PublishEvent(synthesized);
+    }
+
+    private static void PublishEvent<T>(T payload)
+    {
         if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
         {
-            eventManager.Publish(synthesized);
+            eventManager.Publish(payload);
         }
     }
 
@@ -721,16 +767,15 @@ public class ItemManager : BaseManager
         var run = GetRun(playerId);
         var uid = ItemCatalog.EMPTY_UID;
         var star = 0;
+        var memberId = DamageSource.NO_MEMBER;
         if (run != null && run.HasEquipped(slot))
         {
             uid = run.Equipment.Stacks[slot].Item.uid;
             star = run.Equipment.Stacks[slot].Item.upgradeLevel;
+            memberId = run.Members.Get(slot);
         }
 
-        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
-        {
-            eventManager.Publish(new EquipmentChanged(playerId, slot, uid, star));
-        }
+        PublishEvent(new EquipmentChanged(playerId, slot, uid, star, memberId));
     }
 
     private void PublishAllEquipment(int playerId)

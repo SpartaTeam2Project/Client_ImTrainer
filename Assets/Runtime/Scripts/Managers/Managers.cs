@@ -30,6 +30,8 @@ public class Managers : MonoBehaviour
     [SerializeField] private TrainingManager _trainingManager;
     [SerializeField] private ItemManager _itemManager;
     [SerializeField] private AddressableManager _addressableManager;
+    [SerializeField] private StageStatsManager _stageStatsManager;
+    [SerializeField] private RankManager _rankManager;
     [SerializeField] private UISettingsWindow _settingsWindow;
 
     private readonly Dictionary<System.Type, BaseManager> _managers = new Dictionary<System.Type, BaseManager>();
@@ -74,6 +76,8 @@ public class Managers : MonoBehaviour
         RegisterManager(_trainingManager);
         RegisterManager(_itemManager);
         RegisterManager(_addressableManager);
+        RegisterManager(_stageStatsManager);
+        RegisterManager(_rankManager);
     }
 
     private void Start()
@@ -169,7 +173,7 @@ public class Managers : MonoBehaviour
     }
 
     /// <summary>
-    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 화면 효과, 필드, 적, 경험치, 드롭, 재화, 무기, 계정, 씬, 트레이닝, 인벤토리, 업그레이드, Addressables 순서로 초기화한다.
+    /// 이벤트, 오디오, 입력, 플레이어, 카메라, 화면 효과, 필드, 적, 경험치, 드롭, 재화, 무기, 계정, 씬, 트레이닝, 인벤토리, 업그레이드, Addressables, 판 통계, 랭킹 순서로 초기화한다.
     /// </summary>
     private async UniTaskVoid InitializeManagersAsync()
     {
@@ -261,6 +265,16 @@ public class Managers : MonoBehaviour
         if (TryGetManager<AddressableManager>(out var addressableManager))
         {
             await addressableManager.InitializeAsync();
+        }
+
+        if (TryGetManager<StageStatsManager>(out var stageStatsManager))
+        {
+            await stageStatsManager.InitializeAsync();
+        }
+
+        if (TryGetManager<RankManager>(out var rankManager))
+        {
+            await rankManager.InitializeAsync();
         }
 
         ChangeState(GameState.Menu);

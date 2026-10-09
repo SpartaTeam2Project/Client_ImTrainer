@@ -14,11 +14,17 @@ internal sealed class RunInventory
     /// </summary>
     public readonly List<int> ShopPool = new List<int>();
 
+    /// <summary>
+    /// 장착 칸의 포켓몬 개체 번호. 판 결과의 피해 통계가 쓴다.
+    /// </summary>
+    public readonly PartyMemberIds Members;
+
     private RunInventory(InventoryHolder bag, InventoryHolder equipment, ShopOffer[] offers)
     {
         Bag = bag;
         Equipment = equipment;
         Offers = offers;
+        Members = new PartyMemberIds(equipment.Stacks.Count);
     }
 
     public static RunInventory Create()
@@ -96,6 +102,7 @@ internal sealed class RunInventory
             return false;
         }
 
+        Members.AssignNew(slot);
         return true;
     }
 

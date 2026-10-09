@@ -245,7 +245,8 @@ public class PlayerManager : BaseManager
         }
 
         var levelBefore = _player.Experience.Level;
-        _player.Experience.AddExperience(amount);
+        _player.Experience.AddExperience(amount, out var applied);
+        PublishEvent(new ExperienceGained(playerId, applied));
         PublishExperience(playerId);
         for (var level = levelBefore + 1; level <= _player.Experience.Level; level++)
         {
@@ -301,6 +302,23 @@ public class PlayerManager : BaseManager
     }
 
     #endregion
+
+    /// <summary>
+    /// 플레이어 식별자의 체력을 최대 체력 비율만큼 회복한다.
+    /// </summary>
+    public void RestoreHp(int playerId, float percent)
+    {
+        if (playerId != LocalPlayerId || _player == null)
+        {
+            return;
+        }
+
+        var healed = _player.Health.RestoreHp(percent);
+        if (healed > 0f)
+        {
+            PublishEvent(new PlayerHealed(playerId, healed));
+        }
+    }
 
     /// <summary>
     /// 플레이어 식별자에 피해를 준다.
@@ -363,6 +381,14 @@ public class PlayerManager : BaseManager
             eventManager.Publish(new PlayerLeveledUp(playerId, level));
         }
 
+    }
+
+    private static void PublishEvent<T>(T payload)
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(payload);
+        }
     }
 
     private void PublishExperience(int playerId)
