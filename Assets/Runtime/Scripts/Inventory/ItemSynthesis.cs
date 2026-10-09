@@ -50,6 +50,8 @@ internal static class ItemSynthesis
         if (usedSlots.Count > 0)
         {
             run.Equipment.Stacks[usedSlots[0]].SetItem(result, 1);
+            // 결과 칸은 개체 번호를 이어 써서 진화해도 같은 포켓몬으로 집계된다.
+            run.Members.ReleaseMaterials(usedSlots);
         }
         else
         {
