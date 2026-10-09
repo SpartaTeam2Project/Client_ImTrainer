@@ -21,7 +21,7 @@ public class StageDataPanel : MonoBehaviour
     {
         if (_title != null)
         {
-            _title.text = TITLE + " (" + StageResultFormat.Time(result.ElapsedSeconds) + ")";
+            _title.text = TITLE + " [" + StageResultFormat.Time(result.ElapsedSeconds) + "]";
         }
 
         _entries.Clear();

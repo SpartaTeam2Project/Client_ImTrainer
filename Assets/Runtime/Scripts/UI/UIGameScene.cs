@@ -146,7 +146,9 @@ public class UIGameScene : MonoBehaviour
             {
                 CacheGameController();
                 var stage = _gameController != null ? _gameController.ActiveStage : null;
-                _stageCompleteScreen.Show(stage != null ? stage.LastResult : null);
+                // 장착 포켓몬의 성공 포즈가 끝난 뒤에 결과창을 연다.
+                _stageCompleteScreen.Show(stage != null ? stage.LastResult : null,
+                    stage != null ? stage.ResultRevealDelay : 0f);
             }
 
             return;

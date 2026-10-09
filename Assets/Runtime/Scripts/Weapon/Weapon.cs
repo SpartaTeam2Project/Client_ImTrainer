@@ -273,15 +273,17 @@ public class Weapon : MonoBehaviour
 
     /// <summary>
     /// 마지막으로 본 좌우 방향의 성공 포즈를 한 번 재생하고 마지막 장에서 멈춘다. 그림이 없으면 현재 장을 유지한다.
+    /// 대기를 포함해 마지막 장에 닿기까지 걸리는 초를 돌려준다. 재생할 그림이 없으면 0이다.
     /// </summary>
-    public void PlayPose(float delay = 0f)
+    public float PlayPose(float delay = 0f)
     {
         if (_fainting)
         {
-            return;
+            return 0f;
         }
 
         BeginResult(false, delay);
+        return PoseSeconds(delay);
     }
 
     #endregion
@@ -542,6 +544,17 @@ public class Weapon : MonoBehaviour
         }
 
         return frames.Length / _framesPerSecond;
+    }
+
+    private float PoseSeconds(float delay)
+    {
+        var frames = GetPoseFrames();
+        if (!HasFrames(frames) || _framesPerSecond <= 0f)
+        {
+            return 0f;
+        }
+
+        return Mathf.Max(0f, delay) + frames.Length / _framesPerSecond;
     }
 
     private bool UsesEightDirection => _visual != null || _facingMode == FacingMode.EightDirection;

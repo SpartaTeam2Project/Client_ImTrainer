@@ -168,10 +168,11 @@ public class PlayerWeapon : MonoBehaviour
 
     /// <summary>
     /// 장착한 포켓몬이 짧은 구간 안에서 각자 성공 포즈를 재생하게 한다.
+    /// 가장 늦게 끝나는 포즈까지 걸리는 초를 돌려준다.
     /// </summary>
-    public void PlayPose()
+    public float PlayPose()
     {
-        PlayResult(false);
+        return PlayResult(false);
     }
 
     /// <summary>
@@ -209,8 +210,9 @@ public class PlayerWeapon : MonoBehaviour
 
     #region Private Methods
 
-    private void PlayResult(bool faint)
+    private float PlayResult(bool faint)
     {
+        var longest = 0f;
         var equipped = CountEquipped();
         for (var i = 0; i < _weapons.Length; i++)
         {
@@ -227,9 +229,11 @@ public class PlayerWeapon : MonoBehaviour
             }
             else
             {
-                _weapons[i].PlayPose(delay);
+                longest = Mathf.Max(longest, _weapons[i].PlayPose(delay));
             }
         }
+
+        return longest;
     }
 
     private int CountEquipped()

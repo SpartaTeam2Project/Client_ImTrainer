@@ -8,7 +8,7 @@ using UnityEngine;
 /// </summary>
 public class StageDamagePanel : MonoBehaviour
 {
-    private const string WHOLE_LABEL = "판 전체  [R]";
+    private const string WHOLE_LABEL = "전체  [R]";
     private const string RECENT_LABEL = "최근 1분  [R]";
 
     [SerializeField] private TMP_Text _modeText;
@@ -53,6 +53,7 @@ public class StageDamagePanel : MonoBehaviour
         _sorted.AddRange(_result.UnitDamages);
         _sorted.Sort(Compare);
         var window = _recent ? Mathf.Min(RecentDamageBuffer.WINDOW_SECONDS, _result.ElapsedSeconds) : _result.ElapsedSeconds;
+        var totalDamage = SumDamage();
         var rows = _rows.Ensure(_rowPrefab, _root, _sorted.Count);
         for (var i = 0; i < _sorted.Count && i < rows.Count; i++)
         {
@@ -60,8 +61,20 @@ public class StageDamagePanel : MonoBehaviour
             var damage = GetDamage(unit);
             var seconds = _recent ? unit.RecentSeconds : unit.SecondsInParty;
             rows[i].Bind(ResolveIcon(unit), unit.UpgradeLevel, damage, StageResultFormat.PerSecond(damage, seconds),
-                StageResultFormat.Ratio(seconds, window), !unit.InPartyAtEnd);
+                StageResultFormat.Ratio(seconds, window), StageResultFormat.Ratio(damage, totalDamage),
+                !unit.InPartyAtEnd, IsEquippedAtEnd(unit));
         }
+    }
+
+    private float SumDamage()
+    {
+        var sum = 0f;
+        foreach (var unit in _sorted)
+        {
+            sum += GetDamage(unit);
+        }
+
+        return sum;
     }
 
     private int Compare(StageUnitDamage a, StageUnitDamage b)
@@ -74,6 +87,12 @@ public class StageDamagePanel : MonoBehaviour
         }
 
         return GetDamage(b).CompareTo(GetDamage(a));
+    }
+
+    // 포켓몬에 귀속되지 않은 줄은 파티 구간이 끝까지 열려 있어도 장착한 것이 아니다.
+    private static bool IsEquippedAtEnd(StageUnitDamage unit)
+    {
+        return unit.MemberId != DamageSource.NO_MEMBER && unit.InPartyAtEnd;
     }
 
     private float GetDamage(StageUnitDamage unit)

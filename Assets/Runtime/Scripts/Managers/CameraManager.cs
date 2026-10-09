@@ -9,6 +9,7 @@ public class CameraManager : BaseManager
     private Transform _cameraTransform;
     private bool _hasLookPoint;
     private Vector2 _lookPoint;
+    private readonly CameraShake _shake = new CameraShake();
 
     public bool HasView => _camera != null && _camera.orthographic;
 
@@ -50,7 +51,9 @@ public class CameraManager : BaseManager
 
         var position = _cameraTransform.position;
         var targetPosition = _hasLookPoint ? (Vector3)_lookPoint : target.position;
-        _cameraTransform.position = new Vector3(targetPosition.x, targetPosition.y, position.z);
+        // 판 결과 중에는 시간이 멈춰 있으므로 흔들림은 실제 시간으로 줄인다.
+        var shake = _shake.Sample(Time.unscaledDeltaTime);
+        _cameraTransform.position = new Vector3(targetPosition.x + shake.x, targetPosition.y + shake.y, position.z);
     }
 
     #endregion
@@ -83,6 +86,15 @@ public class CameraManager : BaseManager
 
         _camera = null;
         _cameraTransform = null;
+        _shake.Clear();
+    }
+
+    /// <summary>
+    /// 카메라를 duration초(실제 시간) 동안 strength(월드 단위)만큼 흔든다.
+    /// </summary>
+    public void Shake(float strength, float duration)
+    {
+        _shake.Start(strength, duration);
     }
 
     /// <summary>

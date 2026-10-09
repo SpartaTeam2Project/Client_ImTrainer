@@ -1,9 +1,10 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
-/// 피해 통계 한 줄. 아이콘, 성, 피해, DPS, 파티에 있던 비율 바.
+/// 피해 통계 한 줄. 아이콘, 성, 피해, DPS, 출전 비율, 딜 비중 바.
 /// </summary>
 public class StageDamageRowView : MonoBehaviour
 {
@@ -15,12 +16,16 @@ public class StageDamageRowView : MonoBehaviour
     [SerializeField] private TMP_Text _damage;
     [SerializeField] private TMP_Text _dps;
     [SerializeField] private TMP_Text _percent;
-    [SerializeField] private Image _presenceFill;
+    [FormerlySerializedAs("_presenceFill")]
+    [SerializeField] private Image _damageShareFill;
+    [SerializeField] private Image _equipped;
 
     /// <summary>
+    /// presence는 파티에 있던 시간 비율, damageShare는 전체 피해 합에서 차지한 비율이다.
     /// dimmed면 판이 끝날 때 파티에 없던 포켓몬이라 흐리게 그린다.
+    /// equipped면 클리어 시점까지 장착하고 있던 포켓몬이라 장착 표시를 켠다.
     /// </summary>
-    public void Bind(Sprite icon, int stars, float damage, float dps, float presence, bool dimmed)
+    public void Bind(Sprite icon, int stars, float damage, float dps, float presence, float damageShare, bool dimmed, bool equipped)
     {
         if (_icon != null)
         {
@@ -44,9 +49,14 @@ public class StageDamageRowView : MonoBehaviour
             _percent.text = Mathf.RoundToInt(presence * 100f) + "%";
         }
 
-        if (_presenceFill != null)
+        if (_damageShareFill != null)
         {
-            _presenceFill.fillAmount = presence;
+            _damageShareFill.fillAmount = damageShare;
+        }
+
+        if (_equipped != null)
+        {
+            _equipped.enabled = equipped;
         }
 
         if (_group != null)
