@@ -83,6 +83,7 @@ public class CurrenciesManager : BaseManager
         var stage = GetOrCreateStage(playerId, currencyId);
         stage.Deposit(amount);
         Publish(playerId, currencyId, stage.Amount, false);
+        PublishDeposited(playerId, currencyId, amount);
     }
 
     /// <summary>
@@ -296,6 +297,14 @@ public class CurrenciesManager : BaseManager
     private static string GetMetaKey(int playerId, string currencyId)
     {
         return META_PREFS_PREFIX + playerId + "_" + currencyId;
+    }
+
+    private static void PublishDeposited(int playerId, string currencyId, int amount)
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(new CurrencyDeposited(playerId, currencyId, amount));
+        }
     }
 
     private void Publish(int playerId, string currencyId, int amount, bool isMetaBalance)

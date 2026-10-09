@@ -37,12 +37,22 @@ public class PlayerExperience : MonoBehaviour
     /// </summary>
     public int AddExperience(float amount)
     {
+        return AddExperience(amount, out _);
+    }
+
+    /// <summary>
+    /// 경험치를 더한다. applied는 배율을 곱해 실제로 들어간 경험치다.
+    /// </summary>
+    public int AddExperience(float amount, out float applied)
+    {
+        applied = 0f;
         if (amount <= 0f)
         {
             return 0;
         }
 
-        var xp = CurrentXp + amount * Mathf.Max(0f, _stat.xpMultiplier);
+        applied = amount * Mathf.Max(0f, _stat.xpMultiplier);
+        var xp = CurrentXp + applied;
         Debug.Log("원래 경험치/증가후 경험치:" +amount+"/"+(xp-CurrentXp));
         var level = Level;
         var required = Mathf.Max(MIN_REQUIRED_XP, RequiredXp);

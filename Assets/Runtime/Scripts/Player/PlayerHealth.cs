@@ -93,20 +93,23 @@ public class PlayerHealth : MonoBehaviour
     }
 
     /// <summary>
-    /// 최대 체력 비율만큼 회복한다.
+    /// 최대 체력 비율만큼 회복한다. 실제로 오른 체력을 돌려준다.
     /// </summary>
-    public void RestoreHp(float percent)
+    public float RestoreHp(float percent)
     {
         if (!IsAlive || percent <= 0f)
         {
-            return;
+            return 0f;
         }
 
+        var previous = CurrentHealth;
         CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + maxHealth * (percent / 100f));
         if (_healthbar != null)
         {
             _healthbar.Apply(CurrentHealth, maxHealth);
         }
+
+        return CurrentHealth - previous;
     }
 
     /// <summary>

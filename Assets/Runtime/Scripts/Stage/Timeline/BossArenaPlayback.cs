@@ -159,6 +159,7 @@ public static class BossArenaPlayback
             return;
         }
 
+        PublishBossDefeated();
         _bossesLeft--;
         if (_bossesLeft > 0)
         {
@@ -284,6 +285,14 @@ public static class BossArenaPlayback
         var position = _fence.RightInnerPosition(RIGHT_SPAWN_INSET);
         position.y += verticalOffset;
         return _fence.ClampPosition(position);
+    }
+
+    private static void PublishBossDefeated()
+    {
+        if (TryGetPlayerId(out var playerId) && Managers.Instance.TryGetManager<EventManager>(out var eventManager))
+        {
+            eventManager.Publish(new BossDefeated(playerId));
+        }
     }
 
     private static bool TryGetPlayerId(out int playerId)
