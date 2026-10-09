@@ -24,6 +24,7 @@ public class InputManager : BaseManager
     private bool _inventoryPressed;
     private bool _shopRefreshPressed;
     private int _numberSlot = -1;
+    private InventoryHotkey _inventoryHotkey;
 
     public Vector2 MovementValue => _movementValue;
 
@@ -172,6 +173,16 @@ public class InputManager : BaseManager
     }
 
     /// <summary>
+    /// 이번 프레임에 눌린 인벤토리 단축키를 반환하고 소비한다. Z 합성, X 장착, C 해제, V 판매다. 없으면 None이다.
+    /// </summary>
+    public InventoryHotkey ConsumeInventoryHotkey()
+    {
+        var hotkey = _inventoryHotkey;
+        _inventoryHotkey = InventoryHotkey.None;
+        return hotkey;
+    }
+
+    /// <summary>
     /// 자리표시. 입력 담당이 장치 바인딩으로 이 읽기만 교체한다.
     /// </summary>
     private void ReadKeyboardPlaceholder()
@@ -186,6 +197,7 @@ public class InputManager : BaseManager
         _inventoryPressed = false;
         _shopRefreshPressed = false;
         _numberSlot = -1;
+        _inventoryHotkey = InventoryHotkey.None;
         var keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -305,6 +317,12 @@ public class InputManager : BaseManager
         else if (keyboard.digit2Key.wasPressedThisFrame || keyboard.numpad2Key.wasPressedThisFrame) _numberSlot = 1;
         else if (keyboard.digit3Key.wasPressedThisFrame || keyboard.numpad3Key.wasPressedThisFrame) _numberSlot = 2;
         else if (keyboard.digit4Key.wasPressedThisFrame || keyboard.numpad4Key.wasPressedThisFrame) _numberSlot = 3;
+
+        // C는 스토리지 필터와 같은 키다. 둘은 따로 소비돼서 열린 창이 자기 것만 가져간다.
+        if (keyboard.zKey.wasPressedThisFrame) _inventoryHotkey = InventoryHotkey.Synthesize;
+        else if (keyboard.xKey.wasPressedThisFrame) _inventoryHotkey = InventoryHotkey.Equip;
+        else if (keyboard.cKey.wasPressedThisFrame) _inventoryHotkey = InventoryHotkey.Unequip;
+        else if (keyboard.vKey.wasPressedThisFrame) _inventoryHotkey = InventoryHotkey.Sell;
     }
 
     /// <summary>

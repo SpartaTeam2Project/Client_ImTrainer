@@ -14,6 +14,7 @@ public class ShopUi : MonoBehaviour
     private const string BALL_OPEN_SOUND = "shop_pb";
     private const string STAMP_SOUND = "shop_stamp";
     private const string REROLL_SOUND = "shop_reroll";
+    private const string ERROR_SOUND = "error";
 
     private static readonly Color LOCKED_COLOR = Color.white;
     private static readonly Color UNLOCKED_COLOR = new Color(0.6f, 0.6f, 0.6f, 1f);
@@ -60,9 +61,11 @@ public class ShopUi : MonoBehaviour
 
     private Action _onChanged;
     private Action<int> _onSelect;
+    private IShopPurchaseEffect _purchaseEffect;
     private CapturedPose[] _poses;
     private Sequence[] _stampTweens;
     private int _pendingStampIndex = -1;
+    private PressFlash _refreshPress;
 
     private void Awake()
     {
@@ -87,8 +90,14 @@ public class ShopUi : MonoBehaviour
 
         if (_refreshButton != null)
         {
-            _refreshButton.onClick.AddListener(RefreshOffers);
+            _refreshButton.onClick.AddListener(() =>
+            {
+                _refreshPress.Punch();
+                RefreshOffers();
+            });
         }
+
+        _refreshPress = PressFlash.ForButton(_refreshButton);
 
         if (_refreshPrice != null)
         {
@@ -102,6 +111,7 @@ public class ShopUi : MonoBehaviour
     private void OnDisable()
     {
         _pendingStampIndex = -1;
+        _refreshPress?.Release();
         for (var i = 0; i < _rows.Length; i++)
         {
             if (_stampTweens[i] != null)
@@ -113,11 +123,13 @@ public class ShopUi : MonoBehaviour
 
     /// <summary>
     /// 구매나 새로고침이 끝나면 onChanged를, 포켓몬 칸을 누르면 onSelect(칸 번호)를 호출한다.
+    /// 구매 연출의 각 단계는 purchaseEffect에 알린다. 없으면 null.
     /// </summary>
-    public void Bind(Action onChanged, Action<int> onSelect)
+    public void Bind(Action onChanged, Action<int> onSelect, IShopPurchaseEffect purchaseEffect)
     {
         _onChanged = onChanged;
         _onSelect = onSelect;
+        _purchaseEffect = purchaseEffect;
     }
 
     /// <summary>
@@ -172,6 +184,15 @@ public class ShopUi : MonoBehaviour
     }
 
     /// <summary>
+    /// F키로 새로고침한다. 버튼을 거치지 않아서 잠깐 눌린 그림으로 바꿔 누른 느낌을 준다.
+    /// </summary>
+    public void PressRefresh()
+    {
+        _refreshPress.Play();
+        RefreshOffers();
+    }
+
+    /// <summary>
     /// 몬스터볼을 내고 잠기지 않은 칸을 다시 뽑는다. 버튼과 F키가 같이 쓴다.
     /// </summary>
     public void RefreshOffers()
@@ -183,7 +204,11 @@ public class ShopUi : MonoBehaviour
 
         if (itemManager.TryRefreshShop(playerId))
         {
-            PlaySound(REROLL_SOUND);
+            UiSound.Play(REROLL_SOUND);
+        }
+        else
+        {
+            UiSound.Play(ERROR_SOUND);
         }
 
         _onChanged?.Invoke();
@@ -256,16 +281,26 @@ public class ShopUi : MonoBehaviour
             row.Buy.interactable = false;
         }
 
+        _purchaseEffect?.OnPurchased(index);
         var sequence = DOTween.Sequence();
         if (row.PriceIcon != null && TryGetOpenIcons(currencyId, out var opening, out var open))
         {
             // 볼 소리는 누르자마자 나고, 그림은 한 박자 뒤부터 바뀐다.
-            PlaySound(BALL_OPEN_SOUND);
+            UiSound.Play(BALL_OPEN_SOUND);
             sequence.AppendInterval(BALL_FRAME_DURATION);
             sequence.AppendCallback(() => row.PriceIcon.sprite = opening);
             sequence.AppendInterval(BALL_FRAME_DURATION);
-            sequence.AppendCallback(() => row.PriceIcon.sprite = open);
+            sequence.AppendCallback(() =>
+            {
+                row.PriceIcon.sprite = open;
+                _purchaseEffect?.OnBallOpened(index, row.PriceIcon.rectTransform);
+            });
             sequence.AppendInterval(BALL_FRAME_DURATION);
+        }
+        else if (row.Buy != null)
+        {
+            // 열리는 그림이 없어도 가격 버튼이 사라지기 전에 광선은 쏜다.
+            sequence.AppendCallback(() => _purchaseEffect?.OnBallOpened(index, (RectTransform)row.Buy.transform));
         }
 
         sequence.AppendCallback(() => SetPrice(row, null, 0, false));
@@ -293,7 +328,7 @@ public class ShopUi : MonoBehaviour
                 sequence.Insert(stampAt, stamp.DOLocalRotate(pose.StampAngles, STAMP_DROP_DURATION).SetEase(Ease.InQuad));
                 sequence.Insert(stampAt, row.Stamp.DOFade(1f, STAMP_FADE_DURATION));
                 // 도장이 다 내려와 닿는 순간에 소리를 낸다.
-                sequence.InsertCallback(stampAt + STAMP_DROP_DURATION, () => PlaySound(STAMP_SOUND));
+                sequence.InsertCallback(stampAt + STAMP_DROP_DURATION, () => UiSound.Play(STAMP_SOUND));
             }
         }
 
@@ -478,16 +513,6 @@ public class ShopUi : MonoBehaviour
         }
 
         return currencies.GetIcon(currencyId);
-    }
-
-    private static void PlaySound(string name)
-    {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
-        {
-            return;
-        }
-
-        audioManager.PlaySound(name);
     }
 
     private static bool TryGetOpenIcons(string currencyId, out Sprite opening, out Sprite open)

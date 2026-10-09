@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -9,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 판 안에서 가방과 장착을 다루는 창. 구매 목록은 ShopUi가 그린다.
 /// </summary>
-public class InventoryUi : MonoBehaviour
+public class InventoryUi : MonoBehaviour, IInventoryKeyboardTarget
 {
     private enum SelectionKind
     {
@@ -23,10 +22,10 @@ public class InventoryUi : MonoBehaviour
     private const float CLOSE_FADE_DURATION = 0.15f;
     private const string OPEN_SOUND = "inventory_open";
     private const string CLOSE_SOUND = "inventory_close";
+    private const string EQUIP_SOUND = "inventory_equip";
     private const string STAR_UP_SOUND = "inventory_star_up";
     private const string EVOLUTION_START_SOUND = "inventory_star_evolution_start";
     private const string EVOLUTION_END_SOUND = "inventory_star_evolution_end";
-
     [SerializeField] private Canvas _canvas;
     [SerializeField] private CanvasGroup _panelGroup;
     [SerializeField] private ScreenBackdrop _backdrop;
@@ -35,8 +34,9 @@ public class InventoryUi : MonoBehaviour
     [SerializeField] private HoverInformation _information;
     [SerializeField] private InventoryItem _slotPrefab;
     [SerializeField] private ResourceBar _resourceBar;
-    [SerializeField] private TextMeshProUGUI _status;
+    [SerializeField] private InventoryToast _toast;
     [SerializeField] private RectTransform _bagContent;
+    [SerializeField] private PurchaseBeam _purchaseBeam;
 
     [Header("Actions")]
     [SerializeField] private Button _synthesizeButton;
@@ -46,16 +46,24 @@ public class InventoryUi : MonoBehaviour
     [SerializeField] private Button _discardButton;
     [SerializeField] private Button _closeButton;
 
+    [Header("Synthesis Pick")]
+    // 키보드로 합성 대상을 고르는 동안 합성 버튼은 확정, 해제 버튼은 취소 그림으로 바뀐다.
+    [SerializeField] private ButtonSkin _confirmSkin;
+    [SerializeField] private ButtonSkin _cancelSkin;
+
     [Header("Drag")]
     [SerializeField] private InventoryDropZone _trashZone;
     [SerializeField] private Vector2 _dragGhostSize = new Vector2(96f, 96f);
 
     private readonly List<InventoryItem> _bagSlots = new List<InventoryItem>();
     private Image _dragGhost;
-    private InventorySlotDrag.SlotKind _dragKind = InventorySlotDrag.SlotKind.None;
-    private int _dragIndex = -1;
-    private int _dragUid = -1;
-    private int _dragStar;
+    private InventorySlotRef _drag = InventorySlotRef.None;
+    private InventoryFocusNavigator _navigator;
+    private InventoryKeyboard _keyboard;
+    private PurchaseBeamDirector _purchaseDirector;
+    private InventorySellDirector _sellDirector;
+    private ScrollRect _bagScroll;
+    private InventorySlotRef _synthesized = InventorySlotRef.None;
     private SelectionKind _selection = SelectionKind.None;
     private int _selectedIndex = -1;
     private int _selectedUid = -1;
@@ -66,18 +74,25 @@ public class InventoryUi : MonoBehaviour
     private Coroutine _showRoutine;
     private Tween _fadeTween;
     private bool _closing;
+    private InventoryActionBar _actionBar;
+    private InventoryEquipmentActions _equipmentActions;
 
     private void Awake()
     {
-        AddAction(_synthesizeButton, SynthesizeSelected);
-        AddAction(_equipButton, EquipSelected);
-        AddAction(_unequipButton, UnequipSelected);
-        AddAction(_sellButton, SellSelected);
+        _navigator = new InventoryFocusNavigator();
+        _keyboard = new InventoryKeyboard(this, _navigator);
+        _purchaseDirector = new PurchaseBeamDirector(_purchaseBeam, _bagSlots, _navigator);
+        _sellDirector = new InventorySellDirector(_bagSlots, _equipmentUi, _slotPrefab != null ? _slotPrefab.DissolveTemplate : null, Refresh,
+            ShowNotice);
+        _equipmentActions = new InventoryEquipmentActions(_sellDirector);
+        _actionBar = new InventoryActionBar(_synthesizeButton, _equipButton, _unequipButton, _sellButton, _trashZone, _confirmSkin, _cancelSkin);
+        _actionBar.Bind(SynthesizeSelected, EquipSelected, UnequipSelected, SellSelected);
+        _bagScroll = _bagContent != null ? _bagContent.GetComponentInParent<ScrollRect>() : null;
         AddAction(_discardButton, DiscardSelected);
         AddAction(_closeButton, Close);
         if (_shopUi != null)
         {
-            _shopUi.Bind(Refresh, SelectShop);
+            _shopUi.Bind(Refresh, SelectShop, _purchaseDirector);
         }
 
         if (_equipmentUi != null)
@@ -101,6 +116,8 @@ public class InventoryUi : MonoBehaviour
     {
         Unsubscribe();
         EndDrag();
+        _sellDirector?.FinishAll();
+        _purchaseDirector?.Stop();
         if (_holdTime && Managers.Instance != null && Managers.Instance.CurrentState == GameState.Playing)
         {
             Time.timeScale = 1f;
@@ -129,16 +146,20 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        // 창이 열려 있으면 ESC를 먼저 가져가서 일시정지 대신 창을 닫는다.
+        // 창이 열려 있으면 ESC를 먼저 가져가서 일시정지 대신 창을 닫는다. 합성할 칸을 고르는 중이면 합성만 취소한다.
         if (_open && inputManager.ConsumePausePressed())
         {
-            Close();
+            if (!_keyboard.TryCancel())
+            {
+                Close();
+            }
+
             return;
         }
 
         if (_open && _shopUi != null && inputManager.ConsumeShopRefreshPressed())
         {
-            _shopUi.RefreshOffers();
+            _shopUi.PressRefresh();
         }
 
         if (_open && _shopUi != null)
@@ -148,6 +169,12 @@ public class InventoryUi : MonoBehaviour
             {
                 _shopUi.Purchase(slot);
             }
+        }
+
+        // 창이 다 열린 뒤에만 받는다. 끄는 중에는 칸 선택이 바뀌지 않게 한다.
+        if (_open && !_closing && _showRoutine == null && _drag.IsEmpty)
+        {
+            _keyboard.Tick(inputManager);
         }
 
         if (!inputManager.ConsumeInventoryPressed())
@@ -185,7 +212,7 @@ public class InventoryUi : MonoBehaviour
             Time.timeScale = 0f;
         }
 
-        PlaySound(OPEN_SOUND);
+        UiSound.Play(OPEN_SOUND);
         _showRoutine = StartCoroutine(ShowAfterCapture());
     }
 
@@ -225,7 +252,11 @@ public class InventoryUi : MonoBehaviour
     private void Close()
     {
         _open = false;
+        _keyboard.Reset();
         EndDrag();
+        // 디졸브 중이던 판매는 기다리지 않고 바로 처리한다.
+        _sellDirector.FinishAll();
+        _purchaseDirector.Stop();
         if (_showRoutine != null)
         {
             StopCoroutine(_showRoutine);
@@ -237,7 +268,7 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        PlaySound(CLOSE_SOUND);
+        UiSound.Play(CLOSE_SOUND);
         if (_panelGroup == null || _canvas == null || !_canvas.gameObject.activeSelf)
         {
             FinishClose();
@@ -261,6 +292,12 @@ public class InventoryUi : MonoBehaviour
     {
         _closing = false;
         ResetFade();
+        _actionBar.Release();
+        if (_toast != null)
+        {
+            _toast.Hide();
+        }
+
         if (_backdrop != null)
         {
             _backdrop.Release();
@@ -349,12 +386,10 @@ public class InventoryUi : MonoBehaviour
             _resourceBar.Refresh(playerId);
         }
 
-        if (_status != null)
-        {
-            _status.text = itemManager.LastMessage;
-        }
-
         RebuildBag(itemManager, playerId);
+        _purchaseDirector.Reapply();
+        _keyboard.Validate(itemManager.GetInventory(playerId), itemManager.GetEquipment(playerId));
+        _actionBar.SetPickMode(_keyboard.Synthesizing);
         ResolveShopSelection(itemManager, playerId);
         if (_shopUi != null)
         {
@@ -366,7 +401,44 @@ public class InventoryUi : MonoBehaviour
             _equipmentUi.Refresh(playerId, selectedSlot, SelectEquipment);
         }
 
+        RefreshSynthesisPick(itemManager, playerId);
         RefreshInformation(itemManager, playerId);
+        _sellDirector.Reapply();
+    }
+
+    /// <summary>
+    /// 키보드로 합성할 칸을 고르는 중이면 후보 칸을 깜빡이고 고르는 칸은 선택 표시로 둔다. 끌고 있으면 끌기 표시를 그대로 둔다.
+    /// </summary>
+    private void RefreshSynthesisPick(ItemManager itemManager, int playerId)
+    {
+        if (!_drag.IsEmpty)
+        {
+            return;
+        }
+
+        if (!_keyboard.Synthesizing)
+        {
+            ClearMergeHints();
+            return;
+        }
+
+        ShowMergeHints(itemManager, playerId, _keyboard.Source);
+        var cursor = GetSlotView(_keyboard.CursorKind, _keyboard.CursorIndex);
+        if (cursor != null)
+        {
+            cursor.SetMergeHint(false);
+            cursor.SetSelected(true);
+        }
+    }
+
+    private InventoryItem GetSlotView(InventorySlotDrag.SlotKind kind, int index)
+    {
+        if (kind == InventorySlotDrag.SlotKind.Bag)
+        {
+            return index >= 0 && index < _bagSlots.Count ? _bagSlots[index] : null;
+        }
+
+        return kind == InventorySlotDrag.SlotKind.Equipment && _equipmentUi != null ? _equipmentUi.GetSlot(index) : null;
     }
 
     private void RefreshInformation(ItemManager itemManager, int playerId)
@@ -390,16 +462,25 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        var holder = _selection == SelectionKind.Bag ? itemManager.GetInventory(playerId)
-            : _selection == SelectionKind.Equipment ? itemManager.GetEquipment(playerId)
+        // 합성할 칸을 고르는 중이면 고르는 칸 포켓몬을 보여 준다.
+        var kind = _selection;
+        var index = _selectedIndex;
+        if (_keyboard.Synthesizing)
+        {
+            kind = _keyboard.CursorKind == InventorySlotDrag.SlotKind.Bag ? SelectionKind.Bag : SelectionKind.Equipment;
+            index = _keyboard.CursorIndex;
+        }
+
+        var holder = kind == SelectionKind.Bag ? itemManager.GetInventory(playerId)
+            : kind == SelectionKind.Equipment ? itemManager.GetEquipment(playerId)
             : null;
-        if (holder == null || _selectedIndex < 0 || _selectedIndex >= holder.Stacks.Count || holder.Stacks[_selectedIndex].Empty)
+        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Empty)
         {
             _information.Clear();
             return;
         }
 
-        _information.Show(holder.Stacks[_selectedIndex].Item);
+        _information.Show(holder.Stacks[index].Item);
     }
 
     private void RebuildBag(ItemManager itemManager, int playerId)
@@ -428,6 +509,8 @@ public class InventoryUi : MonoBehaviour
             var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
             slot.ShowPokemon(portrait, stack.Item.name, stack.Item.upgradeLevel, stack.Number, true, selected);
         }
+
+        _navigator.SetSlots(_bagSlots, bag.CountFilled(), _equipmentUi, _bagScroll);
     }
 
     private void EnsureBagSlots(InventoryHolder bag)
@@ -455,7 +538,9 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        var index = bag.FindIndex(_selectedUid, _selectedStar);
+        // 같은 종, 같은 성이 여러 칸이면 첫 칸으로 끌려가지 않게 고른 칸이 그대로면 그 칸을 둔다.
+        var index = InventoryMerge.ResolveBagIndex(bag,
+            new InventorySlotRef(InventorySlotDrag.SlotKind.Bag, _selectedIndex, _selectedUid, _selectedStar));
         if (index < 0)
         {
             _selection = SelectionKind.None;
@@ -469,6 +554,12 @@ public class InventoryUi : MonoBehaviour
 
     private void SelectBag(int index)
     {
+        if (_sellDirector.IsSelling(InventorySlotDrag.SlotKind.Bag, index))
+        {
+            return;
+        }
+
+        _keyboard.Reset();
         if (!TryGetContext(out var itemManager, out var playerId))
         {
             return;
@@ -493,6 +584,12 @@ public class InventoryUi : MonoBehaviour
 
     private void SelectEquipment(int slot)
     {
+        if (_sellDirector.IsSelling(InventorySlotDrag.SlotKind.Equipment, slot))
+        {
+            return;
+        }
+
+        _keyboard.Reset();
         _selection = SelectionKind.Equipment;
         _selectedIndex = slot;
         Refresh();
@@ -503,6 +600,7 @@ public class InventoryUi : MonoBehaviour
     /// </summary>
     private void SelectShop(int index)
     {
+        _keyboard.Reset();
         if (!TryGetContext(out var itemManager, out var playerId))
         {
             return;
@@ -559,6 +657,11 @@ public class InventoryUi : MonoBehaviour
 
     private void SynthesizeSelected()
     {
+        if (_keyboard.TryConfirm())
+        {
+            return;
+        }
+
         if (!TryGetSelectedBag(out var itemManager, out var playerId, out var stack))
         {
             return;
@@ -575,18 +678,27 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        itemManager.TryEquip(playerId, _selectedIndex);
+        if (itemManager.TryEquip(playerId, _selectedIndex))
+        {
+            UiSound.Play(EQUIP_SOUND);
+        }
+
         Refresh();
     }
 
     private void UnequipSelected()
     {
-        if (_selection != SelectionKind.Equipment || !TryGetContext(out var itemManager, out var playerId))
+        if (_keyboard.TryCancel())
         {
             return;
         }
 
-        itemManager.TryUnequip(playerId, _selectedIndex);
+        if (_selection != SelectionKind.Equipment)
+        {
+            return;
+        }
+
+        _equipmentActions.Unequip(_selectedIndex);
         Refresh();
     }
 
@@ -597,13 +709,10 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        if (_selection == SelectionKind.Bag)
+        // 디졸브로 팔기 시작했으면 그 칸은 판매가 끝날 때까지 고를 수 없어서 선택을 푼다.
+        if (_sellDirector.Sell(GetSelectedRef(itemManager, playerId), null))
         {
-            itemManager.TrySell(playerId, _selectedIndex);
-        }
-        else if (_selection == SelectionKind.Equipment)
-        {
-            itemManager.TrySellEquipped(playerId, _selectedIndex);
+            ClearSelection();
         }
 
         Refresh();
@@ -622,7 +731,7 @@ public class InventoryUi : MonoBehaviour
         }
         else if (_selection == SelectionKind.Equipment)
         {
-            itemManager.TryDiscardEquipped(playerId, _selectedIndex);
+            _equipmentActions.Discard(_selectedIndex);
         }
 
         Refresh();
@@ -641,16 +750,14 @@ public class InventoryUi : MonoBehaviour
         var holder = kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId)
             : kind == InventorySlotDrag.SlotKind.Equipment ? itemManager.GetEquipment(playerId)
             : null;
-        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Empty || holder.Stacks[index].Item == null)
+        if (holder == null || index < 0 || index >= holder.Stacks.Count || holder.Stacks[index].Empty || holder.Stacks[index].Item == null
+            || _sellDirector.IsSelling(kind, index))
         {
             return false;
         }
 
         var item = holder.Stacks[index].Item;
-        _dragKind = kind;
-        _dragIndex = index;
-        _dragUid = item.uid;
-        _dragStar = item.upgradeLevel;
+        _drag = new InventorySlotRef(kind, index, item.uid, item.upgradeLevel);
         if (kind == InventorySlotDrag.SlotKind.Bag)
         {
             SelectBag(index);
@@ -661,7 +768,7 @@ public class InventoryUi : MonoBehaviour
         }
 
         ShowDragGhost(itemManager, item.uid);
-        ShowMergeHints(itemManager, playerId);
+        ShowMergeHints(itemManager, playerId, _drag);
         MoveDrag(eventData);
         if (_trashZone != null)
         {
@@ -695,9 +802,7 @@ public class InventoryUi : MonoBehaviour
     public void EndDrag()
     {
         ClearMergeHints();
-        _dragKind = InventorySlotDrag.SlotKind.None;
-        _dragIndex = -1;
-        _dragUid = -1;
+        _drag = InventorySlotRef.None;
         if (_dragGhost != null)
         {
             _dragGhost.gameObject.SetActive(false);
@@ -714,12 +819,12 @@ public class InventoryUi : MonoBehaviour
     /// </summary>
     public void DropOnSlot(InventorySlotDrag.SlotKind targetKind, int targetIndex)
     {
-        if (_dragKind == InventorySlotDrag.SlotKind.None || !TryGetContext(out var itemManager, out var playerId))
+        if (_drag.IsEmpty || !TryGetContext(out var itemManager, out var playerId))
         {
             return;
         }
 
-        if (_dragKind == InventorySlotDrag.SlotKind.Bag)
+        if (_drag.Kind == InventorySlotDrag.SlotKind.Bag)
         {
             DropBag(itemManager, playerId, targetKind, targetIndex);
         }
@@ -737,142 +842,123 @@ public class InventoryUi : MonoBehaviour
     /// </summary>
     public void DropOnZone(InventoryDropZone.ZoneKind zone)
     {
-        if (_dragKind == InventorySlotDrag.SlotKind.None || !TryGetContext(out var itemManager, out var playerId))
+        if (_drag.IsEmpty || !TryGetContext(out var itemManager, out var playerId))
         {
             return;
         }
 
-        if (zone == InventoryDropZone.ZoneKind.Trash)
+        // 휴지통에 놓으면 판다. 디졸브로 팔면 끌고 있던 그림이 그 자리에서 디졸브된다.
+        if (zone == InventoryDropZone.ZoneKind.Trash && _sellDirector.Sell(ResolveDrag(itemManager, playerId), _dragGhost))
         {
-            if (_dragKind == InventorySlotDrag.SlotKind.Bag)
-            {
-                var bagIndex = ResolveDragBagIndex(itemManager, playerId);
-                if (bagIndex >= 0)
-                {
-                    itemManager.TrySell(playerId, bagIndex);
-                }
-            }
-            else
-            {
-                itemManager.TrySellEquipped(playerId, _dragIndex);
-            }
+            ClearSelection();
         }
-        else if (zone == InventoryDropZone.ZoneKind.Bag && _dragKind == InventorySlotDrag.SlotKind.Equipment)
+        else if (zone == InventoryDropZone.ZoneKind.Bag && _drag.Kind == InventorySlotDrag.SlotKind.Equipment)
         {
-            itemManager.TryUnequip(playerId, _dragIndex);
+            _equipmentActions.Unequip(_drag.Index);
         }
 
         EndDrag();
         Refresh();
     }
 
+    private InventorySlotRef GetSelectedRef(ItemManager itemManager, int playerId)
+    {
+        var kind = _selection == SelectionKind.Bag ? InventorySlotDrag.SlotKind.Bag
+            : _selection == SelectionKind.Equipment ? InventorySlotDrag.SlotKind.Equipment
+            : InventorySlotDrag.SlotKind.None;
+        var holder = kind == InventorySlotDrag.SlotKind.Bag ? itemManager.GetInventory(playerId)
+            : kind == InventorySlotDrag.SlotKind.Equipment ? itemManager.GetEquipment(playerId)
+            : null;
+        if (holder == null || _selectedIndex < 0 || _selectedIndex >= holder.Stacks.Count
+            || holder.Stacks[_selectedIndex].Empty || holder.Stacks[_selectedIndex].Item == null)
+        {
+            return InventorySlotRef.None;
+        }
+
+        var item = holder.Stacks[_selectedIndex].Item;
+        return new InventorySlotRef(kind, _selectedIndex, item.uid, item.upgradeLevel);
+    }
+
+    /// <summary>
+    /// 끌고 있는 칸의 지금 번호. 가방은 끄는 사이 정렬될 수 있어서 종과 성으로 다시 찾는다.
+    /// </summary>
+    private InventorySlotRef ResolveDrag(ItemManager itemManager, int playerId)
+    {
+        if (_drag.Kind != InventorySlotDrag.SlotKind.Bag)
+        {
+            return _drag;
+        }
+
+        var bagIndex = InventoryMerge.ResolveBagIndex(itemManager.GetInventory(playerId), _drag);
+        return bagIndex >= 0 ? new InventorySlotRef(_drag.Kind, bagIndex, _drag.Uid, _drag.Star) : InventorySlotRef.None;
+    }
+
     private void DropBag(ItemManager itemManager, int playerId, InventorySlotDrag.SlotKind targetKind, int targetIndex)
     {
-        var bagIndex = ResolveDragBagIndex(itemManager, playerId);
+        var bag = itemManager.GetInventory(playerId);
+        var bagIndex = InventoryMerge.ResolveBagIndex(bag, _drag);
         if (bagIndex < 0)
         {
             return;
         }
 
-        if (targetKind == InventorySlotDrag.SlotKind.Equipment)
+        if (InventoryMerge.IsTarget(bag, itemManager.GetEquipment(playerId), _drag, targetKind, targetIndex, false))
         {
-            if (IsSameAsDragged(itemManager.GetEquipment(playerId), targetIndex))
-            {
-                itemManager.TrySynthesize(playerId, _dragUid, _dragStar, targetIndex, -1);
-                return;
-            }
-
-            itemManager.TryEquipToSlot(playerId, bagIndex, targetIndex);
+            InventoryMerge.Merge(itemManager, playerId, _drag, targetKind, targetIndex);
             return;
         }
 
         // 가방은 자동 정렬이라 자리만 옮기는 동작은 없다. 같은 종, 같은 성 칸에 놓을 때만 합성한다.
-        if (targetKind != InventorySlotDrag.SlotKind.Bag || targetIndex == _dragIndex)
+        if (targetKind == InventorySlotDrag.SlotKind.Equipment)
         {
-            return;
-        }
-
-        if (IsSameAsDragged(itemManager.GetInventory(playerId), targetIndex))
-        {
-            itemManager.TrySynthesize(playerId, _dragUid, _dragStar);
+            if (itemManager.TryEquipToSlot(playerId, bagIndex, targetIndex))
+            {
+                UiSound.Play(EQUIP_SOUND);
+            }
         }
     }
 
     private void DropEquipment(ItemManager itemManager, int playerId, InventorySlotDrag.SlotKind targetKind, int targetIndex)
     {
+        // 같은 종, 같은 성 칸에 놓으면 합성하고 결과는 놓은 장착 칸, 가방이면 끈 장착 칸에 남긴다.
+        if (InventoryMerge.IsTarget(itemManager.GetInventory(playerId), itemManager.GetEquipment(playerId), _drag, targetKind, targetIndex, false))
+        {
+            InventoryMerge.Merge(itemManager, playerId, _drag, targetKind, targetIndex);
+            return;
+        }
+
         if (targetKind == InventorySlotDrag.SlotKind.Equipment)
         {
-            if (targetIndex == _dragIndex)
+            if (targetIndex != _drag.Index)
             {
-                return;
+                itemManager.TrySwapEquipped(playerId, _drag.Index, targetIndex);
             }
 
-            if (IsSameAsDragged(itemManager.GetEquipment(playerId), targetIndex))
-            {
-                itemManager.TrySynthesize(playerId, _dragUid, _dragStar, targetIndex, _dragIndex);
-                return;
-            }
-
-            itemManager.TrySwapEquipped(playerId, _dragIndex, targetIndex);
             return;
         }
 
-        if (targetKind != InventorySlotDrag.SlotKind.Bag)
+        if (targetKind == InventorySlotDrag.SlotKind.Bag)
         {
-            return;
+            _equipmentActions.Unequip(_drag.Index);
         }
-
-        // 같은 종, 같은 성 가방 칸에 놓으면 합성하고 결과는 끈 장착 칸에 남긴다. 그 밖에는 해제한다.
-        if (IsSameAsDragged(itemManager.GetInventory(playerId), targetIndex))
-        {
-            itemManager.TrySynthesize(playerId, _dragUid, _dragStar, -1, _dragIndex);
-            return;
-        }
-
-        itemManager.TryUnequip(playerId, _dragIndex);
-    }
-
-    private bool IsSameAsDragged(InventoryHolder holder, int index)
-    {
-        return holder != null && index >= 0 && index < holder.Stacks.Count && holder.Stacks[index].isSameItem(_dragUid, _dragStar);
     }
 
     /// <summary>
-    /// 가방은 바뀔 때마다 정렬돼서 끌기 시작한 칸 번호 대신 종과 성으로 다시 찾는다.
+    /// 가방과 장착에서 출발 칸 포켓몬과 같은 종, 같은 성인 칸 테두리를 깜빡인다. 출발 칸은 뺀다.
     /// </summary>
-    private int ResolveDragBagIndex(ItemManager itemManager, int playerId)
-    {
-        var bag = itemManager.GetInventory(playerId);
-        if (bag == null)
-        {
-            return -1;
-        }
-
-        if (_dragIndex >= 0 && _dragIndex < bag.Stacks.Count && bag.Stacks[_dragIndex].isSameItem(_dragUid, _dragStar))
-        {
-            return _dragIndex;
-        }
-
-        return bag.FindIndex(_dragUid, _dragStar);
-    }
-
-    /// <summary>
-    /// 가방과 장착에서 끌고 있는 포켓몬과 같은 종, 같은 성인 칸 테두리를 깜빡인다.
-    /// </summary>
-    private void ShowMergeHints(ItemManager itemManager, int playerId)
+    private void ShowMergeHints(ItemManager itemManager, int playerId, InventorySlotRef source)
     {
         var bag = itemManager.GetInventory(playerId);
         var equipment = itemManager.GetEquipment(playerId);
-        var bagExcept = _dragKind == InventorySlotDrag.SlotKind.Bag ? _dragIndex : -1;
         for (var i = 0; i < _bagSlots.Count; i++)
         {
-            _bagSlots[i].SetMergeHint(i != bagExcept && IsSameAsDragged(bag, i));
+            _bagSlots[i].SetMergeHint(InventoryMerge.IsTarget(bag, equipment, source, InventorySlotDrag.SlotKind.Bag, i, false));
         }
 
         if (_equipmentUi != null)
         {
-            var equipmentExcept = _dragKind == InventorySlotDrag.SlotKind.Equipment ? _dragIndex : -1;
-            _equipmentUi.SetMergeHints(equipment, _dragUid, _dragStar, equipmentExcept);
+            var equipmentExcept = source.Kind == InventorySlotDrag.SlotKind.Equipment ? source.Index : -1;
+            _equipmentUi.SetMergeHints(equipment, source.Uid, source.Star, equipmentExcept);
         }
     }
 
@@ -958,6 +1044,136 @@ public class InventoryUi : MonoBehaviour
         return true;
     }
 
+    bool IInventoryKeyboardTarget.TryGetSelection(out InventorySlotDrag.SlotKind kind, out int index)
+    {
+        kind = _selection == SelectionKind.Bag ? InventorySlotDrag.SlotKind.Bag
+            : _selection == SelectionKind.Equipment ? InventorySlotDrag.SlotKind.Equipment
+            : InventorySlotDrag.SlotKind.None;
+        index = _selectedIndex;
+        return kind != InventorySlotDrag.SlotKind.None && index >= 0;
+    }
+
+    bool IInventoryKeyboardTarget.TryGetHolders(out InventoryHolder bag, out InventoryHolder equipment)
+    {
+        bag = null;
+        equipment = null;
+        if (!TryGetContext(out var itemManager, out var playerId))
+        {
+            return false;
+        }
+
+        bag = itemManager.GetInventory(playerId);
+        equipment = itemManager.GetEquipment(playerId);
+        return true;
+    }
+
+    void IInventoryKeyboardTarget.Select(InventorySlotDrag.SlotKind kind, int index)
+    {
+        if (kind == InventorySlotDrag.SlotKind.Bag)
+        {
+            SelectBag(index);
+        }
+        else if (kind == InventorySlotDrag.SlotKind.Equipment)
+        {
+            SelectEquipment(index);
+        }
+    }
+
+    void IInventoryKeyboardTarget.Equip()
+    {
+        var index = _selectedIndex;
+        EquipSelected();
+        KeepBagFocus(index);
+    }
+
+    void IInventoryKeyboardTarget.Unequip()
+    {
+        UnequipSelected();
+    }
+
+    void IInventoryKeyboardTarget.Sell()
+    {
+        var wasBag = _selection == SelectionKind.Bag;
+        var index = _selectedIndex;
+        SellSelected();
+        if (wasBag)
+        {
+            KeepBagFocus(index);
+        }
+    }
+
+    void IInventoryKeyboardTarget.Synthesize(InventorySlotRef source, InventorySlotDrag.SlotKind targetKind, int targetIndex)
+    {
+        if (!TryGetContext(out var itemManager, out var playerId))
+        {
+            return;
+        }
+
+        _synthesized = InventorySlotRef.None;
+        if (!InventoryMerge.Merge(itemManager, playerId, source, targetKind, targetIndex) || _synthesized.IsEmpty)
+        {
+            Refresh();
+            return;
+        }
+
+        // 결과 칸을 골라서 이어서 키보드로 다룰 수 있게 한다.
+        var resultIndex = _synthesized.Kind == InventorySlotDrag.SlotKind.Bag
+            ? InventoryMerge.ResolveBagIndex(itemManager.GetInventory(playerId), _synthesized)
+            : _synthesized.Index;
+        ((IInventoryKeyboardTarget)this).Select(_synthesized.Kind, resultIndex);
+    }
+
+    void IInventoryKeyboardTarget.Refresh()
+    {
+        Refresh();
+    }
+
+    void IInventoryKeyboardTarget.Notify(string message)
+    {
+        ShowNotice(message);
+    }
+
+    void IInventoryKeyboardTarget.ShowHotkeyPress(InventoryHotkey hotkey)
+    {
+        _actionBar.PlayHotkey(hotkey);
+    }
+
+    /// <summary>
+    /// 키보드로 가방 포켓몬을 장착하거나 팔아 고른 칸이 비면 같은 자리 칸을 다시 고른다. 연달아 누르기 좋게 한다.
+    /// </summary>
+    private void KeepBagFocus(int index)
+    {
+        if (_selection != SelectionKind.None || !TryGetContext(out var itemManager, out var playerId))
+        {
+            return;
+        }
+
+        var bag = itemManager.GetInventory(playerId);
+        var count = bag != null ? bag.CountFilled() : 0;
+        if (count > 0)
+        {
+            SelectBag(Mathf.Min(index, count - 1));
+        }
+    }
+
+    private void HandleInventoryNotice(InventoryNotice notice)
+    {
+        if (!_open || !TryGetContext(out _, out var playerId) || notice.PlayerId != playerId)
+        {
+            return;
+        }
+
+        ShowNotice(notice.Message);
+    }
+
+    private void ShowNotice(string message)
+    {
+        if (_toast != null)
+        {
+            _toast.Show(message);
+        }
+    }
+
     private void HandleInventoryChanged(InventoryChanged changed)
     {
         if (!_open || !TryGetContext(out _, out var playerId) || changed.PlayerId != playerId)
@@ -978,10 +1194,13 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
+        _synthesized = synthesized.EquipmentSlot >= 0
+            ? new InventorySlotRef(InventorySlotDrag.SlotKind.Equipment, synthesized.EquipmentSlot, synthesized.Uid, synthesized.UpgradeLevel)
+            : new InventorySlotRef(InventorySlotDrag.SlotKind.Bag, -1, synthesized.Uid, synthesized.UpgradeLevel);
         var slot = FindSynthesizedSlot(itemManager, synthesized);
         if (!synthesized.Evolved)
         {
-            PlaySound(STAR_UP_SOUND);
+            UiSound.Play(STAR_UP_SOUND);
             if (slot != null)
             {
                 slot.PlayStarUp(synthesized.UpgradeLevel);
@@ -990,11 +1209,11 @@ public class InventoryUi : MonoBehaviour
             return;
         }
 
-        PlaySound(EVOLUTION_START_SOUND);
+        var startSound = UiSound.Play(EVOLUTION_START_SOUND);
         if (slot != null)
         {
             slot.PlayEvolution(GetPortrait(itemManager, synthesized.PreviousUid), GetPortrait(itemManager, synthesized.Uid),
-                () => PlaySound(EVOLUTION_END_SOUND));
+                GetLength(startSound), () => UiSound.Play(EVOLUTION_END_SOUND));
         }
     }
 
@@ -1049,6 +1268,7 @@ public class InventoryUi : MonoBehaviour
         }
 
         eventManager.Subscribe<InventoryChanged>(HandleInventoryChanged);
+        eventManager.Subscribe<InventoryNotice>(HandleInventoryNotice);
         eventManager.Subscribe<ItemSynthesized>(HandleItemSynthesized);
         eventManager.Subscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = true;
@@ -1063,19 +1283,23 @@ public class InventoryUi : MonoBehaviour
         }
 
         eventManager.Unsubscribe<InventoryChanged>(HandleInventoryChanged);
+        eventManager.Unsubscribe<InventoryNotice>(HandleInventoryNotice);
         eventManager.Unsubscribe<ItemSynthesized>(HandleItemSynthesized);
         eventManager.Unsubscribe<GameStateChanged>(HandleStateChanged);
         _subscribed = false;
     }
 
-    private static void PlaySound(string name)
+    /// <summary>
+    /// 재생 중인 효과음이 끝날 때까지 걸리는 실제 시간. 재생되지 않았으면 0.
+    /// </summary>
+    private static float GetLength(AudioSource source)
     {
-        if (Managers.Instance == null || !Managers.Instance.TryGetManager<AudioManager>(out var audioManager))
+        if (source == null || source.clip == null || Mathf.Approximately(source.pitch, 0f))
         {
-            return;
+            return 0f;
         }
 
-        audioManager.PlaySound(name);
+        return source.clip.length / Mathf.Abs(source.pitch);
     }
 
     private static void AddAction(Button button, UnityEngine.Events.UnityAction action)

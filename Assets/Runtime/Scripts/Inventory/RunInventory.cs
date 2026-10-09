@@ -133,7 +133,7 @@ internal sealed class RunInventory
 
         if (Equipment.CountFilled() <= ItemManager.MIN_EQUIPPED)
         {
-            message = "포켓몬은 한 마리 이상 장착해야 합니다.";
+            message = ItemManager.MIN_EQUIPPED_MESSAGE;
             return false;
         }
 
