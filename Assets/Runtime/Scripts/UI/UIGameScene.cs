@@ -144,7 +144,9 @@ public class UIGameScene : MonoBehaviour
 
             if (_stageCompleteScreen != null)
             {
-                _stageCompleteScreen.Show();
+                CacheGameController();
+                var stage = _gameController != null ? _gameController.ActiveStage : null;
+                _stageCompleteScreen.Show(stage != null ? stage.LastResult : null);
             }
 
             return;

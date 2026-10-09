@@ -29,6 +29,8 @@ GameObject:
   - component: {fileID: 5910283746501928374}
   - component: {fileID: 7319027461358201946}
   - component: {fileID: 4719305822614937851}
+  - component: {fileID: 1075269261642411482}
+  - component: {fileID: 5685805950477920616}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -94,6 +96,8 @@ MonoBehaviour:
   _trainingManager: {fileID: 3357020527997165755}
   _itemManager: {fileID: 5910283746501928374}
   _addressableManager: {fileID: 7319027461358201946}
+  _stageStatsManager: {fileID: 1075269261642411482}
+  _rankManager: {fileID: 5685805950477920616}
   _settingsWindow: {fileID: 3061198548743366585}
 --- !u!114 &1728748694618320786
 MonoBehaviour:
@@ -344,6 +348,30 @@ MonoBehaviour:
   _victoryExposure: 0.4
   _victoryInSeconds: 0.2
   _victoryOutSeconds: 0.8
+--- !u!114 &1075269261642411482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5778147509170455382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68a9e3e3aed528b47a460fcdea81beab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StageStatsManager
+--- !u!114 &5685805950477920616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5778147509170455382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5eb7ef66a26d2d943b7e6804c9ce4789, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RankManager
 --- !u!1001 &5256769204921313244
 PrefabInstance:
   m_ObjectHideFlags: 0
