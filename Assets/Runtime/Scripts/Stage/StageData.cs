@@ -79,6 +79,12 @@ public static class ShopGenerationMask
 [CreateAssetMenu(fileName = "StageData", menuName = "Stage/Stage Data")]
 public class StageData : ScriptableObject
 {
+    [Header("정보")]
+    [Tooltip("리더보드가 스테이지를 구분하는 키. 서버로 나가므로 한 번 정하면 바꾸지 않는다.")]
+    [SerializeField] private string _stageId;
+    [Tooltip("결과 화면 부제에 보이는 이름.")]
+    [SerializeField] private string _stageName;
+
     [Header("진행")]
     [SerializeField] private bool _endsOnTime = true;
     [SerializeField] private float _clearTimeSeconds = 45f;
@@ -97,6 +103,13 @@ public class StageData : ScriptableObject
     [Header("상점")]
     [Tooltip("상점에 나올 포켓몬 세대. Everything이면 모든 세대가 나온다.")]
     [SerializeField] private ShopGeneration _shopGenerations = ShopGenerationMask.ALL;
+
+    /// <summary>
+    /// 비어 있으면 에셋 이름을 쓴다.
+    /// </summary>
+    public string StageId => string.IsNullOrEmpty(_stageId) ? name : _stageId;
+
+    public string StageName => string.IsNullOrEmpty(_stageName) ? StageId : _stageName;
 
     public bool EndsOnTime => _endsOnTime;
 

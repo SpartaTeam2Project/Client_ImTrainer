@@ -141,6 +141,11 @@ public class StageController : MonoBehaviour
         }
 
         var playerId = playerManager.SpawnLocal();
+        if (Managers.Instance.TryGetManager<StageStatsManager>(out var statsManager))
+        {
+            statsManager.BeginStage(playerId);
+        }
+
         if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
         {
             itemManager.BeginRun(playerId, _stageData.ShopGenerations);
@@ -559,9 +564,16 @@ public class StageController : MonoBehaviour
         }
 
         var playerId = 0;
+        var report = default(StageStatsReport);
         if (Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
             playerId = playerManager.LocalPlayerId;
+            // 파티를 읽어야 하므로 가방을 지우는 EndRun보다 먼저 닫는다.
+            if (Managers.Instance.TryGetManager<StageStatsManager>(out var statsManager))
+            {
+                report = statsManager.FinishStage(playerId, killCount);
+            }
+
             if (resultState == GameState.Victory)
             {
                 playerManager.PlayPose(playerId);
@@ -579,7 +591,13 @@ public class StageController : MonoBehaviour
             currencies = currenciesManager.FinishStage(playerId);
         }
 
-        LastResult = new StageResult(playerId, killCount, _gameController.ElapsedSeconds, currencies);
+        LastResult = StageResultBuilder.Build(playerId, _stageData, resultState == GameState.Victory, killCount,
+            _gameController.ElapsedSeconds, currencies, report);
+        if (Managers.Instance.TryGetManager<RankManager>(out var rankManager))
+        {
+            rankManager.Submit(LastResult);
+        }
+
         Time.timeScale = 0f;
         ReleaseBossTimeline();
         Managers.Instance.ChangeState(resultState);
@@ -625,6 +643,11 @@ public class StageController : MonoBehaviour
 
         if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
         {
+            if (Managers.Instance.TryGetManager<StageStatsManager>(out var statsManager))
+            {
+                statsManager.CancelStage(playerManager.LocalPlayerId);
+            }
+
             if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
             {
                 itemManager.EndRun(playerManager.LocalPlayerId);
