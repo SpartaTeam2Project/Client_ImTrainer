@@ -134,6 +134,11 @@ public class EnemyView : MonoBehaviour
     public bool HasBodyBounds => _hitCollider != null && _bodyExtents.x > 0f && _bodyExtents.y > 0f;
 
     /// <summary>
+    /// 그림 기준 몸통의 가로세로 절반. 로컬 좌표다.
+    /// </summary>
+    public Vector2 BodyExtents => _bodyExtents;
+
+    /// <summary>
     /// 이번 스폰에 쓸 그림 에셋을 넣는다. 8방향은 이 에셋만 재생한다.
     /// </summary>
     public void ApplyVisual(MonsterVisualData visual)

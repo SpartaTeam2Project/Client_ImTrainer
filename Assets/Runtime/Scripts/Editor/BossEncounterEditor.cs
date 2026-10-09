@@ -49,30 +49,14 @@ public class BossEncounterEditor : Editor
         for (var i = 0; i < stats.arraySize; i++)
         {
             EditorGUILayout.LabelField(BuildLabel(members, i), EditorStyles.boldLabel);
-            var skill = DrawSkill(party, i);
-            if (skill == BossSkillKind.RisingVolley)
+            var skillData = DrawSkill(party, i);
+            var skill = skillData != null ? skillData.Kind : BossSkillKind.None;
+            if (skillData != null)
             {
-                DrawProjectile(party, i);
-            }
-
-            if (skill == BossSkillKind.FanVolley)
-            {
-                DrawFanProjectileFrames(party, i);
-            }
-
-            if (skill == BossSkillKind.TrackingBeam)
-            {
-                DrawBeamFrames(party, i);
-            }
-
-            if (skill == BossSkillKind.SleepPowder)
-            {
-                DrawPowderFrames(party, i);
-            }
-
-            if (skill == BossSkillKind.SpoonRing)
-            {
-                DrawSpoonFrames(party, i);
+                var skillObject = new SerializedObject(skillData);
+                skillObject.Update();
+                DrawSkillSprites(skillObject, skill);
+                skillObject.ApplyModifiedProperties();
             }
 
             DrawStatsForSkill(stats.GetArrayElementAtIndex(i), skill);
@@ -85,88 +69,67 @@ public class BossEncounterEditor : Editor
         }
     }
 
-    private static BossSkillKind DrawSkill(SerializedProperty party, int index)
+    private static BossSkillData DrawSkill(SerializedProperty party, int index)
     {
         if (party == null || index < 0 || index >= party.arraySize)
         {
-            return BossSkillKind.None;
+            return null;
         }
 
         var member = party.GetArrayElementAtIndex(index);
         var skill = member.FindPropertyRelative("_skill");
         if (skill == null)
         {
-            return BossSkillKind.None;
+            return null;
         }
 
         EditorGUILayout.PropertyField(skill, new GUIContent("스킬"));
-        var data = skill.objectReferenceValue as BossSkillData;
-        return data != null ? data.Kind : BossSkillKind.None;
+        return skill.objectReferenceValue as BossSkillData;
     }
 
-    private static void DrawProjectile(SerializedProperty party, int index)
+    /// <summary>
+    /// 스킬 SO에 든 탄 그림만 고른 기술에 맞게 연다.
+    /// </summary>
+    public static void DrawSkillSprites(SerializedObject skillObject, BossSkillKind skill)
     {
-        var sprite = party.GetArrayElementAtIndex(index).FindPropertyRelative("_projectileSprite");
-        if (sprite == null)
+        if (skill == BossSkillKind.RisingVolley)
+        {
+            DrawSkillProperty(skillObject, "_projectileSprite", "탄 그림");
+        }
+
+        if (skill == BossSkillKind.FanVolley)
+        {
+            DrawSkillProperty(skillObject, "_chargeProjectileFrames", "차지 탄");
+            DrawSkillProperty(skillObject, "_flyProjectileFrames", "발사 탄");
+        }
+
+        if (skill == BossSkillKind.TrackingBeam)
+        {
+            DrawSkillProperty(skillObject, "_beamFrames", "빔 그림");
+            DrawMouthOffsets(skillObject.FindProperty("_beamMouthOffsets"));
+        }
+
+        if (skill == BossSkillKind.SleepPowder)
+        {
+            DrawSkillProperty(skillObject, "_poolBurstFrames", "퍼지는 그림");
+            DrawSkillProperty(skillObject, "_poolLingerFrames", "유지 그림");
+        }
+
+        if (skill == BossSkillKind.SpoonRing)
+        {
+            DrawSkillProperty(skillObject, "_spoonFrames", "숟가락 그림");
+        }
+    }
+
+    private static void DrawSkillProperty(SerializedObject skillObject, string name, string label)
+    {
+        var property = skillObject.FindProperty(name);
+        if (property == null)
         {
             return;
         }
 
-        EditorGUILayout.PropertyField(sprite, new GUIContent("탄 그림"));
-    }
-
-    private static void DrawFanProjectileFrames(SerializedProperty party, int index)
-    {
-        var member = party.GetArrayElementAtIndex(index);
-        var chargeFrames = member.FindPropertyRelative("_chargeProjectileFrames");
-        var flyFrames = member.FindPropertyRelative("_flyProjectileFrames");
-        if (chargeFrames != null)
-        {
-            EditorGUILayout.PropertyField(chargeFrames, new GUIContent("차지 탄"), true);
-        }
-
-        if (flyFrames != null)
-        {
-            EditorGUILayout.PropertyField(flyFrames, new GUIContent("발사 탄"), true);
-        }
-    }
-
-    private static void DrawBeamFrames(SerializedProperty party, int index)
-    {
-        var member = party.GetArrayElementAtIndex(index);
-        var frames = member.FindPropertyRelative("_beamFrames");
-        if (frames == null)
-        {
-            return;
-        }
-
-        EditorGUILayout.PropertyField(frames, new GUIContent("빔 그림"), true);
-        DrawMouthOffsets(member.FindPropertyRelative("_beamMouthOffsets"));
-    }
-
-    private static void DrawPowderFrames(SerializedProperty party, int index)
-    {
-        var member = party.GetArrayElementAtIndex(index);
-        var burst = member.FindPropertyRelative("_poolBurstFrames");
-        var linger = member.FindPropertyRelative("_poolLingerFrames");
-        if (burst != null)
-        {
-            EditorGUILayout.PropertyField(burst, new GUIContent("퍼지는 그림"), true);
-        }
-
-        if (linger != null)
-        {
-            EditorGUILayout.PropertyField(linger, new GUIContent("유지 그림"), true);
-        }
-    }
-
-    private static void DrawSpoonFrames(SerializedProperty party, int index)
-    {
-        var frames = party.GetArrayElementAtIndex(index).FindPropertyRelative("_spoonFrames");
-        if (frames != null)
-        {
-            EditorGUILayout.PropertyField(frames, new GUIContent("숟가락 그림"), true);
-        }
+        EditorGUILayout.PropertyField(property, new GUIContent(label), true);
     }
 
     private static void DrawMouthOffsets(SerializedProperty mouths)
@@ -335,5 +298,20 @@ public class BossEncounterEditor : Editor
         }
 
         return number + ". " + monsterName;
+    }
+}
+
+/// <summary>
+/// 스킬 SO에서 그 기술이 쓰는 탄 그림만 보여 준다.
+/// </summary>
+[CustomEditor(typeof(BossSkillData))]
+public class BossSkillEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("_kind"));
+        BossEncounterEditor.DrawSkillSprites(serializedObject, ((BossSkillData)target).Kind);
+        serializedObject.ApplyModifiedProperties();
     }
 }

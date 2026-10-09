@@ -318,6 +318,24 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 다른 보스와 떨어질 때 쓰는 몸통 반경.
+    /// </summary>
+    public float SeparationRadius
+    {
+        get
+        {
+            if (_view == null || !_view.HasBodyBounds)
+            {
+                return 0.5f;
+            }
+
+            var extents = _view.BodyExtents;
+            var scale = Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.y));
+            return Mathf.Max(extents.x, extents.y) * scale;
+        }
+    }
+
     #region Unity Methods
 
     private void Awake()
@@ -2409,6 +2427,11 @@ public class Enemy : MonoBehaviour
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
             next = fieldManager.ValidatePosition(next);
+        }
+
+        if (_owner != null)
+        {
+            next = _owner.SeparateFromBosses(this, next);
         }
 
         transform.position = next;
