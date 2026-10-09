@@ -16,6 +16,17 @@ public static class StageResultIcons
         return visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null;
     }
 
+    public static string MonsterName(int uid)
+    {
+        if (uid < 0 || Managers.Instance == null || !Managers.Instance.TryGetManager<ItemManager>(out var itemManager))
+        {
+            return string.Empty;
+        }
+
+        var item = itemManager.TryGetItem(uid);
+        return item != null ? item.name : string.Empty;
+    }
+
     public static Sprite Trainer()
     {
         if (Managers.Instance == null || !Managers.Instance.TryGetManager<AccountManager>(out var account))
