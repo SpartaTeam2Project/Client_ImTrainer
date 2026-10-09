@@ -47,7 +47,7 @@ public class RestoreHPWeaponAbilityBehavior : WeaponAbilityBehavior<RestoreHPWea
                 continue;
             }
 
-            player.Health.RestoreHp(WeaponAbilityLevel.RestoredHPPercent);
+            RestorePlayerHp(WeaponAbilityLevel.RestoredHPPercent);
             var wait = WeaponAbilityLevel.Cooldown * Mathf.Max(MIN_COOLDOWN_MULTIPLIER, player.Stat.cooldownMultiplier);
             await UniTask.Delay(TimeSpan.FromSeconds(wait), cancellationToken: token);
         }

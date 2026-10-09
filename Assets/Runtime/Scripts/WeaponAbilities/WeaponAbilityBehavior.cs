@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// 능력 동작의 공통 레벨 적용.
 /// </summary>
-public abstract class WeaponAbilityBehavior<T, K> : MonoBehaviour, IWeaponAbilityBehavior where T : GenericWeaponAbilityData<K> where K : WeaponAbilityLevel
+public abstract class WeaponAbilityBehavior<T, K> : MonoBehaviour, IWeaponAbilityBehavior, IDamageSourceProvider where T : GenericWeaponAbilityData<K> where K : WeaponAbilityLevel
 {
     public T Data { get; private set; }
 
@@ -72,6 +72,17 @@ public abstract class WeaponAbilityBehavior<T, K> : MonoBehaviour, IWeaponAbilit
     }
 
     /// <summary>
+    /// 이 능력의 플레이어를 최대 체력 비율만큼 회복한다. 회복량 집계를 위해 PlayerManager를 거친다.
+    /// </summary>
+    protected void RestorePlayerHp(float percent)
+    {
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<PlayerManager>(out var playerManager))
+        {
+            playerManager.RestoreHp(PlayerId, percent);
+        }
+    }
+
+    /// <summary>
     /// 일시정지 시간을 제외하고 기다린다. 취소되면 true.
     /// </summary>
     protected async UniTask<bool> WaitCombatSecondsAsync(float seconds, CancellationToken token)
@@ -97,6 +108,14 @@ public abstract class WeaponAbilityBehavior<T, K> : MonoBehaviour, IWeaponAbilit
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 지금 이 능력이 주는 피해의 출처. 칸 능력이면 그 칸 포켓몬의 개체 번호가 들어간다.
+    /// </summary>
+    public DamageSource CreateDamageSource()
+    {
+        return DamageSourceResolver.Resolve(PlayerId, WeaponAbilityType, this as ISlotOriginAbility);
     }
 
     /// <summary>

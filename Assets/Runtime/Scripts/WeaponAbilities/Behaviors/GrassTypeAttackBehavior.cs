@@ -6,10 +6,11 @@ using UnityEngine;
 /// <summary>
 /// 플레이어 주위를 일정 시간 도는 별을 소환한다.
 /// </summary>
-public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData, GrassTypeAttackLevel>
+public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData, GrassTypeAttackLevel>, ISlotOriginAbility
 {
     private const float MIN_MULTIPLIER = 0.01f;
     private const float RADIUS_BLEND_SECONDS = 0.5f;
+    private const float SLOT_ANGLE_OFFSET = 360f / WeaponSlots.MAX_COUNT / 2f;
     private const float MIN_DELAY = 0.5f;
 
     [SerializeField] private GameObject starPrefab;
@@ -20,6 +21,12 @@ public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData
     private float _angle;
     private float _radiusMultiplier;
     private float _radiusTarget;
+    private WeaponSlot _originSlot;
+    private bool _hasOriginSlot;
+
+    public WeaponSlot OriginSlot => _originSlot;
+
+    public bool HasOriginSlot => _hasOriginSlot;
 
     #region Unity Methods
 
@@ -50,6 +57,16 @@ public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData
     #endregion
 
     #region Public Methods
+
+    /// <summary>
+    /// 별을 내는 장착 칸을 기억한다. 칸마다 시작 각도를 어긋나게 해 여러 마리의 별이 겹치지 않게 한다.
+    /// </summary>
+    public void BindSlot(WeaponSlot slot)
+    {
+        _originSlot = slot;
+        _hasOriginSlot = true;
+        _angle = SLOT_ANGLE_OFFSET * (int)slot;
+    }
 
     /// <summary>
     /// 소환 루프와 돌고 있던 별을 치운다.
@@ -162,7 +179,7 @@ public class GrassTypeAttackBehavior : WeaponAbilityBehavior<GrassTypeAttackData
                 continue;
             }
 
-            star.Show(PlayerId, WeaponAbilityLevel.Damage, attackType, player.Stat.sizeMultiplier);
+            star.Show(PlayerId, this, WeaponAbilityLevel.Damage, attackType, player.Stat.sizeMultiplier);
             _stars.Add(star);
         }
     }

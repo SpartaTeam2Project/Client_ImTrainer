@@ -13,8 +13,11 @@ public class WaterTypeAttackEvolutionBehavior : WeaponAbilityBehavior<WaterTypeA
 
     private CancellationTokenSource _loop;
     private WeaponSlot _originSlot;
+    private bool _hasOriginSlot;
 
     public WeaponSlot OriginSlot => _originSlot;
+
+    public bool HasOriginSlot => _hasOriginSlot;
 
     #region Unity Methods
 
@@ -33,6 +36,7 @@ public class WaterTypeAttackEvolutionBehavior : WeaponAbilityBehavior<WaterTypeA
     public void BindSlot(WeaponSlot slot)
     {
         _originSlot = slot;
+        _hasOriginSlot = true;
         CacheBeam();
         if (beam != null)
         {
@@ -116,7 +120,7 @@ public class WaterTypeAttackEvolutionBehavior : WeaponAbilityBehavior<WaterTypeA
             var length = WeaponAbilityLevel.BeamLength * player.Stat.sizeMultiplier;
             var width = WeaponAbilityLevel.BeamWidth * player.Stat.sizeMultiplier;
             var duration = WeaponAbilityLevel.BeamDuration * Mathf.Max(MIN_MULTIPLIER, player.Stat.durationMultiplier);
-            beam.Play(PlayerId, damage, length, width, duration, WeaponAbilityLevel.DamageInterval, ResolveAttackType());
+            beam.Play(PlayerId, this, damage, length, width, duration, WeaponAbilityLevel.DamageInterval, ResolveAttackType());
             var shotCanceled = await WaitCombatSecondsAsync(duration, token);
             if (shotCanceled)
             {

@@ -6,9 +6,9 @@ public class HealEndgameWeaponAbilityBehavior : WeaponAbilityBehavior<HealEndgam
     protected override void SetWeaponAbilityLevel(int levelId)
     {
         base.SetWeaponAbilityLevel(levelId);
-        if (WeaponAbilityLevel != null && TryGetPlayer(out var player))
+        if (WeaponAbilityLevel != null)
         {
-            player.Health.RestoreHp(WeaponAbilityLevel.HealPersentage);
+            RestorePlayerHp(WeaponAbilityLevel.HealPersentage);
         }
     }
 }

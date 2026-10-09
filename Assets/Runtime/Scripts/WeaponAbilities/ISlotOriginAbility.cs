@@ -6,6 +6,11 @@ public interface ISlotOriginAbility
     WeaponSlot OriginSlot { get; }
 
     /// <summary>
+    /// 칸에 묶였으면 true. 칸 없이 만든 진화는 OriginSlot이 기본값이라 이것으로 구분한다.
+    /// </summary>
+    bool HasOriginSlot { get; }
+
+    /// <summary>
     /// 발사 기준으로 쓸 장착 칸을 기억한다.
     /// </summary>
     void BindSlot(WeaponSlot slot);

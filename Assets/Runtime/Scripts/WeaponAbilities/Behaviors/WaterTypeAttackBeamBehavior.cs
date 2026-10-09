@@ -19,6 +19,7 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
     private readonly Dictionary<Enemy, float> _nextHit = new Dictionary<Enemy, float>();
 
     private int _playerId;
+    private IDamageSourceProvider _sourceProvider;
     private float _damage;
     private float _interval;
     private float _timeLeft;
@@ -83,7 +84,8 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
             return;
         }
 
-        enemy.ApplyDamage(_damage, _attackType);
+        var source = _sourceProvider != null ? _sourceProvider.CreateDamageSource() : default;
+        enemy.ApplyDamage(_damage, _attackType, source);
         _nextHit[enemy] = Time.time + _interval;
     }
 
@@ -105,6 +107,7 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
     /// </summary>
     public void Play(
         int playerId,
+        IDamageSourceProvider sourceProvider,
         float damage,
         float length,
         float width,
@@ -113,6 +116,7 @@ public class WaterTypeAttackBeamBehavior : MonoBehaviour
         MonsterType attackType)
     {
         _playerId = playerId;
+        _sourceProvider = sourceProvider;
         _damage = damage;
         _interval = Mathf.Max(0.02f, interval);
         _timeLeft = duration;

@@ -22,6 +22,8 @@ public class FireAttackWeaponAbilityBehavior : WeaponAbilityBehavior<FireAttackW
 
     public WeaponSlot OriginSlot => _originSlot;
 
+    public bool HasOriginSlot => _hasOriginSlot;
+
     #region Unity Methods
 
     private void Awake()
