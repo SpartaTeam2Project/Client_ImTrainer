@@ -45,12 +45,15 @@ public static class StageResultFormat
     }
 
     /// <summary>
-    /// 초를 mm:ss로 적는다.
+    /// 초를 "05분 03초"로 적는다. 1시간이 넘으면 "1시간 02분 03초"다.
     /// </summary>
     public static string Time(float seconds)
     {
         var total = Mathf.Max(0, Mathf.FloorToInt(seconds));
-        return (total / 60).ToString("00") + ":" + (total % 60).ToString("00");
+        var hours = total / 3600;
+        var minutes = total % 3600 / 60;
+        var text = minutes.ToString("00") + "분 " + (total % 60).ToString("00") + "초";
+        return hours > 0 ? hours + "시간 " + text : text;
     }
 
     public static float PerSecond(float amount, float seconds)

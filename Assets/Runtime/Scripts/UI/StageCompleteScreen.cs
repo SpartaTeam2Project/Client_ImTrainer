@@ -1,3 +1,4 @@
+using System.Collections;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
@@ -19,6 +20,7 @@ public class StageCompleteScreen : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _titleText;
     [SerializeField] private StageCompleteLines _lines;
     [SerializeField] private Button _button;
+    [SerializeField] private ScreenBackdrop _backdrop;
 
     [Header("판 결과")]
     [SerializeField] private TextMeshProUGUI _stageNameText;
@@ -30,6 +32,7 @@ public class StageCompleteScreen : MonoBehaviour
     [SerializeField] private StageDamagePanel _damagePanel;
 
     private Tweener _alphaTween;
+    private Coroutine _showRoutine;
     private StageResult _result;
 
     #region Unity Methods
@@ -63,6 +66,11 @@ public class StageCompleteScreen : MonoBehaviour
     private void OnDisable()
     {
         KillTween();
+        _showRoutine = null;
+        if (_backdrop != null)
+        {
+            _backdrop.Release();
+        }
     }
 
     #endregion
@@ -76,6 +84,7 @@ public class StageCompleteScreen : MonoBehaviour
     public void Show(StageResult result)
     {
         KillTween();
+        StopShowRoutine();
         _result = result;
         ApplyTitle();
         gameObject.SetActive(true);
@@ -88,7 +97,7 @@ public class StageCompleteScreen : MonoBehaviour
         _canvasGroup.alpha = 0f;
         _canvasGroup.interactable = true;
         _canvasGroup.blocksRaycasts = true;
-        _alphaTween = _canvasGroup.DOFade(1f, FADE_DURATION).SetUpdate(true);
+        _showRoutine = StartCoroutine(FadeInAfterCapture());
         PlaySound(STAGE_COMPLETE_SOUND);
     }
 
@@ -103,6 +112,7 @@ public class StageCompleteScreen : MonoBehaviour
         }
 
         KillTween();
+        StopShowRoutine();
         if (_canvasGroup == null)
         {
             gameObject.SetActive(false);
@@ -117,6 +127,30 @@ public class StageCompleteScreen : MonoBehaviour
     #endregion
 
     #region Private Methods
+
+    // 알파 0인 화면 아래의 게임 화면을 배경으로 담은 뒤에 알파를 올린다.
+    private IEnumerator FadeInAfterCapture()
+    {
+        if (_backdrop != null)
+        {
+            yield return new WaitForEndOfFrame();
+            _backdrop.Capture();
+        }
+
+        _showRoutine = null;
+        _alphaTween = _canvasGroup.DOFade(1f, FADE_DURATION).SetUpdate(true);
+    }
+
+    private void StopShowRoutine()
+    {
+        if (_showRoutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(_showRoutine);
+        _showRoutine = null;
+    }
 
     private void ApplyTitle()
     {

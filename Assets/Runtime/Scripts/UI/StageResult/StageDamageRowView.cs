@@ -16,11 +16,13 @@ public class StageDamageRowView : MonoBehaviour
     [SerializeField] private TMP_Text _dps;
     [SerializeField] private TMP_Text _percent;
     [SerializeField] private Image _presenceFill;
+    [SerializeField] private Image _equipped;
 
     /// <summary>
     /// dimmed면 판이 끝날 때 파티에 없던 포켓몬이라 흐리게 그린다.
+    /// equipped면 클리어 시점까지 장착하고 있던 포켓몬이라 장착 표시를 켠다.
     /// </summary>
-    public void Bind(Sprite icon, int stars, float damage, float dps, float presence, bool dimmed)
+    public void Bind(Sprite icon, int stars, float damage, float dps, float presence, bool dimmed, bool equipped)
     {
         if (_icon != null)
         {
@@ -47,6 +49,11 @@ public class StageDamageRowView : MonoBehaviour
         if (_presenceFill != null)
         {
             _presenceFill.fillAmount = presence;
+        }
+
+        if (_equipped != null)
+        {
+            _equipped.enabled = equipped;
         }
 
         if (_group != null)
