@@ -8539,6 +8539,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StageCompleteScreen
   _canvasGroup: {fileID: 9201000000000000103}
   _titleText: {fileID: 9201000000000000124}
+  _titleDrop: {fileID: 0}
   _lines: {fileID: 11400000, guid: f2b84d6e1a0c4f7b9e3d5a8c7b1e0f36, type: 2}
   _button: {fileID: 9201000000000000135}
   _backdrop: {fileID: 9093214030814417809}
@@ -8646,6 +8647,8 @@ GameObject:
   - component: {fileID: 9201000000000000122}
   - component: {fileID: 9201000000000000123}
   - component: {fileID: 9201000000000000124}
+  - component: {fileID: 7327253488741166198}
+  - component: {fileID: 9131352734238011521}
   m_Layer: 5
   m_Name: Title
   m_TagString: Untagged
@@ -8772,6 +8775,39 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!225 &7327253488741166198
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9201000000000000121}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &9131352734238011521
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9201000000000000121}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48e46d088b57db44782af3b72e1f50ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TitleDropText
+  _dropHeight: 140
+  _letterInterval: 0.14
+  _fallDuration: 0.16
+  _squashDuration: 0.24
+  _squash: 0.35
+  _impactSound: shop_stamp
+  _titlePunch: 10
+  _cameraShakeStrength: 0.12
+  _cameraShakeDuration: 0.15
 --- !u!1 &9201000000000000131
 GameObject:
   m_ObjectHideFlags: 0

@@ -11,6 +11,12 @@ public class StageController : MonoBehaviour
     [SerializeField] private StageData _stageData;
     [SerializeField] private PlayableDirector _director;
 
+    [Header("성공 연출")]
+    [Tooltip("성공 포즈 마지막 장을 보여 준 뒤 결과창을 열기까지의 시간")]
+    [SerializeField] private float _poseHoldSeconds = 0.6f;
+    [Tooltip("포즈 그림이 없어도 결과창을 열기 전에 기다리는 최소 시간")]
+    [SerializeField] private float _minResultDelaySeconds = 0.5f;
+
     private GameController _gameController;
     private bool _stageActive;
     private bool _deathSubscribed;
@@ -24,6 +30,11 @@ public class StageController : MonoBehaviour
     private readonly List<double> _clearedBossTimes = new List<double>();
 
     public StageResult LastResult { get; private set; }
+
+    /// <summary>
+    /// 판이 끝난 뒤 결과창을 열기 전에 기다릴 실제 시간(초). 성공 포즈를 보여 줄 시간이다.
+    /// </summary>
+    public float ResultRevealDelay { get; private set; }
 
     /// <summary>
     /// 이 씬이 진행할 스테이지. 판 시작 전에 몬스터 그림을 미리 불러올 때 쓴다.
@@ -134,6 +145,7 @@ public class StageController : MonoBehaviour
 
         Time.timeScale = 1f;
         LastResult = null;
+        ResultRevealDelay = 0f;
         _clearedBossTimes.Clear();
         if (Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {
@@ -576,7 +588,8 @@ public class StageController : MonoBehaviour
 
             if (resultState == GameState.Victory)
             {
-                playerManager.PlayPose(playerId);
+                var poseSeconds = playerManager.PlayPose(playerId);
+                ResultRevealDelay = Mathf.Max(_minResultDelaySeconds, poseSeconds + _poseHoldSeconds);
             }
 
             if (Managers.Instance.TryGetManager<ItemManager>(out var itemManager))

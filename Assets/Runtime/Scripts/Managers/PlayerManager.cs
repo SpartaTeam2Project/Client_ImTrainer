@@ -150,15 +150,16 @@ public class PlayerManager : BaseManager
 
     /// <summary>
     /// 그 플레이어의 장착 포켓몬이 성공 포즈를 재생하게 한다.
+    /// 가장 늦게 끝나는 포즈까지 걸리는 초를 돌려준다.
     /// </summary>
-    public void PlayPose(int playerId)
+    public float PlayPose(int playerId)
     {
         if (!TryGetPlayer(playerId, out var player))
         {
-            return;
+            return 0f;
         }
 
-        player.Weapons.PlayPose();
+        return player.Weapons.PlayPose();
     }
 
 
