@@ -31,6 +31,18 @@ public class Enemy : MonoBehaviour
     private const float DEFAULT_BEAM_SECONDS = 2.5f;
     private const float DEFAULT_BEAM_HIT_INTERVAL = 0.25f;
     private const float DEFAULT_BEAM_TURN_SPEED = 45f;
+    private const float DEFAULT_POOL_RANGE = 3f;
+    private const float DEFAULT_POOL_SPREAD_SPEED = 1.5f;
+    private const float DEFAULT_POOL_HITS_PER_SECOND = 2f;
+    private const float DEFAULT_POOL_SLOW_PERCENT = 40f;
+    private const float DEFAULT_POOL_CAST_SECONDS = 1.2f;
+    private const float DEFAULT_POOL_SECONDS = 5f;
+    private const int DEFAULT_SPOON_COUNT = 8;
+    private const float DEFAULT_SPOON_CHARGE_SECONDS = 1.2f;
+    private const float DEFAULT_SPOON_SPEED = 6f;
+    private const float DEFAULT_SPOON_FLY_SECONDS = 4f;
+    private const float SPOON_ORBIT_RADIUS = 1.2f;
+    private const int SPOON_SHOOT_RELEASE_FRAME = 4;
     private const float BEAM_FRAME_RATE = 10f;
     private const int BEAM_SORTING_ORDER = 6;
     private const string REAR_UP_SKILL = "RearUp";
@@ -173,6 +185,24 @@ public class Enemy : MonoBehaviour
     private Vector2 _mouthOffset;
     private Sprite[] _beamFrames = System.Array.Empty<Sprite>();
     private Vector2[] _beamMouthOffsets = System.Array.Empty<Vector2>();
+    private PowderPhase _powderPhase;
+    private float _powderCastUntil;
+    private float _poolRange;
+    private float _poolSpreadSpeed;
+    private float _poolHitsPerSecond;
+    private float _poolSlowPercent;
+    private float _poolCastSeconds;
+    private float _poolSeconds;
+    private Sprite[] _poolBurstFrames = System.Array.Empty<Sprite>();
+    private Sprite[] _poolLingerFrames = System.Array.Empty<Sprite>();
+    private SpoonPhase _spoonPhase;
+    private float _spoonChargeUntil;
+    private int _spoonCount;
+    private float _spoonChargeSeconds;
+    private float _spoonSpeed;
+    private float _spoonFlySeconds;
+    private Sprite[] _spoonFrames = System.Array.Empty<Sprite>();
+    private readonly List<SpoonShot> _spoons = new List<SpoonShot>();
     private SpriteRenderer _beamWarning;
     private SpriteRenderer _beamFill;
     private SpriteRenderer _beam;
@@ -200,6 +230,20 @@ public class Enemy : MonoBehaviour
         None = 0,
         Charging = 1,
         Firing = 2
+    }
+
+    private enum PowderPhase
+    {
+        None = 0,
+        Casting = 1
+    }
+
+    private enum SpoonPhase
+    {
+        None = 0,
+        Charging = 1,
+        Releasing = 2,
+        Shooting = 3
     }
 
     private enum SlamPhase
@@ -287,6 +331,7 @@ public class Enemy : MonoBehaviour
         HideChargeMark();
         HideSlamMark();
         HideBeamVisuals();
+        ClearOrbitSpoons();
         if (_owner == null)
         {
             return;
@@ -415,7 +460,20 @@ public class Enemy : MonoBehaviour
         float beamHitInterval = 0f,
         float beamTurnSpeed = 0f,
         Sprite[] beamFrames = null,
-        Vector2[] beamMouthOffsets = null)
+        Vector2[] beamMouthOffsets = null,
+        float poolRange = 0f,
+        float poolSpreadSpeed = 0f,
+        float poolHitsPerSecond = 0f,
+        float poolSlowPercent = -1f,
+        float poolCastSeconds = 0f,
+        float poolSeconds = 0f,
+        Sprite[] poolBurstFrames = null,
+        Sprite[] poolLingerFrames = null,
+        int spoonCount = 0,
+        float spoonChargeSeconds = 0f,
+        float spoonSpeed = 0f,
+        float spoonFlySeconds = 0f,
+        Sprite[] spoonFrames = null)
     {
         CancelUnfiredVolley();
         CancelFanShots();
@@ -474,6 +532,22 @@ public class Enemy : MonoBehaviour
         _beamTurnSpeed = beamTurnSpeed > 0f ? beamTurnSpeed : DEFAULT_BEAM_TURN_SPEED;
         _beamFrames = beamFrames ?? System.Array.Empty<Sprite>();
         _beamMouthOffsets = beamMouthOffsets ?? System.Array.Empty<Vector2>();
+        _powderPhase = PowderPhase.None;
+        _poolRange = poolRange > 0f ? poolRange : DEFAULT_POOL_RANGE;
+        _poolSpreadSpeed = poolSpreadSpeed > 0f ? poolSpreadSpeed : DEFAULT_POOL_SPREAD_SPEED;
+        _poolHitsPerSecond = poolHitsPerSecond > 0f ? poolHitsPerSecond : DEFAULT_POOL_HITS_PER_SECOND;
+        _poolSlowPercent = poolSlowPercent >= 0f ? Mathf.Clamp(poolSlowPercent, 0f, 100f) : DEFAULT_POOL_SLOW_PERCENT;
+        _poolCastSeconds = poolCastSeconds > 0f ? poolCastSeconds : DEFAULT_POOL_CAST_SECONDS;
+        _poolSeconds = poolSeconds > 0f ? poolSeconds : DEFAULT_POOL_SECONDS;
+        _poolBurstFrames = poolBurstFrames ?? System.Array.Empty<Sprite>();
+        _poolLingerFrames = poolLingerFrames ?? System.Array.Empty<Sprite>();
+        ClearOrbitSpoons();
+        _spoonPhase = SpoonPhase.None;
+        _spoonCount = spoonCount > 0 ? spoonCount : DEFAULT_SPOON_COUNT;
+        _spoonChargeSeconds = spoonChargeSeconds > 0f ? spoonChargeSeconds : DEFAULT_SPOON_CHARGE_SECONDS;
+        _spoonSpeed = spoonSpeed > 0f ? spoonSpeed : DEFAULT_SPOON_SPEED;
+        _spoonFlySeconds = spoonFlySeconds > 0f ? spoonFlySeconds : DEFAULT_SPOON_FLY_SECONDS;
+        _spoonFrames = spoonFrames ?? System.Array.Empty<Sprite>();
         _mouthSector = int.MinValue;
         _beamAim = Vector2.right;
         _nextContactTime = 0f;
@@ -579,6 +653,16 @@ public class Enemy : MonoBehaviour
             return TickBeam(playerPosition);
         }
 
+        if (_skill == BossSkillKind.SleepPowder)
+        {
+            return TickSleepPowder(playerPosition);
+        }
+
+        if (_skill == BossSkillKind.SpoonRing)
+        {
+            return TickSpoonRing(playerPosition);
+        }
+
         if (_attackKind == EnemyAttackKind.Projectile)
         {
             TickProjectile(playerPosition);
@@ -628,6 +712,7 @@ public class Enemy : MonoBehaviour
         HideSlamMark();
         HideBeamVisuals();
         CancelFanShots();
+        ClearOrbitSpoons();
         if (_owner != null)
         {
             _owner.NotifyDied(this);
@@ -1024,6 +1109,214 @@ public class Enemy : MonoBehaviour
         _fanDirections.Clear();
         _fanPhase = FanPhase.None;
         _fanSpawned = 0;
+    }
+
+    /// <summary>
+    /// 숟가락. 차지 동안 원으로 두고, 끝나면 각 방향으로 날린다.
+    /// </summary>
+    private bool TickSpoonRing(Vector2 playerPosition)
+    {
+        if (_spoonPhase == SpoonPhase.Charging)
+        {
+            if (_view != null)
+            {
+                _view.SetChargeDown();
+            }
+
+            PlaceOrbitSpoons();
+            if (Time.time >= _spoonChargeUntil)
+            {
+                _spoonPhase = SpoonPhase.Releasing;
+                if (_view != null)
+                {
+                    _view.PlayShootDownOnce();
+                }
+            }
+
+            return TryContactDamage(playerPosition);
+        }
+
+        if (_spoonPhase == SpoonPhase.Releasing)
+        {
+            if (_view != null)
+            {
+                _view.PlayShootDownOnce();
+            }
+
+            PlaceOrbitSpoons();
+            if (IsSpoonReleaseFrame())
+            {
+                ReleaseSpoons();
+            }
+
+            return TryContactDamage(playerPosition);
+        }
+
+        if (_spoonPhase == SpoonPhase.Shooting)
+        {
+            if (_view != null)
+            {
+                _view.PlayShootDownOnce();
+            }
+
+            if (_view == null || _view.IsShootDownFinished)
+            {
+                _spoonPhase = SpoonPhase.None;
+            }
+
+            return TryContactDamage(playerPosition);
+        }
+
+        if (Time.time >= _nextShotTime)
+        {
+            BeginSpoonCharge();
+            return TryContactDamage(playerPosition);
+        }
+
+        MoveToward(playerPosition, Time.deltaTime);
+        return TryContactDamage(playerPosition);
+    }
+
+    private void BeginSpoonCharge()
+    {
+        ClearOrbitSpoons();
+        _spoonPhase = SpoonPhase.Charging;
+        _spoonChargeUntil = Time.time + _spoonChargeSeconds;
+        var count = Mathf.Max(1, _spoonCount);
+        for (var i = 0; i < count; i++)
+        {
+            var direction = SpoonDirection(i, count);
+            var spoon = SpoonShot.Create((Vector2)transform.position + direction * SPOON_ORBIT_RADIUS, _spoonFrames);
+            spoon.SetSpinPhase(i, count);
+            _spoons.Add(spoon);
+        }
+
+        if (_view != null)
+        {
+            _view.SetChargeDown();
+        }
+    }
+
+    private void PlaceOrbitSpoons()
+    {
+        var count = _spoons.Count;
+        for (var i = 0; i < count; i++)
+        {
+            var spoon = _spoons[i];
+            if (spoon == null)
+            {
+                continue;
+            }
+
+            spoon.Place((Vector2)transform.position + SpoonDirection(i, count) * SPOON_ORBIT_RADIUS);
+        }
+    }
+
+    private void ReleaseSpoons()
+    {
+        var count = _spoons.Count;
+        for (var i = 0; i < count; i++)
+        {
+            var spoon = _spoons[i];
+            if (spoon == null)
+            {
+                continue;
+            }
+
+            spoon.Launch(SpoonDirection(i, count), _spoonSpeed, _spoonFlySeconds, _playerId, _skillDamage);
+        }
+
+        _spoons.Clear();
+        _spoonPhase = SpoonPhase.Shooting;
+        _nextShotTime = Time.time + _skillCooldown;
+        if (_view != null)
+        {
+            _view.PlayShootDownOnce();
+        }
+    }
+
+    private bool IsSpoonReleaseFrame()
+    {
+        if (_view == null || _view.ShootDownFrameCount <= 0)
+        {
+            return true;
+        }
+
+        var releaseFrame = Mathf.Min(SPOON_SHOOT_RELEASE_FRAME, _view.ShootDownFrameCount - 1);
+        return _view.ShootDownFrameIndex >= releaseFrame || _view.IsShootDownFinished;
+    }
+
+    private void ClearOrbitSpoons()
+    {
+        for (var i = 0; i < _spoons.Count; i++)
+        {
+            var spoon = _spoons[i];
+            if (spoon != null)
+            {
+                Destroy(spoon.gameObject);
+            }
+        }
+
+        _spoons.Clear();
+    }
+
+    private static Vector2 SpoonDirection(int index, int count)
+    {
+        var turns = count <= 0 ? 0f : index / (float)count;
+        var radians = turns * Mathf.PI * 2f;
+        return new Vector2(Mathf.Cos(radians), Mathf.Sin(radians));
+    }
+
+    /// <summary>
+    /// 수면가루. 시전 동안만 멈추고, 장판은 깔린 자리에서 따로 퍼진다.
+    /// </summary>
+    private bool TickSleepPowder(Vector2 playerPosition)
+    {
+        if (_powderPhase == PowderPhase.Casting)
+        {
+            if (_view != null)
+            {
+                _view.SetHopDown(_poolCastSeconds);
+            }
+
+            if (Time.time >= _powderCastUntil)
+            {
+                _powderPhase = PowderPhase.None;
+                _nextShotTime = Time.time + _skillCooldown;
+            }
+
+            return TryContactDamage(playerPosition);
+        }
+
+        if (Time.time >= _nextShotTime)
+        {
+            BeginSleepPowder();
+            return TryContactDamage(playerPosition);
+        }
+
+        MoveToward(playerPosition, Time.deltaTime);
+        return TryContactDamage(playerPosition);
+    }
+
+    private void BeginSleepPowder()
+    {
+        _powderPhase = PowderPhase.Casting;
+        _powderCastUntil = Time.time + _poolCastSeconds;
+        SleepPowderField.Create(
+            transform.position,
+            _playerId,
+            _skillDamage,
+            _poolRange,
+            _poolSpreadSpeed,
+            _poolHitsPerSecond,
+            _poolSlowPercent,
+            _poolSeconds,
+            _poolBurstFrames,
+            _poolLingerFrames);
+        if (_view != null)
+        {
+            _view.SetHopDown(_poolCastSeconds);
+        }
     }
 
     /// <summary>
@@ -1797,7 +2090,9 @@ public class Enemy : MonoBehaviour
             || skill == BossSkillKind.NidokingLunge
             || skill == BossSkillKind.CircleVolley
             || skill == BossSkillKind.FanVolley
-            || skill == BossSkillKind.TrackingBeam;
+            || skill == BossSkillKind.TrackingBeam
+            || skill == BossSkillKind.SleepPowder
+            || skill == BossSkillKind.SpoonRing;
     }
 
     private static float ResolveSkillCooldown(BossSkillKind skill, float attackInterval, float skillCooldown)

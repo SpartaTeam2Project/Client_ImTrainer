@@ -581,7 +581,20 @@ public class EnemyManager : BaseManager
             profile.BeamHitInterval,
             profile.BeamTurnSpeed,
             profile.BeamFrames,
-            profile.BeamMouthOffsets);
+            profile.BeamMouthOffsets,
+            profile.PoolRange,
+            profile.PoolSpreadSpeed,
+            profile.PoolHitsPerSecond,
+            profile.PoolSlowPercent,
+            profile.PoolCastSeconds,
+            profile.PoolSeconds,
+            profile.PoolBurstFrames,
+            profile.PoolLingerFrames,
+            profile.SpoonCount,
+            profile.SpoonChargeSeconds,
+            profile.SpoonSpeed,
+            profile.SpoonFlySeconds,
+            profile.SpoonFrames);
         enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
         enemy.SetDropGem(onDied != null ? _bossExperienceGem : null);
         if (onDied != null)

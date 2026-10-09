@@ -106,6 +106,12 @@ public class BossPartyMember
     [SerializeField] private Sprite[] _beamFrames = System.Array.Empty<Sprite>();
     [Tooltip("빔이 나가는 입. 그림 중심 기준이고 보스 크기를 곱하기 전 값이다. 순서: 오른쪽, 오른쪽 위, 위, 왼쪽 위, 왼쪽, 왼쪽 아래, 아래, 오른쪽 아래.")]
     [SerializeField] private Vector2[] _beamMouthOffsets = new Vector2[0];
+    [Tooltip("수면가루가 퍼지는 동안 재생하는 그림. 비어 있으면 단색 원을 쓴다.")]
+    [SerializeField] private Sprite[] _poolBurstFrames = System.Array.Empty<Sprite>();
+    [Tooltip("수면가루가 범위까지 퍼진 뒤 반복하는 그림.")]
+    [SerializeField] private Sprite[] _poolLingerFrames = System.Array.Empty<Sprite>();
+    [Tooltip("후딘 숟가락. 차지 중과 날아가는 동안 반복한다.")]
+    [SerializeField] private Sprite[] _spoonFrames = System.Array.Empty<Sprite>();
 
     public MonsterVisualData Monster => _monster;
 
@@ -120,6 +126,12 @@ public class BossPartyMember
     public Sprite[] BeamFrames => _beamFrames ?? System.Array.Empty<Sprite>();
 
     public Vector2[] BeamMouthOffsets => _beamMouthOffsets;
+
+    public Sprite[] PoolBurstFrames => _poolBurstFrames ?? System.Array.Empty<Sprite>();
+
+    public Sprite[] PoolLingerFrames => _poolLingerFrames ?? System.Array.Empty<Sprite>();
+
+    public Sprite[] SpoonFrames => _spoonFrames ?? System.Array.Empty<Sprite>();
 
     public const int MOUTH_SECTOR_COUNT = 8;
 

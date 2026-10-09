@@ -322,6 +322,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _maxHealth: 180
     _contactDamage: 4
     _skillDamage: 4
@@ -356,6 +366,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _maxHealth: 180
     _contactDamage: 4
     _skillDamage: 4
@@ -390,6 +410,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _maxHealth: 180
     _contactDamage: 4
     _skillDamage: 4
@@ -424,6 +454,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _maxHealth: 180
     _contactDamage: 4
     _skillDamage: 4
@@ -458,6 +498,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   _fixedBoss:
     _monster: {fileID: 0}
     _id: 0
@@ -473,6 +523,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -501,6 +554,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   _candidates:
   - _monster: {fileID: 0}
     _id: 0
@@ -516,6 +579,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -544,6 +610,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -558,6 +634,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -586,6 +665,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -600,6 +689,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -628,6 +720,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -642,6 +744,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -670,6 +775,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -684,6 +799,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -712,6 +830,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   _spawnCount: 1
   _fence:
     _width: 19
@@ -1717,7 +1845,7 @@ MonoBehaviour:
     _skillDamage: 0.1
     _moveSpeed: 2
     _attackKind: 0
-    _skillCooldown: 1
+    _skillCooldown: 5
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 5
@@ -1746,6 +1874,16 @@ MonoBehaviour:
     _beamSeconds: 4
     _beamHitInterval: 0.25
     _beamTurnSpeed: 15
+    _poolRange: 3.5
+    _poolSpreadSpeed: 5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 30
+    _poolCastSeconds: 3
+    _poolSeconds: 7
+    _spoonCount: 12
+    _spoonChargeSeconds: 2.2
+    _spoonSpeed: 5
+    _spoonFlySeconds: 8
   _fixedBoss:
     _monster: {fileID: 11400000, guid: 08d59cce9609425dbee57361332d7038, type: 2}
     _id: 3
@@ -1761,6 +1899,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1789,6 +1930,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   _candidates:
   - _monster: {fileID: 0}
     _id: 0
@@ -1804,6 +1955,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1832,6 +1986,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -1846,6 +2010,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1874,6 +2041,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -1888,6 +2065,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1916,6 +2096,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -1930,6 +2120,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -1958,6 +2151,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   - _monster: {fileID: 0}
     _id: 0
     _maxHealth: 30
@@ -1972,6 +2175,9 @@ MonoBehaviour:
     _flyProjectileFrames: []
     _beamFrames: []
     _beamMouthOffsets: []
+    _poolBurstFrames: []
+    _poolLingerFrames: []
+    _spoonFrames: []
     _attackRange: 4
     _attackInterval: 1.4
     _projectileSpeed: 6
@@ -2000,6 +2206,16 @@ MonoBehaviour:
     _beamSeconds: 2.5
     _beamHitInterval: 0.25
     _beamTurnSpeed: 45
+    _poolRange: 3
+    _poolSpreadSpeed: 1.5
+    _poolHitsPerSecond: 2
+    _poolSlowPercent: 40
+    _poolCastSeconds: 1.2
+    _poolSeconds: 5
+    _spoonCount: 8
+    _spoonChargeSeconds: 1.2
+    _spoonSpeed: 6
+    _spoonFlySeconds: 4
   _spawnCount: 1
   _fence:
     _width: 19

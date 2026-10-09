@@ -85,6 +85,32 @@ public sealed class MonsterWaveProfile
 
     public float BeamTurnSpeed { get; set; }
 
+    public float PoolRange { get; set; }
+
+    public float PoolSpreadSpeed { get; set; }
+
+    public float PoolHitsPerSecond { get; set; }
+
+    public float PoolSlowPercent { get; set; }
+
+    public float PoolCastSeconds { get; set; }
+
+    public float PoolSeconds { get; set; }
+
+    public Sprite[] PoolBurstFrames { get; set; }
+
+    public Sprite[] PoolLingerFrames { get; set; }
+
+    public int SpoonCount { get; set; }
+
+    public float SpoonChargeSeconds { get; set; }
+
+    public float SpoonSpeed { get; set; }
+
+    public float SpoonFlySeconds { get; set; }
+
+    public Sprite[] SpoonFrames { get; set; }
+
     public bool OverrideScale { get; set; }
 
     public float Scale { get; set; }

@@ -65,6 +65,16 @@ public class BossEncounterEditor : Editor
                 DrawBeamFrames(party, i);
             }
 
+            if (skill == BossSkillKind.SleepPowder)
+            {
+                DrawPowderFrames(party, i);
+            }
+
+            if (skill == BossSkillKind.SpoonRing)
+            {
+                DrawSpoonFrames(party, i);
+            }
+
             DrawStatsForSkill(stats.GetArrayElementAtIndex(i), skill);
             EditorGUILayout.Space();
         }
@@ -132,6 +142,31 @@ public class BossEncounterEditor : Editor
 
         EditorGUILayout.PropertyField(frames, new GUIContent("빔 그림"), true);
         DrawMouthOffsets(member.FindPropertyRelative("_beamMouthOffsets"));
+    }
+
+    private static void DrawPowderFrames(SerializedProperty party, int index)
+    {
+        var member = party.GetArrayElementAtIndex(index);
+        var burst = member.FindPropertyRelative("_poolBurstFrames");
+        var linger = member.FindPropertyRelative("_poolLingerFrames");
+        if (burst != null)
+        {
+            EditorGUILayout.PropertyField(burst, new GUIContent("퍼지는 그림"), true);
+        }
+
+        if (linger != null)
+        {
+            EditorGUILayout.PropertyField(linger, new GUIContent("유지 그림"), true);
+        }
+    }
+
+    private static void DrawSpoonFrames(SerializedProperty party, int index)
+    {
+        var frames = party.GetArrayElementAtIndex(index).FindPropertyRelative("_spoonFrames");
+        if (frames != null)
+        {
+            EditorGUILayout.PropertyField(frames, new GUIContent("숟가락 그림"), true);
+        }
     }
 
     private static void DrawMouthOffsets(SerializedProperty mouths)
@@ -235,6 +270,28 @@ public class BossEncounterEditor : Editor
             DrawRelative(stats, "_beamSeconds", "빔 쏘는 시간");
             DrawRelative(stats, "_beamHitInterval", "빔 다단 히트 시간");
             DrawRelative(stats, "_beamTurnSpeed", "방향 전환 속도");
+            return;
+        }
+
+        if (skill == BossSkillKind.SleepPowder)
+        {
+            DrawRelative(stats, "_skillCooldown", "스킬 쿨타임");
+            DrawRelative(stats, "_poolRange", "스킬 범위");
+            DrawRelative(stats, "_poolSpreadSpeed", "퍼지는 시간");
+            DrawRelative(stats, "_poolHitsPerSecond", "초당 히트 수");
+            DrawRelative(stats, "_poolSlowPercent", "이동속도 감소 퍼센트");
+            DrawRelative(stats, "_poolCastSeconds", "시전 시간");
+            DrawRelative(stats, "_poolSeconds", "장판 존재하는 시간");
+            return;
+        }
+
+        if (skill == BossSkillKind.SpoonRing)
+        {
+            DrawRelative(stats, "_skillCooldown", "스킬 쿨타임");
+            DrawRelative(stats, "_spoonCount", "투사체 개수");
+            DrawRelative(stats, "_spoonChargeSeconds", "차지 시간");
+            DrawRelative(stats, "_spoonSpeed", "날아가는 속도");
+            DrawRelative(stats, "_spoonFlySeconds", "날아가는 시간");
             return;
         }
 

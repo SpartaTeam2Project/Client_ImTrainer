@@ -23,6 +23,11 @@ public class PlayerStat : MonoBehaviour
 
     // 아래 네 배율은 Player의 UpgradeAPI가 직접 누적한다.
     public float moveSpeedMultiplier { get; set; } = 1f;
+
+    /// <summary>
+    /// 장판처럼 잠시 느려질 때 곱하는 배율. 훈련 배율과는 따로다. 1이면 느려지지 않는다.
+    /// </summary>
+    public float moveSlowMultiplier { get; private set; } = 1f;
     public float receivedDamageMultiplier { get; set; } = 1f;
 
     public float damageMultiplier { get; set; } = 1f;
@@ -56,6 +61,7 @@ public class PlayerStat : MonoBehaviour
     {
         moveSpeed = Mathf.Max(0f, _moveSpeed);
         moveSpeedMultiplier = 1f;
+        moveSlowMultiplier = 1f;
         receivedDamageMultiplier = 1f;
         damageMultiplier = Mathf.Max(0f, _damageMultiplier);
         magnetRadius = Mathf.Max(0f, _magnetRadius);
@@ -80,6 +86,14 @@ public class PlayerStat : MonoBehaviour
     public void AddMoveSpeedMultiplier(float value)
     {
         moveSpeedMultiplier = Mathf.Max(0f, moveSpeedMultiplier + value);
+    }
+
+    /// <summary>
+    /// 장판 둔화 배율을 넣는다. 1이면 원래 속도, 0.6이면 40% 느리다.
+    /// </summary>
+    public void SetMoveSlow(float multiplier)
+    {
+        moveSlowMultiplier = Mathf.Clamp01(multiplier);
     }
 
     /// <summary>
