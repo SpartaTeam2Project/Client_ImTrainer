@@ -53,6 +53,7 @@ public class StageDamagePanel : MonoBehaviour
         _sorted.AddRange(_result.UnitDamages);
         _sorted.Sort(Compare);
         var window = _recent ? Mathf.Min(RecentDamageBuffer.WINDOW_SECONDS, _result.ElapsedSeconds) : _result.ElapsedSeconds;
+        var totalDamage = SumDamage();
         var rows = _rows.Ensure(_rowPrefab, _root, _sorted.Count);
         for (var i = 0; i < _sorted.Count && i < rows.Count; i++)
         {
@@ -60,8 +61,20 @@ public class StageDamagePanel : MonoBehaviour
             var damage = GetDamage(unit);
             var seconds = _recent ? unit.RecentSeconds : unit.SecondsInParty;
             rows[i].Bind(ResolveIcon(unit), unit.UpgradeLevel, damage, StageResultFormat.PerSecond(damage, seconds),
-                StageResultFormat.Ratio(seconds, window), !unit.InPartyAtEnd, IsEquippedAtEnd(unit));
+                StageResultFormat.Ratio(seconds, window), StageResultFormat.Ratio(damage, totalDamage),
+                !unit.InPartyAtEnd, IsEquippedAtEnd(unit));
         }
+    }
+
+    private float SumDamage()
+    {
+        var sum = 0f;
+        foreach (var unit in _sorted)
+        {
+            sum += GetDamage(unit);
+        }
+
+        return sum;
     }
 
     private int Compare(StageUnitDamage a, StageUnitDamage b)
