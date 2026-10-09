@@ -8,6 +8,13 @@ public class ApiClient
 {
     private const string BASE_URL = "http://43.203.49.129:8080";
 
+    /// <summary>
+    /// 판 결과 제출 경로. 서버가 정해지면 채운다(제안: "/rank/stage-results"). 비어 있으면 RankManager는 로컬에만 보관한다.
+    /// </summary>
+    public const string STAGE_RESULT_PATH = "";
+
+    public static bool HasStageResultPath => !string.IsNullOrEmpty(STAGE_RESULT_PATH);
+
     public IEnumerator GetMasterData(string accessToken, Action<ApiResult> onComplete)
     {
         using UnityWebRequest request = UnityWebRequest.Get(BASE_URL + "/master-data");
@@ -58,6 +65,22 @@ public class ApiClient
 
         onComplete?.Invoke(result);
     }
+    /// <summary>
+    /// 판 결과 JSON을 리더보드 서버에 보낸다. json은 StageResultRequest를 직렬화한 문자열이다.
+    /// </summary>
+    public IEnumerator PostStageResult(string accessToken, string json, Action<ApiResult> onComplete)
+    {
+        using UnityWebRequest request = UnityWebRequest.Post(BASE_URL + STAGE_RESULT_PATH, json, "application/json");
+
+        request.SetRequestHeader("Authorization", $"Bearer {accessToken}");
+
+        yield return request.SendWebRequest();
+
+        ApiResult result = new ApiResult(request.responseCode, request.downloadHandler.text, request.result);
+
+        onComplete?.Invoke(result);
+    }
+
     public IEnumerator PostLogout(string accessToken, string refreshToken, Action<ApiResult> onComplete)
     {
         RefreshTokenRequest requestBody = new RefreshTokenRequest(refreshToken);
