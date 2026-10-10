@@ -18,27 +18,6 @@ public static class MonsterIconAssigner
 
     private static readonly Regex ASSET_NAME = new Regex(@"^Monster(\d{4})(?:_(.+))?$");
 
-    // 기본 이름 스프라이트가 없고 폼 이름만 있는 종
-    private static readonly Dictionary<int, string> DEFAULT_FORM_SUFFIX = new Dictionary<int, string>
-    {
-        { 201, "-a" },
-        { 412, "-plant" },
-        { 413, "-plant" },
-        { 421, "-overcast" },
-        { 422, "-west" },
-        { 423, "-west" },
-        { 487, "-altered" },
-        { 492, "-land" },
-        { 493, "-normal" },
-    };
-
-    // 폼 에셋 접미사별로 앞에서부터 찾는 스프라이트 접미사
-    private static readonly Dictionary<string, string[]> FORM_SUFFIXES = new Dictionary<string, string[]>
-    {
-        { "Mega", new[] { "-mega", "-mega-y", "-mega-x" } },
-        { "VMAX", new[] { "-gigantamax" } },
-    };
-
     [MenuItem("Tools/Monster/아이콘 채우기")]
     private static void Assign()
     {
@@ -109,24 +88,9 @@ public static class MonsterIconAssigner
 
     private static Sprite FindSprite(Dictionary<string, Sprite> sprites, string dex, string form)
     {
-        IEnumerable<string> candidates;
-        if (form == null)
+        foreach (var name in MonsterFormSpriteNames.Candidates(int.Parse(dex), form, "D4"))
         {
-            var defaultForm = DEFAULT_FORM_SUFFIX.TryGetValue(int.Parse(dex), out var suffix) ? dex + suffix : null;
-            candidates = new[] { dex, defaultForm };
-        }
-        else if (FORM_SUFFIXES.TryGetValue(form, out var suffixes))
-        {
-            candidates = suffixes.Select(s => dex + s);
-        }
-        else
-        {
-            return null;
-        }
-
-        foreach (var name in candidates)
-        {
-            if (name != null && sprites.TryGetValue(name, out var sprite))
+            if (sprites.TryGetValue(name, out var sprite))
             {
                 return sprite;
             }
