@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Serialization;
@@ -29,7 +30,7 @@ public class MonsterVisualData : ScriptableObject
     [SerializeField] private bool _hasSecondaryType;
     [SerializeField] private MonsterType _secondaryType = MonsterType.Normal;
 
-    [SerializeField] private MonsterVisualData _evolution;
+    [SerializeField] private MonsterVisualData[] _evolutions = new MonsterVisualData[0];
     [SerializeField] private MonsterVisualData _megaEvolution;
     [SerializeField] private MonsterVisualData _vmaxEvolution;
 
@@ -63,9 +64,9 @@ public class MonsterVisualData : ScriptableObject
     public WeaponAbilityData WeaponAbility => _ability;
 
     /// <summary>
-    /// 3성 세 마리를 합성하면 나오는 다음 종. 최종 진화는 비운다.
+    /// 다음 진화 종. 비면 최종 진화, 하나면 3성 합성으로 진화, 둘 이상이면 갈래 진화라 합성으로는 진화하지 않는다.
     /// </summary>
-    public MonsterVisualData Evolution => _evolution;
+    public IReadOnlyList<MonsterVisualData> Evolutions => _evolutions ?? System.Array.Empty<MonsterVisualData>();
 
     /// <summary>
     /// 메가진화한 종. 없으면 비운다. 정보창 표시 전용이며 획득 규칙은 아직 없다.

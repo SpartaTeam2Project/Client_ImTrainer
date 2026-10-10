@@ -5,13 +5,14 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 인벤토리 창 오른쪽에 고른 포켓몬의 이름, 타입, 성, 무기 능력, 진화 계통을 보여 준다.
-/// 진화 계통은 기본, 1진화, 2진화, 메가진화, 거다이맥스 칸에 고정해서 그린다.
+/// 진화 계통은 기본, 1진화, 2진화, 메가진화, 거다이맥스 칸에 고정해서 그리고, 나머지 갈래 진화는 갈래 칸에 그린다.
 /// </summary>
 public class HoverInformation : MonoBehaviour
 {
     private const string DAMAGE_PREFIX = "공격력: ";
     private const float EVOLUTION_ICON_SCALE = 2f;
     private const string UNKNOWN_NAME = "???";
+    private const string BRANCH_NAME = "갈래";
 
     // 스토리지 정보창의 잠금 실루엣과 같은 색.
     private static readonly Color LOCKED_ICON_COLOR = new Color32(0, 0, 0, 237);
@@ -48,8 +49,13 @@ public class HoverInformation : MonoBehaviour
     [Header("Evolution")]
     [Tooltip("Basic, Stage1, Stage2, Mega, VMax 순서")]
     [SerializeField] private EvolutionView[] _evolutionViews = new EvolutionView[EvolutionLine.STAGE_COUNT];
+    [Tooltip("단계 칸에 들어가지 않은 갈래 진화. 갈래 수만큼 켠다")]
+    [SerializeField] private EvolutionView[] _branchViews = new EvolutionView[EvolutionLine.MAX_BRANCH];
+    [Tooltip("진화 칸 가로 스크롤. 다른 종을 고르면 맨 앞으로 되돌린다")]
+    [SerializeField] private ScrollRect _evolutionScroll;
 
     private Color _defaultTitleColor = Color.white;
+    private int _scrolledUid = EvolutionLine.NONE;
 
     private void Awake()
     {
@@ -58,15 +64,8 @@ public class HoverInformation : MonoBehaviour
             _defaultTitleColor = _abilityTitle.color;
         }
 
-        for (var i = 0; i < _evolutionViews.Length; i++)
-        {
-            var view = _evolutionViews[i];
-            if (view != null && view.Icon != null)
-            {
-                view.DefaultIconSize = view.Icon.rectTransform.sizeDelta;
-            }
-        }
-
+        StoreDefaultIconSizes(_evolutionViews);
+        StoreDefaultIconSizes(_branchViews);
         Clear();
     }
 
@@ -94,6 +93,18 @@ public class HoverInformation : MonoBehaviour
         InventoryItem.ShowStars(_starImages, item.upgradeLevel);
         ShowAbility(visual != null ? visual.WeaponAbility : null, item.upgradeLevel);
         ShowEvolution(itemManager, item.uid);
+    }
+
+    private static void StoreDefaultIconSizes(EvolutionView[] views)
+    {
+        for (var i = 0; i < views.Length; i++)
+        {
+            var view = views[i];
+            if (view != null && view.Icon != null)
+            {
+                view.DefaultIconSize = view.Icon.rectTransform.sizeDelta;
+            }
+        }
     }
 
     /// <summary>
@@ -162,32 +173,58 @@ public class HoverInformation : MonoBehaviour
             }
 
             var stage = (EvolutionStage)i;
-            var target = itemManager.TryGetItem(line.Get(stage));
-            if (view.Root != null)
-            {
-                view.Root.SetActive(target != null);
-            }
+            ShowEvolutionView(view, itemManager, account, line.Get(stage), StageName(stage), stage == EvolutionStage.Basic, line.IsSelected(stage));
+        }
 
-            if (target == null)
+        for (var i = 0; i < _branchViews.Length; i++)
+        {
+            var view = _branchViews[i];
+            if (view != null)
             {
-                continue;
+                var branch = line.GetBranch(i);
+                ShowEvolutionView(view, itemManager, account, branch, BRANCH_NAME, false, branch >= 0 && branch == line.SelectedUid);
             }
+        }
 
-            var visual = itemManager.GetVisual(target.uid);
-            var obtained = account == null || account.HasObtainedMonster(visual);
-            SetImage(view.Icon, visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null);
-            if (view.Icon != null)
-            {
-                view.Icon.color = obtained ? Color.white : LOCKED_ICON_COLOR;
-            }
+        // 같은 종을 다시 그릴 때는 보고 있던 스크롤 위치를 둔다.
+        if (_evolutionScroll != null && uid != _scrolledUid)
+        {
+            _scrolledUid = uid;
+            _evolutionScroll.StopMovement();
+            _evolutionScroll.horizontalNormalizedPosition = 0f;
+        }
+    }
 
-            SetEvolutionIconSize(view, visual);
-            SetText(view.Stage, obtained || stage == EvolutionStage.Basic ? StageName(stage) : UNKNOWN_NAME);
-            SetText(view.Name, obtained ? target.name : UNKNOWN_NAME);
-            if (view.Highlight != null)
-            {
-                view.Highlight.enabled = line.IsSelected(stage);
-            }
+    /// <summary>
+    /// 진화 칸 하나를 채운다. 종이 없으면 칸을 끈다. 얻지 못한 종은 실루엣과 ???로 가린다.
+    /// </summary>
+    private void ShowEvolutionView(EvolutionView view, ItemManager itemManager, AccountManager account, int uid, string stageName, bool alwaysShowStage, bool selected)
+    {
+        var target = itemManager.TryGetItem(uid);
+        if (view.Root != null)
+        {
+            view.Root.SetActive(target != null);
+        }
+
+        if (target == null)
+        {
+            return;
+        }
+
+        var visual = itemManager.GetVisual(target.uid);
+        var obtained = account == null || account.HasObtainedMonster(visual);
+        SetImage(view.Icon, visual != null ? MonsterVisualData.FirstFrame(visual.Icon) : null);
+        if (view.Icon != null)
+        {
+            view.Icon.color = obtained ? Color.white : LOCKED_ICON_COLOR;
+        }
+
+        SetEvolutionIconSize(view, visual);
+        SetText(view.Stage, obtained || alwaysShowStage ? stageName : UNKNOWN_NAME);
+        SetText(view.Name, obtained ? target.name : UNKNOWN_NAME);
+        if (view.Highlight != null)
+        {
+            view.Highlight.enabled = selected;
         }
     }
 

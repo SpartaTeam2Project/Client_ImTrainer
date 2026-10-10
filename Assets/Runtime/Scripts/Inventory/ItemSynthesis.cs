@@ -79,9 +79,14 @@ internal static class ItemSynthesis
         {
             result = catalog.CreateItem(source.uid, upgradeLevel + 1);
         }
-        else if (source.evolutionUid >= 0)
+        else if (source.evolutionUids.Length == 1)
         {
-            result = catalog.CreateItem(source.evolutionUid, Item.STAR_MIN);
+            result = catalog.CreateItem(source.evolutionUids[0], Item.STAR_MIN);
+        }
+        else if (source.evolutionUids.Length > 1)
+        {
+            message = EvolutionBlockedMessage.Get(source.name);
+            return false;
         }
         else
         {

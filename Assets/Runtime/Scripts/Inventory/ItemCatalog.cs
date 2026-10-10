@@ -11,6 +11,7 @@ public class ItemCatalog
     private readonly List<Item> _items = new List<Item>();
     private readonly List<MonsterVisualData> _visuals = new List<MonsterVisualData>();
     private readonly List<int> _shopPool = new List<int>();
+    private EvolutionGraph _evolutions = new EvolutionGraph(null, null);
 
     public IReadOnlyList<Item> Items => _items;
 
@@ -21,7 +22,8 @@ public class ItemCatalog
     public IReadOnlyList<int> ShopPool => _shopPool;
 
     /// <summary>
-    /// 상점 후보 중 세대 마스크에 드는 종만 담는다. 하나도 없으면 경고하고 전체 후보를 담는다.
+    /// 상점 후보 중 계통의 어느 종이든 세대 마스크에 드는 종만 담는다. 1세대만 켜도 피카츄의 이전 종인 피츄가 나온다.
+    /// 하나도 없으면 경고하고 전체 후보를 담는다.
     /// </summary>
     public void CollectShopPool(ShopGeneration generations, List<int> result)
     {
@@ -29,7 +31,7 @@ public class ItemCatalog
         for (var i = 0; i < _shopPool.Count; i++)
         {
             var uid = _shopPool[i];
-            if (ShopGenerationMask.Contains(generations, _visuals[uid].Generation))
+            if (((int)generations & _evolutions.GetLineGenerationMask(uid)) != 0)
             {
                 result.Add(uid);
             }
@@ -47,6 +49,7 @@ public class ItemCatalog
     /// </summary>
     public void ReInit(MonsterVisualData[] monsters)
     {
+        monsters = AppendEvolutions(monsters);
         _items.Clear();
         _visuals.Clear();
         _shopPool.Clear();
@@ -68,21 +71,26 @@ public class ItemCatalog
                 upgradeLevel = Item.STAR_MIN,
                 maxiumStack = ItemManager.MAX_STACK,
                 price = visual.ShopPrice,
-                currencyId = visual.ShopCurrencyId,
-                evolutionUid = Item.NO_EVOLUTION
+                currencyId = visual.ShopCurrencyId
             });
         }
 
+        var next = new int[_visuals.Count][];
+        var generations = new int[_visuals.Count];
         for (var i = 0; i < _visuals.Count; i++)
         {
             var visual = _visuals[i];
-            if (visual == null || visual.Evolution == null || _items[i] == null)
+            if (visual == null || _items[i] == null)
             {
                 continue;
             }
 
-            _items[i].evolutionUid = FindUid(visual.Evolution);
+            generations[i] = visual.Generation;
+            next[i] = FindUids(visual.Evolutions);
+            _items[i].evolutionUids = next[i];
         }
+
+        _evolutions = new EvolutionGraph(next, generations);
 
         for (var i = 0; i < _items.Count; i++)
         {
@@ -103,14 +111,15 @@ public class ItemCatalog
             return EMPTY_UID;
         }
 
+        var previous = _evolutions.FindPrevious(uid);
+        if (previous >= 0)
+        {
+            return previous;
+        }
+
         for (var i = 0; i < _items.Count; i++)
         {
-            if (_items[i] == null)
-            {
-                continue;
-            }
-
-            if (_items[i].evolutionUid == uid || FindMegaUid(i) == uid || FindVMaxUid(i) == uid)
+            if (_items[i] != null && (FindMegaUid(i) == uid || FindVMaxUid(i) == uid))
             {
                 return i;
             }
@@ -130,23 +139,20 @@ public class ItemCatalog
             return line;
         }
 
-        var basic = uid;
-        for (var depth = 0; depth < EVOLUTION_SEARCH_DEPTH; depth++)
+        // 메가진화나 거다이맥스 종을 고르면 그 원래 종의 계통을 보여 준다.
+        var lineUid = uid;
+        for (var depth = 0; depth < EVOLUTION_SEARCH_DEPTH && _evolutions.FindPrevious(lineUid) < 0; depth++)
         {
-            var previous = FindPreEvolutionUid(basic);
+            var previous = FindPreEvolutionUid(lineUid);
             if (previous < 0)
             {
                 break;
             }
 
-            basic = previous;
+            lineUid = previous;
         }
 
-        line.Set(EvolutionStage.Basic, basic);
-        var stage1 = TryGetItem(basic) != null ? TryGetItem(basic).evolutionUid : EMPTY_UID;
-        line.Set(EvolutionStage.Stage1, stage1);
-        var stage2 = TryGetItem(stage1) != null ? TryGetItem(stage1).evolutionUid : EMPTY_UID;
-        line.Set(EvolutionStage.Stage2, stage2);
+        _evolutions.FillLine(ref line, lineUid);
         line.Set(EvolutionStage.Mega, FindLastBranch(line, FindMegaUid));
         line.Set(EvolutionStage.VMax, FindLastBranch(line, FindVMaxUid));
         return line;
@@ -228,6 +234,73 @@ public class ItemCatalog
         }
 
         return EMPTY_UID;
+    }
+
+    /// <summary>
+    /// 데이터베이스는 스토리지에 보일 종만 담으므로, 거기서 이어지는 진화, 메가진화, 거다이맥스 종을 뒤에 붙인다.
+    /// 데이터베이스 종의 uid는 그대로다.
+    /// </summary>
+    private static MonsterVisualData[] AppendEvolutions(MonsterVisualData[] monsters)
+    {
+        var result = new List<MonsterVisualData>(monsters);
+        var included = new HashSet<MonsterVisualData>();
+        foreach (var monster in monsters)
+        {
+            if (monster != null)
+            {
+                included.Add(monster);
+            }
+        }
+
+        for (var i = 0; i < result.Count; i++)
+        {
+            var visual = result[i];
+            if (visual == null)
+            {
+                continue;
+            }
+
+            foreach (var next in visual.Evolutions)
+            {
+                AppendIfNew(next, result, included);
+            }
+
+            AppendIfNew(visual.MegaEvolution, result, included);
+            AppendIfNew(visual.VMaxEvolution, result, included);
+        }
+
+        return result.ToArray();
+    }
+
+    private static void AppendIfNew(MonsterVisualData visual, List<MonsterVisualData> result, HashSet<MonsterVisualData> included)
+    {
+        if (visual != null && included.Add(visual))
+        {
+            result.Add(visual);
+        }
+    }
+
+    /// <summary>
+    /// 목록에 있는 종의 uid. 카탈로그에 없는 종은 뺀다.
+    /// </summary>
+    private int[] FindUids(IReadOnlyList<MonsterVisualData> visuals)
+    {
+        if (visuals == null || visuals.Count == 0)
+        {
+            return System.Array.Empty<int>();
+        }
+
+        var uids = new List<int>(visuals.Count);
+        for (var i = 0; i < visuals.Count; i++)
+        {
+            var uid = FindUid(visuals[i]);
+            if (uid >= 0 && !uids.Contains(uid))
+            {
+                uids.Add(uid);
+            }
+        }
+
+        return uids.ToArray();
     }
 
     /// <summary>
