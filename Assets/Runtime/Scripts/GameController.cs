@@ -5,7 +5,25 @@ public class GameController : MonoBehaviour
     private const string TITLE_MUSIC_NAME = "TitleScene";
     private const string MAIN_MUSIC_NAME = "MainScene";
 
+    [Tooltip("타이틀에서 따로 고르지 않았을 때 시작할 스테이지")]
+    [SerializeField] private StageData _defaultStage;
+
     private bool _clockPaused;
+    private StageData _selectedStage;
+
+    /// <summary>
+    /// 다음 판에 진행할 스테이지. 고른 게 없으면 기본 스테이지.
+    /// 로딩 씬이 게임 씬보다 먼저 알아야 프리로드할 수 있다.
+    /// </summary>
+    public StageData SelectedStage => _selectedStage != null ? _selectedStage : _defaultStage;
+
+    /// <summary>
+    /// 다음 판에 진행할 스테이지를 고른다.
+    /// </summary>
+    public void SelectStage(StageData stage)
+    {
+        _selectedStage = stage;
+    }
 
     /// <summary>
     /// Playing 상태 동안 쌓인 초.

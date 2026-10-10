@@ -17,6 +17,9 @@ public class SceneLoadManager : BaseManager
 {
     private const float SCENE_ACTIVATION_PROGRESS = 0.9f;
 
+    [Tooltip("게임 씬에 들어가기 전에 로딩 씬에서 데울 셰이더 변형 묶음")]
+    [SerializeField] private ShaderVariantCollection _gameShaderVariants;
+
     private bool _isLoading;
 
     /// <summary>
@@ -31,16 +34,23 @@ public class SceneLoadManager : BaseManager
 
         _isLoading = true;
         var cancellationToken = this.GetCancellationTokenOnDestroy();
+        var transition = ScreenTransition.Instance;
 
         try
         {
             Managers.Instance.ChangeState(GameState.Loading);
+            await transition.FadeInAsync(cancellationToken);
+
+            // 로딩 씬 화면도 검은색이라 덮개를 걷어도 이어진다.
             await LoadSceneAsync(SceneNames.LOADING_SCENE, LoadSceneMode.Additive, cancellationToken);
             await UnloadSceneAsync(SceneNames.TITLE_SCENE, cancellationToken);
-            await LoadSceneAsync(SceneNames.GAME_SCENE, LoadSceneMode.Single, cancellationToken);
+            transition.SetCovered(false);
 
-            // 스테이지는 Loading 상태에서 시작하지 않으므로, 그동안 이번 판 적과 보스 그림을 불러 둔다.
-            await PreloadStageMonstersAsync(cancellationToken);
+            await PreloadGameSceneAsync(cancellationToken);
+
+            // 로딩 씬이 내려가는 동안 게임 씬이 보이지 않게 다시 덮는다.
+            transition.SetCovered(true);
+            await LoadSceneAsync(SceneNames.GAME_SCENE, LoadSceneMode.Single, cancellationToken);
 
             if (Managers.Instance != null)
             {
@@ -50,6 +60,12 @@ public class SceneLoadManager : BaseManager
         finally
         {
             _isLoading = false;
+
+            // 예외가 나도 덮인 채로 남지 않는다.
+            if (transition != null && transition.IsCovering)
+            {
+                transition.FadeOut();
+            }
         }
     }
 
@@ -100,16 +116,21 @@ public class SceneLoadManager : BaseManager
         }
     }
 
-    private static async UniTask PreloadStageMonstersAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// 다음 판 스테이지와 데려갈 포켓몬을 기준으로 셰이더를 데우고 그림을 불러 둔다.
+    /// </summary>
+    private UniTask PreloadGameSceneAsync(CancellationToken cancellationToken)
     {
-        var gameController = Managers.Instance != null ? Managers.Instance.GetComponent<GameController>() : null;
-        var stage = gameController != null && gameController.ActiveStage != null ? gameController.ActiveStage.StageData : null;
-        if (stage == null)
+        var managers = Managers.Instance;
+        if (managers == null)
         {
-            return;
+            return UniTask.CompletedTask;
         }
 
-        await MonsterAnimationLoader.PreloadStageAsync(stage, cancellationToken);
+        var gameController = managers.GetComponent<GameController>();
+        var stage = gameController != null ? gameController.SelectedStage : null;
+        var runMonster = managers.TryGetManager<AccountManager>(out var account) ? account.ResolveRunMonster() : null;
+        return GameScenePreloader.PreloadAsync(stage, runMonster, _gameShaderVariants, cancellationToken);
     }
 
     /// <summary>

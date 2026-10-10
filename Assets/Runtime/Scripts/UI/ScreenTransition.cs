@@ -121,6 +121,29 @@ public class ScreenTransition : MonoBehaviour
     }
 
     /// <summary>
+    /// 빈 화면에서 회전 대신 알파로 서서히 덮는다. FadeOut의 반대.
+    /// 시작부터 덮인 상태로 보고 입력을 막는다.
+    /// </summary>
+    public Tween FadeIn(float duration = DEFAULT_FADE_DURATION)
+    {
+        KillTween();
+        SetProgress(CLOSED_PROGRESS);
+        SetAlpha(0f);
+        _wipeTween = _image.DOFade(1f, duration)
+            .SetEase(Ease.InQuad)
+            .SetUpdate(true);
+        return _wipeTween;
+    }
+
+    /// <summary>
+    /// 화면이 다 덮일 때까지 알파로 페이드한다.
+    /// </summary>
+    public UniTask FadeInAsync(CancellationToken cancellationToken = default, float duration = DEFAULT_FADE_DURATION)
+    {
+        return WaitForTween(FadeIn(duration), cancellationToken);
+    }
+
+    /// <summary>
     /// 화면을 덮고 대기까지 끝날 때까지 기다린다.
     /// </summary>
     public UniTask CloseAsync(CancellationToken cancellationToken = default, float duration = DEFAULT_DURATION, float holdDuration = CLOSED_HOLD_DURATION)
@@ -142,6 +165,7 @@ public class ScreenTransition : MonoBehaviour
     public void SetCovered(bool isCovered)
     {
         KillTween();
+        SetAlpha(1f);
         SetProgress(isCovered ? CLOSED_PROGRESS : OPENED_PROGRESS);
     }
 

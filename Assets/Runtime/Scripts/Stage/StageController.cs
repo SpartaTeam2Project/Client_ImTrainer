@@ -37,7 +37,7 @@ public class StageController : MonoBehaviour
     public float ResultRevealDelay { get; private set; }
 
     /// <summary>
-    /// 이 씬이 진행할 스테이지. 판 시작 전에 몬스터 그림을 미리 불러올 때 쓴다.
+    /// 이 씬이 진행할 스테이지.
     /// </summary>
     public StageData StageData => _stageData;
 
@@ -51,6 +51,12 @@ public class StageController : MonoBehaviour
         _gameController = Managers.Instance.GetComponent<GameController>();
         if (_gameController != null)
         {
+            // 로딩 씬이 프리로드한 스테이지를 따른다. 없으면 씬에 넣어 둔 값(게임 씬 바로 실행)을 쓴다.
+            if (_gameController.SelectedStage != null)
+            {
+                _stageData = _gameController.SelectedStage;
+            }
+
             _gameController.RegisterStage(this);
         }
 

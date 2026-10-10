@@ -48,17 +48,15 @@ public static class MonsterAnimationLoader
     }
 
     /// <summary>
-    /// 스테이지 타임라인에 나오는 적과 보스의 그림을 미리 불러온다.
+    /// 주어진 종들의 그림을 "run" 묶음으로 미리 불러온다.
     /// </summary>
-    public static UniTask PreloadStageAsync(StageData stage, CancellationToken cancellationToken)
+    public static UniTask PreloadAsync(IEnumerable<MonsterVisualData> monsters, CancellationToken cancellationToken)
     {
-        if (stage == null || !TryGetManager(out var manager))
+        if (monsters == null || !TryGetManager(out var manager))
         {
             return UniTask.CompletedTask;
         }
 
-        var monsters = new List<MonsterVisualData>();
-        CollectStageMonsters(stage, monsters);
         var references = new List<AssetReference>();
         foreach (var monster in monsters)
         {
