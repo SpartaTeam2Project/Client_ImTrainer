@@ -15,6 +15,7 @@ public class ExperienceManager : BaseManager
 
     private readonly Dictionary<EntityId, List<ExperienceGem>> _pools = new Dictionary<EntityId, List<ExperienceGem>>();
     private readonly List<ExperienceGem> _gems = new List<ExperienceGem>();
+    private readonly ExperienceGemGlow _glow = new ExperienceGemGlow();
 
     private int _playerId;
     private bool _active;
@@ -38,6 +39,7 @@ public class ExperienceManager : BaseManager
             return;
         }
 
+        _glow.Tick(Time.time);
         if (!TryGetPlayerPosition(out var playerPosition))
         {
             return;
@@ -52,6 +54,7 @@ public class ExperienceManager : BaseManager
     public override void Cleanup()
     {
         ClearGems();
+        _glow.Dispose();
         _active = false;
         base.Cleanup();
     }
@@ -191,6 +194,7 @@ public class ExperienceManager : BaseManager
 
         var created = Instantiate(gemPrefab, transform);
         created.gameObject.name = gemPrefab.name;
+        created.SetSharedMaterial(_glow.GetRuntimeMaterial(gemPrefab.SourceMaterial));
         created.gameObject.SetActive(false);
         pool.Add(created);
         _gems.Add(created);

@@ -27,6 +27,18 @@ public class ExperienceGem : MonoBehaviour
 
     public bool IsAttracting { get; private set; }
 
+    /// <summary>
+    /// 프리팹에 넣어 둔 머티리얼.
+    /// </summary>
+    public Material SourceMaterial
+    {
+        get
+        {
+            CacheRenderer();
+            return _spriteRenderer != null ? _spriteRenderer.sharedMaterial : null;
+        }
+    }
+
     #region Unity Methods
 
     private void Awake()
@@ -103,6 +115,18 @@ public class ExperienceGem : MonoBehaviour
         if (_sound != null)
         {
             _sound.Play();
+        }
+    }
+
+    /// <summary>
+    /// 같은 등급 구슬끼리 공유하는 머티리얼로 바꾼다.
+    /// </summary>
+    public void SetSharedMaterial(Material material)
+    {
+        CacheRenderer();
+        if (_spriteRenderer != null && material != null)
+        {
+            _spriteRenderer.sharedMaterial = material;
         }
     }
 
