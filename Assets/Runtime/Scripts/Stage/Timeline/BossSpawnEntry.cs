@@ -23,7 +23,11 @@ public enum BossSkillKind
     [InspectorName("부채꼴 사격")]
     FanVolley = 7,
     [InspectorName("추적 빔")]
-    TrackingBeam = 8
+    TrackingBeam = 8,
+    [InspectorName("수면가루")]
+    SleepPowder = 9,
+    [InspectorName("숟가락")]
+    SpoonRing = 10
 }
 
 /// <summary>
@@ -50,6 +54,9 @@ public class BossSpawnEntry
     [Tooltip("빔 그림. 쏘는 동안 반복한다. 비어 있으면 단색 직선을 쓴다.")]
     [SerializeField] private Sprite[] _beamFrames = Array.Empty<Sprite>();
     [SerializeField] private Vector2[] _beamMouthOffsets = Array.Empty<Vector2>();
+    [SerializeField] private Sprite[] _poolBurstFrames = Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _poolLingerFrames = Array.Empty<Sprite>();
+    [SerializeField] private Sprite[] _spoonFrames = Array.Empty<Sprite>();
     [SerializeField, Min(0.5f)] private float _attackRange = 4f;
     [SerializeField, Min(0.05f)] private float _attackInterval = 1.4f;
     [SerializeField, Min(0.01f)] private float _projectileSpeed = 6f;
@@ -97,6 +104,26 @@ public class BossSpawnEntry
     [SerializeField, Min(0.05f)] private float _beamHitInterval = 0.25f;
     [Tooltip("빔을 쏘는 동안 플레이어 쪽으로 도는 속도. 도/초.")]
     [SerializeField, Min(0f)] private float _beamTurnSpeed = 45f;
+    [Tooltip("수면가루가 커지는 최대 반지름.")]
+    [SerializeField, Min(0.1f)] private float _poolRange = 3f;
+    [Tooltip("수면가루가 스킬 범위까지 커지는 데 걸리는 시간.")]
+    [SerializeField, Min(0.05f)] private float _poolSpreadSpeed = 1.5f;
+    [Tooltip("장판 안에서 스킬 피해가 초당 들어가는 횟수.")]
+    [SerializeField, Min(0.01f)] private float _poolHitsPerSecond = 2f;
+    [Tooltip("장판 안에 서 있는 동안 줄어드는 이동속도. 40이면 40% 느려진다.")]
+    [SerializeField, Range(0f, 100f)] private float _poolSlowPercent = 40f;
+    [Tooltip("제자리에서 hop하는 시간. 끝나면 다시 쫓고, 장판은 따로 남는다.")]
+    [SerializeField, Min(0.05f)] private float _poolCastSeconds = 1.2f;
+    [Tooltip("장판이 깔린 뒤 사라지기까지 시간.")]
+    [SerializeField, Min(0.05f)] private float _poolSeconds = 5f;
+    [Tooltip("후딘 둘레에 생기는 숟가락 수.")]
+    [SerializeField, Min(1)] private int _spoonCount = 8;
+    [Tooltip("숟가락을 원으로 두는 시간.")]
+    [SerializeField, Min(0.05f)] private float _spoonChargeSeconds = 1.2f;
+    [Tooltip("숟가락이 날아가는 속도.")]
+    [SerializeField, Min(0.01f)] private float _spoonSpeed = 6f;
+    [Tooltip("날아가기 시작한 뒤 숟가락이 남는 시간.")]
+    [SerializeField, Min(0.05f)] private float _spoonFlySeconds = 4f;
 
     public MonsterVisualData Monster => _monster;
 
@@ -137,6 +164,9 @@ public class BossSpawnEntry
         _flyProjectileFrames = party.FlyProjectileFrames;
         _beamFrames = party.BeamFrames;
         _beamMouthOffsets = party.BeamMouthOffsets;
+        _poolBurstFrames = party.PoolBurstFrames;
+        _poolLingerFrames = party.PoolLingerFrames;
+        _spoonFrames = party.SpoonFrames;
         _attackRange = source._attackRange;
         _attackInterval = source._attackInterval;
         _projectileSpeed = source._projectileSpeed;
@@ -165,6 +195,16 @@ public class BossSpawnEntry
         _beamSeconds = source._beamSeconds;
         _beamHitInterval = source._beamHitInterval;
         _beamTurnSpeed = source._beamTurnSpeed;
+        _poolRange = source._poolRange;
+        _poolSpreadSpeed = source._poolSpreadSpeed;
+        _poolHitsPerSecond = source._poolHitsPerSecond;
+        _poolSlowPercent = source._poolSlowPercent;
+        _poolCastSeconds = source._poolCastSeconds;
+        _poolSeconds = source._poolSeconds;
+        _spoonCount = source._spoonCount;
+        _spoonChargeSeconds = source._spoonChargeSeconds;
+        _spoonSpeed = source._spoonSpeed;
+        _spoonFlySeconds = source._spoonFlySeconds;
     }
 
     /// <summary>
@@ -214,6 +254,19 @@ public class BossSpawnEntry
             BeamSeconds = _beamSeconds,
             BeamHitInterval = _beamHitInterval,
             BeamTurnSpeed = _beamTurnSpeed,
+            PoolRange = _poolRange,
+            PoolSpreadSpeed = _poolSpreadSpeed,
+            PoolHitsPerSecond = _poolHitsPerSecond,
+            PoolSlowPercent = _poolSlowPercent,
+            PoolCastSeconds = _poolCastSeconds,
+            PoolSeconds = _poolSeconds,
+            PoolBurstFrames = _poolBurstFrames,
+            PoolLingerFrames = _poolLingerFrames,
+            SpoonCount = _spoonCount,
+            SpoonChargeSeconds = _spoonChargeSeconds,
+            SpoonSpeed = _spoonSpeed,
+            SpoonFlySeconds = _spoonFlySeconds,
+            SpoonFrames = _spoonFrames,
             OverrideScale = true,
             Scale = _scale > 0f ? _scale : MonsterVisualData.DEFAULT_SCALE,
             DisableOffscreenTeleport = true
@@ -284,6 +337,16 @@ public class BossSpawnEntry
         _beamSeconds = stats.BeamSeconds;
         _beamHitInterval = stats.BeamHitInterval;
         _beamTurnSpeed = stats.BeamTurnSpeed;
+        _poolRange = stats.PoolRange;
+        _poolSpreadSpeed = stats.PoolSpreadSpeed;
+        _poolHitsPerSecond = stats.PoolHitsPerSecond;
+        _poolSlowPercent = stats.PoolSlowPercent;
+        _poolCastSeconds = stats.PoolCastSeconds;
+        _poolSeconds = stats.PoolSeconds;
+        _spoonCount = stats.SpoonCount;
+        _spoonChargeSeconds = stats.SpoonChargeSeconds;
+        _spoonSpeed = stats.SpoonSpeed;
+        _spoonFlySeconds = stats.SpoonFlySeconds;
     }
 }
 
@@ -348,6 +411,26 @@ public class BossFightStats
     [SerializeField, Min(0.05f)] private float _beamHitInterval = 0.25f;
     [Tooltip("빔을 쏘는 동안 플레이어 쪽으로 도는 속도. 도/초.")]
     [SerializeField, Min(0f)] private float _beamTurnSpeed = 45f;
+    [Tooltip("수면가루가 커지는 최대 반지름.")]
+    [SerializeField, Min(0.1f)] private float _poolRange = 3f;
+    [Tooltip("수면가루가 스킬 범위까지 커지는 데 걸리는 시간.")]
+    [SerializeField, Min(0.05f)] private float _poolSpreadSpeed = 1.5f;
+    [Tooltip("장판 안에서 스킬 피해가 초당 들어가는 횟수.")]
+    [SerializeField, Min(0.01f)] private float _poolHitsPerSecond = 2f;
+    [Tooltip("장판 안에 서 있는 동안 줄어드는 이동속도. 40이면 40% 느려진다.")]
+    [SerializeField, Range(0f, 100f)] private float _poolSlowPercent = 40f;
+    [Tooltip("제자리에서 hop하는 시간. 끝나면 다시 쫓고, 장판은 따로 남는다.")]
+    [SerializeField, Min(0.05f)] private float _poolCastSeconds = 1.2f;
+    [Tooltip("장판이 깔린 뒤 사라지기까지 시간.")]
+    [SerializeField, Min(0.05f)] private float _poolSeconds = 5f;
+    [Tooltip("후딘 둘레에 생기는 숟가락 수.")]
+    [SerializeField, Min(1)] private int _spoonCount = 8;
+    [Tooltip("숟가락을 원으로 두는 시간.")]
+    [SerializeField, Min(0.05f)] private float _spoonChargeSeconds = 1.2f;
+    [Tooltip("숟가락이 날아가는 속도.")]
+    [SerializeField, Min(0.01f)] private float _spoonSpeed = 6f;
+    [Tooltip("날아가기 시작한 뒤 숟가락이 남는 시간.")]
+    [SerializeField, Min(0.05f)] private float _spoonFlySeconds = 4f;
 
     public BossFightStats()
     {
@@ -449,4 +532,24 @@ public class BossFightStats
     public float BeamHitInterval => _beamHitInterval > 0f ? _beamHitInterval : 0.25f;
 
     public float BeamTurnSpeed => Mathf.Max(0f, _beamTurnSpeed);
+
+    public float PoolRange => _poolRange > 0f ? _poolRange : 3f;
+
+    public float PoolSpreadSpeed => _poolSpreadSpeed > 0f ? _poolSpreadSpeed : 1.5f;
+
+    public float PoolHitsPerSecond => _poolHitsPerSecond > 0f ? _poolHitsPerSecond : 2f;
+
+    public float PoolSlowPercent => Mathf.Clamp(_poolSlowPercent, 0f, 100f);
+
+    public float PoolCastSeconds => _poolCastSeconds > 0f ? _poolCastSeconds : 1.2f;
+
+    public float PoolSeconds => _poolSeconds > 0f ? _poolSeconds : 5f;
+
+    public int SpoonCount => _spoonCount > 0 ? _spoonCount : 8;
+
+    public float SpoonChargeSeconds => _spoonChargeSeconds > 0f ? _spoonChargeSeconds : 1.2f;
+
+    public float SpoonSpeed => _spoonSpeed > 0f ? _spoonSpeed : 6f;
+
+    public float SpoonFlySeconds => _spoonFlySeconds > 0f ? _spoonFlySeconds : 4f;
 }

@@ -3,11 +3,11 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 보스 클립이 울타리를 세우고, 파티에서 고른 두 마리를 같이 낸다.
+/// 보스 클립이 울타리를 세우고, 파티에서 고른 마리수만큼 같이 낸다.
 /// </summary>
 public static class BossArenaPlayback
 {
-    private const int PAIR_COUNT = 2;
+    private const int DEFAULT_SPAWN_COUNT = 2;
     private const float RIGHT_SPAWN_INSET = 1.5f;
     private const float PAIR_VERTICAL_OFFSET = 2.5f;
     private const float APPROACH_DELAY_SECONDS = 1f;
@@ -18,6 +18,7 @@ public static class BossArenaPlayback
     private static RectBossFence _fence;
     private static BossSpawnEntry _fixedBoss;
     private static BossSpawnEntry[] _candidates;
+    private static int _spawnCount = DEFAULT_SPAWN_COUNT;
     private static BossFenceSpec _fenceSpec;
 
     /// <summary>
@@ -43,6 +44,7 @@ public static class BossArenaPlayback
         _bossesLeft = 0;
         _fixedBoss = fixedBoss;
         _candidates = candidates;
+        _spawnCount = spawnCount > 0 ? spawnCount : DEFAULT_SPAWN_COUNT;
         _fenceSpec = fence;
         if (!TryGetEnemyManager(out var enemyManager))
         {
@@ -236,11 +238,11 @@ public static class BossArenaPlayback
     }
 
     /// <summary>
-    /// 풀에서 서로 다른 보스를 최대 두 마리 고른다. 한 마리뿐이면 그 마리만 반환한다.
+    /// 풀에서 서로 다른 보스를 등장 수만큼 고른다. 가진 수보다 많으면 가진 만큼만 반환한다.
     /// </summary>
     private static List<BossSpawnEntry> PickBosses(List<BossSpawnEntry> pool)
     {
-        var count = Mathf.Min(PAIR_COUNT, pool.Count);
+        var count = Mathf.Min(Mathf.Max(1, _spawnCount), pool.Count);
         for (var i = 0; i < count; i++)
         {
             var swap = Random.Range(i, pool.Count);
@@ -259,7 +261,8 @@ public static class BossArenaPlayback
             return 0f;
         }
 
-        return index == 0 ? PAIR_VERTICAL_OFFSET : -PAIR_VERTICAL_OFFSET;
+        var step = PAIR_VERTICAL_OFFSET * 2f / (count - 1);
+        return PAIR_VERTICAL_OFFSET - step * index;
     }
 
     private static bool TrySpawnBoss(EnemyManager enemyManager, int playerId, MonsterWaveProfile profile, float verticalOffset)

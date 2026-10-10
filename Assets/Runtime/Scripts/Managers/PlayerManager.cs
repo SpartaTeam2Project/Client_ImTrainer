@@ -268,6 +268,19 @@ public class PlayerManager : BaseManager
         _player.Stat.AddMoveSpeedMultiplier(value);
     }
 
+    /// <summary>
+    /// 장판에 서 있는 동안의 이동속도 배율. 훈련 배율은 바꾸지 않는다.
+    /// </summary>
+    public void SetMoveSlow(int playerId, float multiplier)
+    {
+        if (playerId != LocalPlayerId || _player == null)
+        {
+            return;
+        }
+
+        _player.Stat.SetMoveSlow(multiplier);
+    }
+
     public void AddXpMultiplier(int playerId,float value)
     {
         if(playerId!=LocalPlayerId || _player == null) return;

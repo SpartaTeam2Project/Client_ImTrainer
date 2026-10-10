@@ -289,6 +289,54 @@ public class EnemyManager : BaseManager
     }
 
     /// <summary>
+    /// 보스전에서 다가오는 보스가 다른 보스 몸통 안으로 들어가지 않게 밖으로 민다.
+    /// </summary>
+    public Vector2 SeparateFromBosses(Enemy self, Vector2 next)
+    {
+        if (!_bossFightActive || self == null || _alive.Count < 2)
+        {
+            return next;
+        }
+
+        var selfRadius = self.SeparationRadius;
+        for (var i = 0; i < _alive.Count; i++)
+        {
+            var other = _alive[i];
+            if (other == null || other == self)
+            {
+                continue;
+            }
+
+            var minDistance = selfRadius + other.SeparationRadius;
+            var delta = next - (Vector2)other.transform.position;
+            var distanceSqr = delta.sqrMagnitude;
+            if (distanceSqr >= minDistance * minDistance)
+            {
+                continue;
+            }
+
+            if (distanceSqr <= 0.0001f)
+            {
+                var angle = (self.GetEntityId().GetHashCode() & 7) * 45f * Mathf.Deg2Rad;
+                delta = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+            }
+            else
+            {
+                delta /= Mathf.Sqrt(distanceSqr);
+            }
+
+            next = (Vector2)other.transform.position + delta * minDistance;
+        }
+
+        if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
+        {
+            next = fieldManager.ValidatePosition(next);
+        }
+
+        return next;
+    }
+
+    /// <summary>
     /// 살아 있는 적과 투사체를 풀로 돌린다. 처치 수는 올리지 않고 판은 유지한다.
     /// </summary>
     public void DismissAlive()
@@ -581,7 +629,20 @@ public class EnemyManager : BaseManager
             profile.BeamHitInterval,
             profile.BeamTurnSpeed,
             profile.BeamFrames,
-            profile.BeamMouthOffsets);
+            profile.BeamMouthOffsets,
+            profile.PoolRange,
+            profile.PoolSpreadSpeed,
+            profile.PoolHitsPerSecond,
+            profile.PoolSlowPercent,
+            profile.PoolCastSeconds,
+            profile.PoolSeconds,
+            profile.PoolBurstFrames,
+            profile.PoolLingerFrames,
+            profile.SpoonCount,
+            profile.SpoonChargeSeconds,
+            profile.SpoonSpeed,
+            profile.SpoonFlySeconds,
+            profile.SpoonFrames);
         enemy.SetLaneFlags(profile.DisableOffscreenTeleport, false);
         enemy.SetDropGem(onDied != null ? _bossExperienceGem : null);
         if (onDied != null)

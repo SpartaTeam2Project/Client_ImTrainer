@@ -96,30 +96,26 @@ public class BossPartyMember
 {
     [SerializeField] private MonsterVisualData _monster;
     [SerializeField] private BossSkillData _skill;
-    [Tooltip("보스 스킬 탄 그림. 비어 있으면 타임라인 클립의 탄을 쓴다.")]
-    [SerializeField] private Sprite _projectileSprite;
-    [Tooltip("차지 중 회오리. 작은 장부터 큰 장까지 한 번 재생한다.")]
-    [SerializeField] private Sprite[] _chargeProjectileFrames = System.Array.Empty<Sprite>();
-    [Tooltip("발사 후 회오리. 날아가는 동안 반복한다.")]
-    [SerializeField] private Sprite[] _flyProjectileFrames = System.Array.Empty<Sprite>();
-    [Tooltip("추적 빔 그림. 쏘는 동안 반복한다. 비어 있으면 단색 직선을 쓴다.")]
-    [SerializeField] private Sprite[] _beamFrames = System.Array.Empty<Sprite>();
-    [Tooltip("빔이 나가는 입. 그림 중심 기준이고 보스 크기를 곱하기 전 값이다. 순서: 오른쪽, 오른쪽 위, 위, 왼쪽 위, 왼쪽, 왼쪽 아래, 아래, 오른쪽 아래.")]
-    [SerializeField] private Vector2[] _beamMouthOffsets = new Vector2[0];
 
     public MonsterVisualData Monster => _monster;
 
     public BossSkillKind Skill => _skill != null ? _skill.Kind : BossSkillKind.None;
 
-    public Sprite ProjectileSprite => _projectileSprite;
+    public Sprite ProjectileSprite => _skill != null ? _skill.ProjectileSprite : null;
 
-    public Sprite[] ChargeProjectileFrames => _chargeProjectileFrames ?? System.Array.Empty<Sprite>();
+    public Sprite[] ChargeProjectileFrames => _skill != null ? _skill.ChargeProjectileFrames : System.Array.Empty<Sprite>();
 
-    public Sprite[] FlyProjectileFrames => _flyProjectileFrames ?? System.Array.Empty<Sprite>();
+    public Sprite[] FlyProjectileFrames => _skill != null ? _skill.FlyProjectileFrames : System.Array.Empty<Sprite>();
 
-    public Sprite[] BeamFrames => _beamFrames ?? System.Array.Empty<Sprite>();
+    public Sprite[] BeamFrames => _skill != null ? _skill.BeamFrames : System.Array.Empty<Sprite>();
 
-    public Vector2[] BeamMouthOffsets => _beamMouthOffsets;
+    public Vector2[] BeamMouthOffsets => _skill != null ? _skill.BeamMouthOffsets : System.Array.Empty<Vector2>();
+
+    public Sprite[] PoolBurstFrames => _skill != null ? _skill.PoolBurstFrames : System.Array.Empty<Sprite>();
+
+    public Sprite[] PoolLingerFrames => _skill != null ? _skill.PoolLingerFrames : System.Array.Empty<Sprite>();
+
+    public Sprite[] SpoonFrames => _skill != null ? _skill.SpoonFrames : System.Array.Empty<Sprite>();
 
     public const int MOUTH_SECTOR_COUNT = 8;
 

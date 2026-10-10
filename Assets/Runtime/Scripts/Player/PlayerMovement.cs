@@ -68,7 +68,7 @@ public class PlayerMovement : MonoBehaviour
             _lookDirection = movement.normalized;
         }
 
-        var delta = movement * _stat.moveSpeed * _stat.moveSpeedMultiplier *Time.deltaTime;
+        var delta = movement * _stat.moveSpeed * _stat.moveSpeedMultiplier * _stat.moveSlowMultiplier * Time.deltaTime;
         var next = (Vector2)transform.position + delta;
         if (Managers.Instance != null && Managers.Instance.TryGetManager<StageFieldManager>(out var fieldManager))
         {

@@ -14,6 +14,7 @@ public class EnemyView : MonoBehaviour
     private const float HURT_SHORT_LIMIT_SECONDS = 1f;
     private const float HURT_MIN_SECONDS = 1.4f;
     private const int SHOOT_TAIL_FRAME_COUNT = 6;
+    private const int HOP_PLAY_COUNT = 2;
     private const float FLIP_X_EPSILON = 0.0001f;
     private const float SECTOR_DEGREES = 45f;
     private const float SECTOR_HALF_DEGREES = 22.5f;
@@ -63,6 +64,11 @@ public class EnemyView : MonoBehaviour
     private bool _poseFacesLeft;
     private bool _useIdleMove;
     private bool _isCharging;
+    private bool _isHopping;
+    private float _hopFramesPerSecond;
+    private bool _isChargeDown;
+    private bool _isShootDown;
+    private bool _shootDownFinished;
     private bool _hasVisual;
     private EightDirectionFrames _namedSkill;
     private bool _facesLeft;
@@ -126,6 +132,11 @@ public class EnemyView : MonoBehaviour
     /// 몸통 판정을 쓸 수 있으면 true.
     /// </summary>
     public bool HasBodyBounds => _hitCollider != null && _bodyExtents.x > 0f && _bodyExtents.y > 0f;
+
+    /// <summary>
+    /// 그림 기준 몸통의 가로세로 절반. 로컬 좌표다.
+    /// </summary>
+    public Vector2 BodyExtents => _bodyExtents;
 
     /// <summary>
     /// 이번 스폰에 쓸 그림 에셋을 넣는다. 8방향은 이 에셋만 재생한다.
@@ -220,6 +231,10 @@ public class EnemyView : MonoBehaviour
         _isCharging = charging;
         _isStriking = striking;
         _isPosing = posing;
+        _isHopping = false;
+        _isChargeDown = false;
+        _isShootDown = false;
+        _shootDownFinished = false;
 
         if (!_isShooting)
         {
@@ -249,6 +264,131 @@ public class EnemyView : MonoBehaviour
         AdvanceFrames();
         ApplyCurrentSprite();
         ApplyFlip();
+    }
+
+    /// <summary>
+    /// hop 아래 장만 반복한다. 시전 시간 안에 두 번 끝나게 재생한다.
+    /// </summary>
+    public void SetHopDown(float castSeconds)
+    {
+        if (_hurtPlaying)
+        {
+            return;
+        }
+
+        var started = !_isHopping;
+        _isHopping = true;
+        _isMoving = false;
+        _isShooting = false;
+        _shootLoopsTail = false;
+        _isAttacking = false;
+        _isCharging = false;
+        _isStriking = false;
+        _isPosing = false;
+        _holdLastFrame = false;
+        _eightWay = EightWay.Down;
+        _hasVisual = true;
+        if (started)
+        {
+            _frameIndex = 0;
+            _frameTimer = 0f;
+            _hopFramesPerSecond = HopFramesPerSecond(castSeconds);
+        }
+
+        AdvanceFrames();
+        ApplyCurrentSprite();
+        ApplyFlip();
+    }
+
+    /// <summary>
+    /// charge 아래 장만 반복한다.
+    /// </summary>
+    public void SetChargeDown()
+    {
+        if (_hurtPlaying)
+        {
+            return;
+        }
+
+        var started = !_isChargeDown;
+        _isChargeDown = true;
+        _isShootDown = false;
+        _isHopping = false;
+        _isMoving = false;
+        _isShooting = false;
+        _shootLoopsTail = false;
+        _isAttacking = false;
+        _isCharging = false;
+        _isStriking = false;
+        _isPosing = false;
+        _holdLastFrame = false;
+        _eightWay = EightWay.Down;
+        _hasVisual = true;
+        if (started)
+        {
+            _frameIndex = 0;
+            _frameTimer = 0f;
+        }
+
+        AdvanceFrames();
+        ApplyCurrentSprite();
+        ApplyFlip();
+    }
+
+    /// <summary>
+    /// shoot 아래를 한 번만 재생한다.
+    /// </summary>
+    public void PlayShootDownOnce()
+    {
+        if (_hurtPlaying)
+        {
+            return;
+        }
+
+        if (!_isShootDown)
+        {
+            _isShootDown = true;
+            _shootDownFinished = false;
+            _isChargeDown = false;
+            _isHopping = false;
+            _isMoving = false;
+            _isShooting = false;
+            _isAttacking = false;
+            _isCharging = false;
+            _isStriking = false;
+            _isPosing = false;
+            _holdLastFrame = true;
+            _eightWay = EightWay.Down;
+            _hasVisual = true;
+            _frameIndex = 0;
+            _frameTimer = 0f;
+        }
+
+        AdvanceFrames();
+        ApplyCurrentSprite();
+        ApplyFlip();
+    }
+
+    /// <summary>
+    /// shoot 아래를 마지막 장까지 한 번 재생했으면 true.
+    /// </summary>
+    public bool IsShootDownFinished => _shootDownFinished;
+
+    /// <summary>
+    /// 지금 보이는 shoot 아래 장. 0부터 세고, 재생 중이 아니면 -1.
+    /// </summary>
+    public int ShootDownFrameIndex => _isShootDown ? _frameIndex : -1;
+
+    /// <summary>
+    /// shoot 아래 장의 수.
+    /// </summary>
+    public int ShootDownFrameCount
+    {
+        get
+        {
+            var frames = GetDirectionFrames(_animations != null ? _animations.Shoot : null, EightWay.Down);
+            return HasFrames(frames) ? frames.Length : 0;
+        }
     }
 
     /// <summary>
@@ -362,7 +502,13 @@ public class EnemyView : MonoBehaviour
     private void AdvanceFrames()
     {
         var frames = CurrentFrames();
-        var playing = _isMoving || _isAttacking || _isCharging || _isShooting || _isStriking || _isPosing;
+        var playing = _isMoving || _isAttacking || _isCharging || _isShooting || _isStriking || _isPosing || _isHopping || _isChargeDown || _isShootDown;
+        if (_isShootDown && (!HasFrames(frames) || frames.Length <= 1))
+        {
+            _shootDownFinished = true;
+            return;
+        }
+
         if (!playing || !HasFrames(frames) || frames.Length <= 1 || _framesPerSecond <= 0f)
         {
             return;
@@ -378,6 +524,15 @@ public class EnemyView : MonoBehaviour
         if ((_holdLastFrame || _isStriking) && _frameIndex >= frames.Length - 1)
         {
             _frameIndex = frames.Length - 1;
+            if (_isShootDown)
+            {
+                _frameTimer += Time.deltaTime;
+                if (_frameTimer >= 1f / _framesPerSecond)
+                {
+                    _shootDownFinished = true;
+                }
+            }
+
             return;
         }
 
@@ -390,6 +545,10 @@ public class EnemyView : MonoBehaviour
         else if (_isPosing)
         {
             framesPerSecond = POSE_FRAMES_PER_SECOND;
+        }
+        else if (_isHopping && _hopFramesPerSecond > 0f)
+        {
+            framesPerSecond = _hopFramesPerSecond;
         }
         var frameDuration = 1f / framesPerSecond;
         while (_frameTimer >= frameDuration)
@@ -583,7 +742,7 @@ public class EnemyView : MonoBehaviour
             return null;
         }
 
-        var playing = _isMoving || _isAttacking || _isCharging || _isShooting || _isStriking || _isPosing;
+        var playing = _isMoving || _isAttacking || _isCharging || _isShooting || _isStriking || _isPosing || _isHopping || _isChargeDown || _isShootDown;
         if (!playing || _frameIndex < 0 || _frameIndex >= frames.Length)
         {
             return frames[0];
@@ -600,6 +759,33 @@ public class EnemyView : MonoBehaviour
             if (HasFrames(pose))
             {
                 return pose;
+            }
+        }
+
+        if (_isHopping)
+        {
+            var hop = GetDirectionFrames(_animations != null ? _animations.Hop : null, EightWay.Down);
+            if (HasFrames(hop))
+            {
+                return hop;
+            }
+        }
+
+        if (_isChargeDown)
+        {
+            var chargeDown = GetDirectionFrames(_animations != null ? _animations.Charge : null, EightWay.Down);
+            if (HasFrames(chargeDown))
+            {
+                return chargeDown;
+            }
+        }
+
+        if (_isShootDown)
+        {
+            var shootDown = GetDirectionFrames(_animations != null ? _animations.Shoot : null, EightWay.Down);
+            if (HasFrames(shootDown))
+            {
+                return shootDown;
             }
         }
 
@@ -783,6 +969,14 @@ public class EnemyView : MonoBehaviour
         _frameTimer = 0f;
         _holdLastFrame = true;
         return count / _framesPerSecond;
+    }
+
+    private float HopFramesPerSecond(float castSeconds)
+    {
+        var frames = GetDirectionFrames(_animations != null ? _animations.Hop : null, EightWay.Down);
+        var count = HasFrames(frames) ? frames.Length : 1;
+        var seconds = Mathf.Max(0.05f, castSeconds);
+        return count * HOP_PLAY_COUNT / seconds;
     }
 
     private Sprite[] PoseFrames()

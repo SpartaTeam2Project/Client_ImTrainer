@@ -215,6 +215,42 @@ public class StageFieldManager : BaseManager
     }
 
     /// <summary>
+    /// 다음 위치가 펜스 밖이면 안쪽으로 되돌리고, 닿은 축의 방향만 뒤집는다.
+    /// </summary>
+    public bool TryBounce(Vector2 position, Vector2 direction, out Vector2 bouncedPosition, out Vector2 bouncedDirection)
+    {
+        bouncedPosition = position;
+        bouncedDirection = direction;
+        if (_fence == null || _fence.Contains(position))
+        {
+            return false;
+        }
+
+        var clamped = _fence.ClampPosition(position);
+        if (position.x > clamped.x)
+        {
+            direction.x = -Mathf.Abs(direction.x);
+        }
+        else if (position.x < clamped.x)
+        {
+            direction.x = Mathf.Abs(direction.x);
+        }
+
+        if (position.y > clamped.y)
+        {
+            direction.y = -Mathf.Abs(direction.y);
+        }
+        else if (position.y < clamped.y)
+        {
+            direction.y = Mathf.Abs(direction.y);
+        }
+
+        bouncedPosition = clamped;
+        bouncedDirection = direction.sqrMagnitude > 0f ? direction.normalized : Vector2.right;
+        return true;
+    }
+
+    /// <summary>
     /// 펜스 안 장식을 치운다.
     /// </summary>
     public void RemovePropsInsideFence()
