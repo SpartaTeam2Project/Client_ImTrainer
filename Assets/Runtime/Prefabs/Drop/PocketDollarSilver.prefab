@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 100002}
   - component: {fileID: 100003}
-  - component: {fileID: -8204059537476443968}
+  - component: {fileID: -5403574402161283592}
   m_Layer: 0
-  m_Name: MonsterBall
+  m_Name: PocketDollarSilver
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28,7 +28,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 0.25}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -59,7 +59,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: fdeeca1a2b3e4ebc847371ced0ad0c8b, type: 2}
+  - {fileID: 2100000, guid: fef2aa8d71764ac0889715a917a306a5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -82,7 +82,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: ec89933044a340c28356fc9b3d3f80a2, type: 3}
+  m_Sprite: {fileID: 1425999540459722927, guid: 6a2b77eb29f6471438b18fe8f7a05591, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -93,7 +93,7 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
---- !u!114 &-8204059537476443968
+--- !u!114 &-5403574402161283592
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -107,6 +107,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CoinDropBehavior
   _spriteRenderer: {fileID: 100003}
   _amount: 1
-  _currencyId: monster_ball
+  _currencyId: pocket_dollar
   _glowRenderer: {fileID: 0}
   _aura: {fileID: 0}

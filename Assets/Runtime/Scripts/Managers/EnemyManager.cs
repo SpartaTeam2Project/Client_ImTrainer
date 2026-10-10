@@ -1057,18 +1057,24 @@ public class EnemyManager : BaseManager
             return;
         }
 
-        TryDropCurrency(dropManager, position, enemy.PocketDollarDrop, enemy.PocketDollarChance);
-        TryDropCurrency(dropManager, position, enemy.MonsterBallDrop, enemy.MonsterBallChance);
+        TryDropCurrency(dropManager, position, enemy.PocketDollarDrops, enemy.PocketDollarChance);
+        TryDropCurrency(dropManager, position, enemy.MonsterBallDrops, enemy.MonsterBallChance);
     }
 
-    private void TryDropCurrency(DropManager dropManager, Vector2 position, CoinDropBehavior prefab, float chance)
+    private void TryDropCurrency(DropManager dropManager, Vector2 position, DropTierTable table, float chance)
     {
-        if (prefab == null || chance <= 0f)
+        if (table == null || chance <= 0f)
         {
             return;
         }
 
         if (UnityEngine.Random.value * 100f > chance)
+        {
+            return;
+        }
+
+        var prefab = table.Pick();
+        if (prefab == null)
         {
             return;
         }

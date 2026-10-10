@@ -15,6 +15,7 @@ public class DropManager : BaseManager
 
     private readonly Dictionary<EntityId, List<CoinDropBehavior>> _pools = new Dictionary<EntityId, List<CoinDropBehavior>>();
     private readonly List<CoinDropBehavior> _drops = new List<CoinDropBehavior>();
+    private readonly PickupGlowAnimator _glow = new PickupGlowAnimator();
 
     private int _playerId;
     private bool _active;
@@ -38,6 +39,7 @@ public class DropManager : BaseManager
             return;
         }
 
+        _glow.Tick(Time.time);
         if (!TryGetPlayerPosition(out var playerPosition))
         {
             return;
@@ -52,6 +54,7 @@ public class DropManager : BaseManager
     public override void Cleanup()
     {
         ClearDrops();
+        _glow.Dispose();
         _active = false;
         base.Cleanup();
     }
@@ -191,6 +194,7 @@ public class DropManager : BaseManager
 
         var created = Instantiate(dropPrefab, transform);
         created.gameObject.name = dropPrefab.name;
+        created.SetSharedMaterial(_glow.GetRuntimeMaterial(dropPrefab.SourceMaterial));
         created.gameObject.SetActive(false);
         pool.Add(created);
         _drops.Add(created);

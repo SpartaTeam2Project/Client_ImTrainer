@@ -2,12 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 경험치 사탕 머티리얼의 발광을 숨 쉬듯 밝게/어둡게 반복(펄스)하고,
+/// 바닥에 떨어진 아이템(경험치 사탕, 재화) 머티리얼의 발광과 외곽선 발광을 숨 쉬듯 밝게/어둡게 반복(펄스)하고,
 /// Shine이 켜진 머티리얼은 빛줄기를 주기적으로 훑고 지나가게 한다.
-/// 원본 머티리얼마다 타이밍이 다른 런타임 복사본 몇 개를 만들고, 사탕은 그중 하나를 무작위로 받는다.
+/// 원본 머티리얼마다 타이밍이 다른 런타임 복사본 몇 개를 만들고, 아이템은 그중 하나를 무작위로 받는다.
 /// 복사본 수만큼만 드로우콜이 나뉘므로 배칭을 크게 깨지 않고 연출이 엇갈린다.
 /// </summary>
-public class ExperienceGemGlow
+public class PickupGlowAnimator
 {
     private const int VARIANT_COUNT = 4;
 
@@ -22,8 +22,10 @@ public class ExperienceGemGlow
 
     private const string GLOW_KEYWORD = "GLOW_ON";
     private const string SHINE_KEYWORD = "SHINE_ON";
+    private const string OUTLINE_KEYWORD = "OUTBASE_ON";
 
     private static readonly int GlowId = Shader.PropertyToID("_Glow");
+    private static readonly int OutlineGlowId = Shader.PropertyToID("_OutlineGlow");
     private static readonly int ShineLocationId = Shader.PropertyToID("_ShineLocation");
 
     private readonly Dictionary<Material, List<GlowVariant>> _variantsBySource = new Dictionary<Material, List<GlowVariant>>();
@@ -32,7 +34,10 @@ public class ExperienceGemGlow
     private class GlowVariant
     {
         public Material Material;
+        public bool HasGlow;
         public float BaseGlow;
+        public bool HasOutline;
+        public float BaseOutlineGlow;
         public float PulseOffset;
         public bool HasShine;
         public float SweepInterval;
@@ -43,11 +48,11 @@ public class ExperienceGemGlow
 
     /// <summary>
     /// 원본 머티리얼의 런타임 복사본 중 하나를 무작위로 돌려준다. 원본 에셋은 건드리지 않는다.
-    /// Glow와 Shine이 모두 꺼진 머티리얼은 복사하지 않고 원본을 그대로 돌려준다.
+    /// Glow, Outline, Shine이 모두 꺼진 머티리얼은 복사하지 않고 원본을 그대로 돌려준다.
     /// </summary>
     public Material GetRuntimeMaterial(Material source)
     {
-        if (source == null || (!source.IsKeywordEnabled(GLOW_KEYWORD) && !source.IsKeywordEnabled(SHINE_KEYWORD)))
+        if (source == null || !HasAnimatedEffect(source))
         {
             return source;
         }
@@ -74,7 +79,17 @@ public class ExperienceGemGlow
                 continue;
             }
 
-            variant.Material.SetFloat(GlowId, variant.BaseGlow * ResolvePulseRate(time + variant.PulseOffset));
+            var pulseRate = ResolvePulseRate(time + variant.PulseOffset);
+            if (variant.HasGlow)
+            {
+                variant.Material.SetFloat(GlowId, variant.BaseGlow * pulseRate);
+            }
+
+            if (variant.HasOutline)
+            {
+                variant.Material.SetFloat(OutlineGlowId, variant.BaseOutlineGlow * pulseRate);
+            }
+
             if (variant.HasShine)
             {
                 variant.Material.SetFloat(ShineLocationId, ResolveShineLocation(time + variant.SweepOffset, variant.SweepInterval));
@@ -105,8 +120,11 @@ public class ExperienceGemGlow
 
     private List<GlowVariant> CreateVariants(Material source)
     {
+        var hasGlow = source.IsKeywordEnabled(GLOW_KEYWORD);
+        var hasOutline = source.IsKeywordEnabled(OUTLINE_KEYWORD);
         var hasShine = source.IsKeywordEnabled(SHINE_KEYWORD);
         var baseGlow = source.GetFloat(GlowId);
+        var baseOutlineGlow = source.GetFloat(OutlineGlowId);
         var variants = new List<GlowVariant>(VARIANT_COUNT);
         for (var i = 0; i < VARIANT_COUNT; i++)
         {
@@ -117,7 +135,10 @@ public class ExperienceGemGlow
             var variant = new GlowVariant
             {
                 Material = material,
+                HasGlow = hasGlow,
                 BaseGlow = baseGlow,
+                HasOutline = hasOutline,
+                BaseOutlineGlow = baseOutlineGlow,
                 PulseOffset = Random.Range(0f, PULSE_PERIOD),
                 HasShine = hasShine,
                 SweepInterval = sweepInterval,
@@ -134,6 +155,13 @@ public class ExperienceGemGlow
         }
 
         return variants;
+    }
+
+    private static bool HasAnimatedEffect(Material material)
+    {
+        return material.IsKeywordEnabled(GLOW_KEYWORD)
+            || material.IsKeywordEnabled(OUTLINE_KEYWORD)
+            || material.IsKeywordEnabled(SHINE_KEYWORD);
     }
 
     private static float ResolvePulseRate(float time)

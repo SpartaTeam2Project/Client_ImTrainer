@@ -15,7 +15,7 @@ public class ExperienceManager : BaseManager
 
     private readonly Dictionary<EntityId, List<ExperienceGem>> _pools = new Dictionary<EntityId, List<ExperienceGem>>();
     private readonly List<ExperienceGem> _gems = new List<ExperienceGem>();
-    private readonly ExperienceGemGlow _glow = new ExperienceGemGlow();
+    private readonly PickupGlowAnimator _glow = new PickupGlowAnimator();
 
     private int _playerId;
     private bool _active;
