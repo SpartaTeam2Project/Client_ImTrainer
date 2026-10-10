@@ -13,6 +13,7 @@ public class HoverInformation : MonoBehaviour
     private const float EVOLUTION_ICON_SCALE = 2f;
     private const string UNKNOWN_NAME = "???";
     private const string BRANCH_NAME = "갈래";
+    private const float DEFAULT_REFERENCE_PIXELS = 96f;
 
     // 스토리지 정보창의 잠금 실루엣과 같은 색.
     private static readonly Color LOCKED_ICON_COLOR = new Color32(0, 0, 0, 237);
@@ -22,6 +23,8 @@ public class HoverInformation : MonoBehaviour
 
     [Header("Pokemon")]
     [SerializeField] private Image _portrait;
+    [Tooltip("초상화에서 이 원본 픽셀 수가 칸의 짧은 변 길이가 된다. 모든 포켓몬이 같은 배율이라 덩치 차이가 보인다")]
+    [SerializeField, Min(1f)] private float _referencePixels = DEFAULT_REFERENCE_PIXELS;
     [SerializeField] private TMP_Text _monsterName;
     [SerializeField] private MonsterTypeView _typeView;
     [SerializeField] private Image[] _starImages = new Image[Item.STAR_MAX];
@@ -33,6 +36,10 @@ public class HoverInformation : MonoBehaviour
     [SerializeField] private TMP_Text _damage;
     [Tooltip("공격 능력 제목을 타입 색으로 칠한다")]
     [SerializeField] private MonsterTypeDatabase _typeDatabase;
+
+    private PortraitFitter _portraitFitter;
+
+    private PortraitFitter PortraitFitter => _portraitFitter ??= new PortraitFitter(_portrait);
 
     [Serializable]
     private class EvolutionView
@@ -84,6 +91,7 @@ public class HoverInformation : MonoBehaviour
         SetVisible(true);
         var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.InfoAnimation) : null;
         SetImage(_portrait, portrait);
+        PortraitFitter.Fit(portrait, _referencePixels);
         SetText(_monsterName, item.name);
         if (_typeView != null)
         {

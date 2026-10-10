@@ -10,6 +10,7 @@ public class StorageInfoView : MonoBehaviour
     private const string GENERATION_SUFFIX = "세대";
     private const string DEX_NUMBER_FORMAT = "No.{0:0000}";
     private const string LOCKED_NAME = "???";
+    private const float DEFAULT_REFERENCE_PIXELS = 96f;
     private static readonly Color32 LOCKED_PORTRAIT_COLOR = new Color32(0, 0, 0, 237);
     private static readonly Color32 UNLOCKED_PORTRAIT_COLOR = new Color32(255, 255, 255, 255);
 
@@ -17,6 +18,12 @@ public class StorageInfoView : MonoBehaviour
     [SerializeField] private TMP_Text _generation;
     [SerializeField] private TMP_Text _characterName;
     [SerializeField] private TMP_Text _unlockCondition;
+    [Tooltip("포켓몬 초상화에서 이 원본 픽셀 수가 칸의 짧은 변 길이가 된다. 모든 포켓몬이 같은 배율이라 덩치 차이가 보인다")]
+    [SerializeField, Min(1f)] private float _referencePixels = DEFAULT_REFERENCE_PIXELS;
+
+    private PortraitFitter _portraitFitter;
+
+    private PortraitFitter PortraitFitter => _portraitFitter ??= new PortraitFitter(_portrait);
 
     /// <summary>
     /// 포커스된 칸의 정보를 채운다. 칸이 없으면 비운다.
@@ -31,6 +38,7 @@ public class StorageInfoView : MonoBehaviour
 
         var data = slot.Data;
         ApplyPortrait(data.Portrait, !slot.IsUnlocked);
+        PortraitFitter.Restore();
         if (_generation != null)
         {
             _generation.text = data.Generation + GENERATION_SUFFIX;
@@ -56,7 +64,9 @@ public class StorageInfoView : MonoBehaviour
         }
 
         var data = slot.Data;
-        ApplyPortrait(MonsterVisualData.FirstFrame(data.InfoAnimation), !slot.IsUnlocked);
+        var portrait = MonsterVisualData.FirstFrame(data.InfoAnimation);
+        ApplyPortrait(portrait, !slot.IsUnlocked);
+        PortraitFitter.Fit(portrait, _referencePixels);
         if (_generation != null)
         {
             _generation.text = string.Format(DEX_NUMBER_FORMAT, data.DexNumber);
@@ -100,6 +110,7 @@ public class StorageInfoView : MonoBehaviour
     private void Clear()
     {
         ApplyPortrait(null, false);
+        PortraitFitter.Restore();
         if (_generation != null)
         {
             _generation.text = string.Empty;
