@@ -20,10 +20,15 @@ public class StorageInfoView : MonoBehaviour
     [SerializeField] private TMP_Text _unlockCondition;
     [Tooltip("포켓몬 초상화에서 이 원본 픽셀 수가 칸의 짧은 변 길이가 된다. 모든 포켓몬이 같은 배율이라 덩치 차이가 보인다")]
     [SerializeField, Min(1f)] private float _referencePixels = DEFAULT_REFERENCE_PIXELS;
+    [Tooltip("포켓몬 초상화 애니메이션의 초당 장 수. 원본은 10이다")]
+    [SerializeField, Min(1f)] private float _portraitFrameRate = PortraitFrameLoop.DEFAULT_FRAME_RATE;
 
     private PortraitFitter _portraitFitter;
+    private PortraitFrameLoop _portraitLoop;
 
     private PortraitFitter PortraitFitter => _portraitFitter ??= new PortraitFitter(_portrait);
+
+    private PortraitFrameLoop PortraitLoop => _portraitLoop ??= new PortraitFrameLoop(_portrait, PortraitFitter);
 
     /// <summary>
     /// 포커스된 칸의 정보를 채운다. 칸이 없으면 비운다.
@@ -37,8 +42,8 @@ public class StorageInfoView : MonoBehaviour
         }
 
         var data = slot.Data;
+        StopMonsterPortrait();
         ApplyPortrait(data.Portrait, !slot.IsUnlocked);
-        PortraitFitter.Restore();
         if (_generation != null)
         {
             _generation.text = data.Generation + GENERATION_SUFFIX;
@@ -53,7 +58,7 @@ public class StorageInfoView : MonoBehaviour
     }
 
     /// <summary>
-    /// 포커스된 포켓몬의 초상화, 도감 번호, 이름, 잠금 조건을 보여 준다.
+    /// 포커스된 포켓몬의 초상화, 도감 번호, 이름, 잠금 조건을 보여 준다. 획득한 포켓몬은 초상화 애니메이션을 반복 재생한다.
     /// </summary>
     public void Show(StorageMonsterView slot)
     {
@@ -64,9 +69,10 @@ public class StorageInfoView : MonoBehaviour
         }
 
         var data = slot.Data;
-        var portrait = MonsterVisualData.FirstFrame(data.InfoAnimation);
+        // 잠긴 칸은 첫 장 실루엣만 보여 준다.
+        PortraitFitter.Fit(data.InfoAnimation, _referencePixels);
+        var portrait = PortraitLoop.Play(data.InfoAnimation, slot.IsUnlocked, _portraitFrameRate);
         ApplyPortrait(portrait, !slot.IsUnlocked);
-        PortraitFitter.Fit(portrait, _referencePixels);
         if (_generation != null)
         {
             _generation.text = string.Format(DEX_NUMBER_FORMAT, data.DexNumber);
@@ -78,6 +84,17 @@ public class StorageInfoView : MonoBehaviour
         }
 
         ApplyUnlockCondition(!slot.IsUnlocked, data.UnlockCondition);
+    }
+
+    private void Update()
+    {
+        _portraitLoop?.Tick(Time.unscaledDeltaTime);
+    }
+
+    private void StopMonsterPortrait()
+    {
+        _portraitLoop?.Stop();
+        PortraitFitter.Restore();
     }
 
     private void ApplyPortrait(Sprite portrait, bool locked = false)
@@ -109,8 +126,8 @@ public class StorageInfoView : MonoBehaviour
 
     private void Clear()
     {
+        StopMonsterPortrait();
         ApplyPortrait(null, false);
-        PortraitFitter.Restore();
         if (_generation != null)
         {
             _generation.text = string.Empty;

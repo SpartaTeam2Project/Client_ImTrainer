@@ -25,6 +25,8 @@ public class HoverInformation : MonoBehaviour
     [SerializeField] private Image _portrait;
     [Tooltip("초상화에서 이 원본 픽셀 수가 칸의 짧은 변 길이가 된다. 모든 포켓몬이 같은 배율이라 덩치 차이가 보인다")]
     [SerializeField, Min(1f)] private float _referencePixels = DEFAULT_REFERENCE_PIXELS;
+    [Tooltip("초상화 애니메이션의 초당 장 수. 원본은 10이다")]
+    [SerializeField, Min(1f)] private float _portraitFrameRate = PortraitFrameLoop.DEFAULT_FRAME_RATE;
     [SerializeField] private TMP_Text _monsterName;
     [SerializeField] private MonsterTypeView _typeView;
     [SerializeField] private Image[] _starImages = new Image[Item.STAR_MAX];
@@ -38,8 +40,13 @@ public class HoverInformation : MonoBehaviour
     [SerializeField] private MonsterTypeDatabase _typeDatabase;
 
     private PortraitFitter _portraitFitter;
+    private PortraitFrameLoop _portraitLoop;
+    // 인벤토리가 바뀔 때마다 Show가 다시 불려도 같은 종이면 재생을 처음으로 되돌리지 않는다.
+    private Sprite[] _shownPortraitFrames;
 
     private PortraitFitter PortraitFitter => _portraitFitter ??= new PortraitFitter(_portrait);
+
+    private PortraitFrameLoop PortraitLoop => _portraitLoop ??= new PortraitFrameLoop(_portrait, PortraitFitter);
 
     [Serializable]
     private class EvolutionView
@@ -89,9 +96,7 @@ public class HoverInformation : MonoBehaviour
 
         var visual = itemManager.GetVisual(item.uid);
         SetVisible(true);
-        var portrait = visual != null ? MonsterVisualData.FirstFrame(visual.InfoAnimation) : null;
-        SetImage(_portrait, portrait);
-        PortraitFitter.Fit(portrait, _referencePixels);
+        ShowPortrait(visual != null ? visual.InfoAnimation : null);
         SetText(_monsterName, item.name);
         if (_typeView != null)
         {
@@ -121,6 +126,25 @@ public class HoverInformation : MonoBehaviour
     public void Clear()
     {
         SetVisible(false);
+        _portraitLoop?.Stop();
+        _shownPortraitFrames = null;
+    }
+
+    private void Update()
+    {
+        _portraitLoop?.Tick(Time.unscaledDeltaTime);
+    }
+
+    private void ShowPortrait(Sprite[] frames)
+    {
+        if (frames != null && frames == _shownPortraitFrames)
+        {
+            return;
+        }
+
+        _shownPortraitFrames = frames;
+        PortraitFitter.Fit(frames, _referencePixels);
+        SetImage(_portrait, PortraitLoop.Play(frames, true, _portraitFrameRate));
     }
 
     private void ShowAbility(WeaponAbilityData ability, int star)
