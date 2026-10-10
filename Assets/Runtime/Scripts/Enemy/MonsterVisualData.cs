@@ -32,6 +32,7 @@ public class MonsterVisualData : ScriptableObject
 
     [SerializeField] private MonsterVisualData[] _evolutions = new MonsterVisualData[0];
     [SerializeField] private MonsterVisualData _megaEvolution;
+    [SerializeField] private MonsterVisualData[] _extraMegaEvolutions = new MonsterVisualData[0];
     [SerializeField] private MonsterVisualData _vmaxEvolution;
 
     [SerializeField, Min(MIN_GENERATION)] private int _generation = MIN_GENERATION;
@@ -72,6 +73,11 @@ public class MonsterVisualData : ScriptableObject
     /// 메가진화한 종. 없으면 비운다. 정보창 표시 전용이며 획득 규칙은 아직 없다.
     /// </summary>
     public MonsterVisualData MegaEvolution => _megaEvolution;
+
+    /// <summary>
+    /// 메가진화 칸 외의 메가진화 갈래(메가리자몽Y, 메가한카리아스Z 등). 진화 계통에서 메가진화 칸 뒤에 보인다.
+    /// </summary>
+    public IReadOnlyList<MonsterVisualData> ExtraMegaEvolutions => _extraMegaEvolutions ?? System.Array.Empty<MonsterVisualData>();
 
     /// <summary>
     /// 거다이맥스한 종. 없으면 비운다. 정보창 표시 전용이며 획득 규칙은 아직 없다.

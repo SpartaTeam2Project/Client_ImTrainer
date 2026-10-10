@@ -26,12 +26,16 @@ public static class MonsterFormSpriteNames
     {
         { "Mega", new[] { "-mega", "-mega-y", "-mega-x" } },
         { "VMAX", new[] { "-gigantamax" } },
+        { "MegaY", new[] { "-mega-y" } },
+        { "MegaZ", new[] { "-mega-z" } },
     };
 
     // X/Y처럼 갈래가 있는 폼 중 이 게임이 쓰는 쪽. 기본 순서보다 먼저 찾는다.
     private static readonly Dictionary<(int Dex, string Form), string> CHOSEN_FORM_SUFFIX = new Dictionary<(int Dex, string Form), string>
     {
         { (6, "Mega"), "-mega-x" },
+        { (26, "Mega"), "-mega-x" },
+        { (150, "Mega"), "-mega-x" },
     };
 
     /// <summary>

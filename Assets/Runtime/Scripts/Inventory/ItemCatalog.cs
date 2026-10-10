@@ -119,7 +119,7 @@ public class ItemCatalog
 
         for (var i = 0; i < _items.Count; i++)
         {
-            if (_items[i] != null && (FindMegaUid(i) == uid || FindVMaxUid(i) == uid))
+            if (_items[i] != null && (FindMegaUid(i) == uid || FindVMaxUid(i) == uid || HasExtraMega(i, uid)))
             {
                 return i;
             }
@@ -154,6 +154,7 @@ public class ItemCatalog
 
         _evolutions.FillLine(ref line, lineUid);
         line.Set(EvolutionStage.Mega, FindLastBranch(line, FindMegaUid));
+        FillExtraMegas(ref line);
         line.Set(EvolutionStage.VMax, FindLastBranch(line, FindVMaxUid));
         return line;
     }
@@ -266,6 +267,11 @@ public class ItemCatalog
             }
 
             AppendIfNew(visual.MegaEvolution, result, included);
+            foreach (var extra in visual.ExtraMegaEvolutions)
+            {
+                AppendIfNew(extra, result, included);
+            }
+
             AppendIfNew(visual.VMaxEvolution, result, included);
         }
 
@@ -329,6 +335,47 @@ public class ItemCatalog
         }
 
         return EMPTY_UID;
+    }
+
+    /// <summary>
+    /// 메가진화 칸을 정한 단계와 같은 단계에서 나머지 메가진화 갈래(Y, Z)를 넣는다.
+    /// </summary>
+    private void FillExtraMegas(ref EvolutionLine line)
+    {
+        for (var stage = EvolutionStage.Stage2; stage >= EvolutionStage.Basic; stage--)
+        {
+            var visual = GetVisual(line.Get(stage));
+            if (visual == null || (visual.MegaEvolution == null && visual.ExtraMegaEvolutions.Count == 0))
+            {
+                continue;
+            }
+
+            foreach (var extra in visual.ExtraMegaEvolutions)
+            {
+                line.AddExtraMega(FindUid(extra));
+            }
+
+            return;
+        }
+    }
+
+    private bool HasExtraMega(int uid, int megaUid)
+    {
+        var visual = GetVisual(uid);
+        if (visual == null)
+        {
+            return false;
+        }
+
+        foreach (var extra in visual.ExtraMegaEvolutions)
+        {
+            if (FindUid(extra) == megaUid)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private int FindMegaUid(int uid)

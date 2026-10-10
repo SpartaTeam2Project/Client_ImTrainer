@@ -13,15 +13,18 @@ public enum EvolutionStage
 /// <summary>
 /// 한 진화 계통의 단계별 uid와 고른 종의 단계. 없는 칸은 -1이다.
 /// 갈래 진화가 있으면 단계 칸에 들어가지 않은 나머지 갈래 종을 따로 담는다.
+/// 메가진화가 X/Y/Z처럼 여럿이면 메가진화 칸 외의 것을 추가 메가로 따로 담는다.
 /// </summary>
 public struct EvolutionLine
 {
     public const int STAGE_COUNT = 5;
     public const int MAX_BRANCH = 8;
+    public const int MAX_EXTRA_MEGA = 2;
     public const int NONE = -1;
 
     private readonly int[] _uids;
     private readonly int[] _branches;
+    private readonly int[] _extraMegas;
 
     /// <summary>
     /// 고른 종의 uid.
@@ -33,12 +36,19 @@ public struct EvolutionLine
     /// </summary>
     public int BranchCount { get; private set; }
 
+    /// <summary>
+    /// 메가진화 칸 외의 메가진화 수.
+    /// </summary>
+    public int ExtraMegaCount { get; private set; }
+
     public EvolutionLine(int selectedUid)
     {
         SelectedUid = selectedUid;
         BranchCount = 0;
+        ExtraMegaCount = 0;
         _uids = new int[STAGE_COUNT];
         _branches = new int[MAX_BRANCH];
+        _extraMegas = new int[MAX_EXTRA_MEGA];
         for (var i = 0; i < _uids.Length; i++)
         {
             _uids[i] = NONE;
@@ -80,6 +90,26 @@ public struct EvolutionLine
         {
             _branches[BranchCount] = uid;
             BranchCount++;
+        }
+    }
+
+    /// <summary>
+    /// index번째 추가 메가진화의 uid. 없으면 -1.
+    /// </summary>
+    public int GetExtraMega(int index)
+    {
+        return _extraMegas != null && index >= 0 && index < ExtraMegaCount ? _extraMegas[index] : NONE;
+    }
+
+    /// <summary>
+    /// 추가 메가진화를 하나 더한다. 칸이 차면 버린다.
+    /// </summary>
+    public void AddExtraMega(int uid)
+    {
+        if (_extraMegas != null && uid >= 0 && ExtraMegaCount < _extraMegas.Length)
+        {
+            _extraMegas[ExtraMegaCount] = uid;
+            ExtraMegaCount++;
         }
     }
 

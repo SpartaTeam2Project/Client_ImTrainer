@@ -6,6 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 인벤토리 창 오른쪽에 고른 포켓몬의 이름, 타입, 성, 무기 능력, 진화 계통을 보여 준다.
 /// 진화 계통은 기본, 1진화, 2진화, 메가진화, 거다이맥스 칸에 고정해서 그리고, 나머지 갈래 진화는 갈래 칸에 그린다.
+/// 메가진화 갈래(Y, Z)는 메가진화 칸을 복제한 칸에 그린다. 칸 순서는 기본, 1진화, 2진화, 갈래, 메가진화들, 거다이맥스다.
 /// </summary>
 public class HoverInformation : MonoBehaviour
 {
@@ -68,6 +69,8 @@ public class HoverInformation : MonoBehaviour
     [Tooltip("진화 칸 가로 스크롤. 다른 종을 고르면 맨 앞으로 되돌린다")]
     [SerializeField] private ScrollRect _evolutionScroll;
 
+    // 메가진화 칸을 복제해 만든 메가진화 갈래 칸
+    private EvolutionView[] _extraMegaViews = Array.Empty<EvolutionView>();
     private Color _defaultTitleColor = Color.white;
     private int _scrolledUid = EvolutionLine.NONE;
 
@@ -80,6 +83,9 @@ public class HoverInformation : MonoBehaviour
 
         StoreDefaultIconSizes(_evolutionViews);
         StoreDefaultIconSizes(_branchViews);
+        _extraMegaViews = CreateExtraMegaViews();
+        StoreDefaultIconSizes(_extraMegaViews);
+        ArrangeEvolutionSlots();
         Clear();
     }
 
@@ -106,6 +112,83 @@ public class HoverInformation : MonoBehaviour
         InventoryItem.ShowStars(_starImages, item.upgradeLevel);
         ShowAbility(visual != null ? visual.WeaponAbility : null, item.upgradeLevel);
         ShowEvolution(itemManager, item.uid);
+    }
+
+    /// <summary>
+    /// 메가진화 칸을 복제해 메가진화 갈래 칸을 만든다. 메가진화 칸이 없으면 만들지 않는다.
+    /// </summary>
+    private EvolutionView[] CreateExtraMegaViews()
+    {
+        var mega = GetStageView(EvolutionStage.Mega);
+        if (mega == null || mega.Root == null)
+        {
+            return Array.Empty<EvolutionView>();
+        }
+
+        var source = mega.Root.transform;
+        var views = new EvolutionView[EvolutionLine.MAX_EXTRA_MEGA];
+        for (var i = 0; i < views.Length; i++)
+        {
+            var clone = Instantiate(mega.Root, source.parent);
+            clone.name = $"{mega.Root.name}{i + 2}";
+            var root = clone.transform;
+            views[i] = new EvolutionView
+            {
+                Root = clone,
+                Icon = HierarchyCounterpart.Find(mega.Icon, source, root),
+                Highlight = HierarchyCounterpart.Find(mega.Highlight, source, root),
+                Stage = HierarchyCounterpart.Find(mega.Stage, source, root),
+                Name = HierarchyCounterpart.Find(mega.Name, source, root),
+            };
+        }
+
+        return views;
+    }
+
+    /// <summary>
+    /// 같은 부모 아래에 있으면 갈래 칸 뒤로 메가진화, 메가진화 갈래, 거다이맥스 순서로 옮긴다.
+    /// </summary>
+    private void ArrangeEvolutionSlots()
+    {
+        var mega = GetStageView(EvolutionStage.Mega);
+        var vmax = GetStageView(EvolutionStage.VMax);
+        if (mega?.Root == null || vmax?.Root == null)
+        {
+            return;
+        }
+
+        var parent = mega.Root.transform.parent;
+        if (vmax.Root.transform.parent != parent || !AllUnder(_branchViews, parent))
+        {
+            return;
+        }
+
+        mega.Root.transform.SetAsLastSibling();
+        foreach (var view in _extraMegaViews)
+        {
+            view.Root.transform.SetAsLastSibling();
+        }
+
+        vmax.Root.transform.SetAsLastSibling();
+    }
+
+    private EvolutionView GetStageView(EvolutionStage stage)
+    {
+        var index = (int)stage;
+        return _evolutionViews != null && index < _evolutionViews.Length ? _evolutionViews[index] : null;
+    }
+
+    private static bool AllUnder(EvolutionView[] views, Transform parent)
+    {
+        foreach (var view in views)
+        {
+            if (view?.Root != null && view.Root.transform.parent != parent)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static void StoreDefaultIconSizes(EvolutionView[] views)
@@ -216,6 +299,12 @@ public class HoverInformation : MonoBehaviour
                 var branch = line.GetBranch(i);
                 ShowEvolutionView(view, itemManager, account, branch, BRANCH_NAME, false, branch >= 0 && branch == line.SelectedUid);
             }
+        }
+
+        for (var i = 0; i < _extraMegaViews.Length; i++)
+        {
+            var extra = line.GetExtraMega(i);
+            ShowEvolutionView(_extraMegaViews[i], itemManager, account, extra, StageName(EvolutionStage.Mega), false, extra >= 0 && extra == line.SelectedUid);
         }
 
         // 같은 종을 다시 그릴 때는 보고 있던 스크롤 위치를 둔다.
